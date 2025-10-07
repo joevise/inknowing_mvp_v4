@@ -1,0 +1,1239 @@
+openapi: 3.0.3
+info:
+  title: InKnowing API
+  description: |
+    知应(InKnowing) AI知识对话平台 MVP API规范
+    基于业务逻辑守恒原理设计，确保与用户旅程、时序图、状态图完全对应
+  version: 1.0.0
+  contact:
+    name: FuturX Lab
+    email: support@inknowing.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: 本地开发环境
+  - url: https://api.inknowing.com
+    description: 生产环境
+
+tags:
+  - name: Auth
+    description: 用户认证相关接口 (AUTH_SEQUENCE)
+  - name: Books
+    description: 书籍管理相关接口 (BROWSE_SEQUENCE)
+  - name: Conversations
+    description: 对话管理相关接口 (CHAT_SEQUENCE)
+  - name: Characters
+    description: 角色管理相关接口 (CHARACTER_SEQUENCE)
+  - name: RAG
+    description: RAG检索相关接口 (RAG_SEQUENCE)
+  - name: Admin
+    description: 管理后台相关接口 (ADMIN_SEQUENCE)
+  - name: Users
+    description: 用户管理相关接口 (HISTORY_SEQUENCE)
+
+paths:
+  # ===== 认证相关 API (AUTH_STATE_MACHINE) =====
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 用户注册
+      description: |
+        极简版用户注册，直接创建账户并自动登录
+        状态转换: GUEST → REGISTERED → LOGGED_IN
+        引用: #REF-REGISTER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: 用户邮箱
+                password:
+                  type: string
+                  minLength: 6
+                  description: 用户密码
+      responses:
+        '201':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    type: string
+                    description: Session Token
+        '400':
+          description: 邮箱已存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+      description: |
+        使用邮箱密码登录，创建24小时session
+        状态转换: GUEST → LOGGING_IN → LOGGED_IN
+        引用: #REF-LOGIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    type: string
+        '401':
+          description: 认证失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 用户登出
+      description: |
+        销毁session并登出
+        状态转换: LOGGED_IN → LOGGED_OUT → GUEST
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 登出成功
+
+  # ===== 书籍相关 API (BROWSE_STATE_MACHINE) =====
+  /search:
+    get:
+      tags: [Books]
+      summary: 智能搜索
+      description: |
+        自然语言搜索，AI理解用户意图
+        状态转换: IDLE → SEARCHING → RESULTS_READY
+        引用: #REF-SEARCH
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 搜索关键词
+      responses:
+        '200':
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BookSummary'
+                  characters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CharacterSummary'
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+
+  /books:
+    get:
+      tags: [Books]
+      summary: 获取书籍列表
+      description: |
+        获取所有上架书籍，支持分类和标签筛选
+        状态转换: IDLE → BROWSING_BOOKS
+        引用: #REF-BROWSE
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [文学, 商业, 科学, 心理, 哲学]
+          description: 分类筛选
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: 标签筛选
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 书籍列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  total:
+                    type: integer
+
+  /books/{id}:
+    get:
+      tags: [Books]
+      summary: 获取书籍详情
+      description: |
+        获取单本书籍的完整信息
+        状态转换: BROWSING_BOOKS → VIEWING_DETAIL
+        引用: #REF-DETAIL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 书籍详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDetail'
+
+  /books/{id}/characters:
+    get:
+      tags: [Books, Characters]
+      summary: 获取书籍角色列表
+      description: |
+        获取书中可对话的角色
+        状态转换: VIEWING_DETAIL → LOADING_CHARACTERS → BOOK_READY
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 角色列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  characters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Character'
+
+  # ===== 对话相关 API (CONVERSATION_STATE_MACHINE) =====
+  /conversations/create:
+    post:
+      tags: [Conversations]
+      summary: 创建对话会话
+      description: |
+        创建新的对话会话，支持书籍对话和角色对话
+        状态转换: NO_CONVERSATION → CREATING_CONVERSATION → CONVERSATION_ACTIVE
+        引用: #REF-CONV-CREATE
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [book_id, type]
+              properties:
+                book_id:
+                  type: string
+                  description: 书籍ID
+                type:
+                  type: string
+                  enum: [book, character]
+                  description: 对话类型
+                character_id:
+                  type: string
+                  description: 角色ID（角色对话必需）
+      responses:
+        '201':
+          description: 对话创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversation_id:
+                    type: string
+                  character:
+                    $ref: '#/components/schemas/Character'
+
+  /conversations/{id}/messages:
+    post:
+      tags: [Conversations]
+      summary: 发送消息
+      description: |
+        向对话发送消息，触发智能路由决策
+        状态转换: CONVERSATION_ACTIVE → MESSAGE_SENDING → ROUTING_DECISION
+        引用: #REF-SMART-CHAT
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: 消息内容
+      responses:
+        '200':
+          description: 消息接收成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message_id:
+                    type: string
+                  routing_strategy:
+                    type: string
+                    enum: [ai_native, rag_retrieval, hybrid]
+                    description: 路由策略
+
+  /conversations/{id}/stream:
+    get:
+      tags: [Conversations]
+      summary: 获取响应流
+      description: |
+        SSE流式输出AI响应
+        状态转换: GENERATING_RESPONSE → STREAMING_RESPONSE
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSE事件流
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /conversations/{id}/character:
+    put:
+      tags: [Conversations, Characters]
+      summary: 切换角色
+      description: |
+        在对话中切换角色
+        状态转换: CHARACTER_CONVERSATION → SWITCHING_CHARACTER → CHARACTER_SWITCHED
+        引用: #REF-CHAR-SWITCH
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_character_id]
+              properties:
+                new_character_id:
+                  type: string
+      responses:
+        '200':
+          description: 切换成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  character:
+                    $ref: '#/components/schemas/Character'
+
+  /conversations:
+    get:
+      tags: [Conversations, Users]
+      summary: 获取对话历史
+      description: |
+        获取用户的所有对话历史
+        状态转换: NO_HISTORY → LOADING_HISTORY → VIEWING_HISTORY
+        引用: #REF-HISTORY-VIEW
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: book_id
+          in: query
+          schema:
+            type: string
+          description: 按书籍筛选
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 对话列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationSummary'
+                  total:
+                    type: integer
+
+  /conversations/{id}:
+    get:
+      tags: [Conversations]
+      summary: 获取对话详情
+      description: |
+        获取完整对话内容和消息历史
+        状态转换: SELECTING_CONVERSATION → LOADING_CONVERSATION → CONVERSATION_RESTORED
+        引用: #REF-HISTORY-CONTINUE
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 对话详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversation:
+                    $ref: '#/components/schemas/Conversation'
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+
+    put:
+      tags: [Conversations]
+      summary: 更新对话
+      description: |
+        保存对话状态
+        状态转换: CONVERSATION_ACTIVE → CONVERSATION_SAVED
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                summary:
+                  type: string
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags: [Conversations]
+      summary: 删除对话
+      description: |
+        永久删除对话记录
+        状态转换: VIEWING_HISTORY → DELETING_CONVERSATION → HISTORY_UPDATED
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 删除成功
+
+  /conversations/search:
+    get:
+      tags: [Conversations]
+      summary: 搜索对话历史
+      description: |
+        在历史对话中搜索内容
+        状态转换: VIEWING_HISTORY → SEARCHING_HISTORY → SEARCH_RESULTS
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationSummary'
+
+  # ===== RAG相关 API (RAG_RETRIEVAL_MODE) =====
+  /rag/search:
+    post:
+      tags: [RAG]
+      summary: RAG向量检索
+      description: |
+        从ChromaDB检索相关文档片段
+        状态转换: RAG_RETRIEVAL_MODE → VECTOR_SEARCHING → CHUNKS_RETRIEVED
+        引用: #REF-RAG-001
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [book_id, query]
+              properties:
+                book_id:
+                  type: string
+                query:
+                  type: string
+                  description: 检索查询
+                top_k:
+                  type: integer
+                  default: 5
+                  description: 返回前K个结果
+      responses:
+        '200':
+          description: 检索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chunks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        content:
+                          type: string
+                        source:
+                          type: string
+                        score:
+                          type: number
+                          description: 相似度分数
+
+  # ===== 用户相关 API (USER_ACTIVE) =====
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: 获取用户信息
+      description: |
+        获取当前登录用户的个人信息
+        状态: USER_ACTIVE
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  # ===== 管理后台 API (ADMIN_STATE_MACHINE) =====
+  /admin/login:
+    post:
+      tags: [Admin]
+      summary: 管理员登录
+      description: |
+        使用环境变量配置的密码登录管理后台
+        状态转换: ADMIN_GUEST → ADMIN_AUTHENTICATING → ADMIN_LOGGED_IN
+        引用: #REF-ADMIN-LOGIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  admin_session:
+                    type: string
+
+  /admin/books/identify:
+    post:
+      tags: [Admin]
+      summary: AI识别书籍
+      description: |
+        通过书名让AI自动识别并生成书籍信息
+        状态转换: BOOK_MANAGEMENT → BOOK_IDENTIFYING → BOOK_IDENTIFIED
+        引用: #REF-BOOK-IDENTIFY
+      security:
+        - adminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  description: 书籍名称
+      responses:
+        '200':
+          description: 识别结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  book_info:
+                    $ref: '#/components/schemas/BookInfo'
+                  ai_score:
+                    type: integer
+                    minimum: 1
+                    maximum: 10
+                    description: AI了解程度评分
+                  cover_options:
+                    type: array
+                    items:
+                      type: string
+                      format: uri
+
+  /admin/books:
+    post:
+      tags: [Admin]
+      summary: 创建书籍
+      description: |
+        基于识别结果创建新书籍
+        状态转换: BOOK_IDENTIFIED → BOOK_CREATING → BOOK_CREATED
+      security:
+        - adminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreateRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+
+  /admin/books/{id}/documents:
+    post:
+      tags: [Admin]
+      summary: 上传书籍文档
+      description: |
+        上传TXT或Markdown文档作为主文档或补充材料
+        状态转换: DOCUMENT_REQUIRED/OPTIONAL → DOCUMENT_UPLOADING → DOCUMENT_PARSING
+        引用: #REF-DOC-UPLOAD
+      security:
+        - adminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, type]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: TXT或Markdown文件
+                type:
+                  type: string
+                  enum: [main, supplement]
+                  description: 文档类型
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  document_id:
+                    type: string
+                  status:
+                    type: string
+
+  /admin/books/{id}/vectorize:
+    post:
+      tags: [Admin]
+      summary: 向量化处理
+      description: |
+        将文档内容向量化并存入ChromaDB
+        状态转换: DOCUMENT_CHUNKING → VECTORIZING → VECTOR_COMPLETE
+        引用: #REF-DOC-VECTOR, #REF-VECTOR-001
+      security:
+        - adminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                document_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: 要向量化的文档ID列表
+      responses:
+        '200':
+          description: 向量化开始
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [processing, completed, failed]
+
+  /admin/books/{id}/status:
+    put:
+      tags: [Admin]
+      summary: 更新书籍状态
+      description: |
+        上架或下架书籍
+        状态转换: BOOK_STATUS_CONTROL → BOOK_ONLINE/OFFLINE
+      security:
+        - adminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [online, offline]
+      responses:
+        '200':
+          description: 状态更新成功
+
+  /admin/books/{id}:
+    put:
+      tags: [Admin]
+      summary: 编辑书籍信息
+      description: |
+        更新书籍的所有信息
+        状态: BOOK_MANAGEMENT
+      security:
+        - adminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags: [Admin]
+      summary: 删除书籍
+      description: |
+        删除书籍及其所有相关数据
+        状态: BOOK_MANAGEMENT
+      security:
+        - adminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 删除成功
+
+  /admin/characters/{id}:
+    put:
+      tags: [Admin]
+      summary: 编辑角色信息
+      description: |
+        更新角色的所有配置
+        状态转换: CHARACTER_EDITING → CHARACTER_SAVED
+        引用: #REF-CHAR-MANAGE
+      security:
+        - adminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+  /admin/config/ai:
+    get:
+      tags: [Admin]
+      summary: 获取AI配置
+      description: |
+        获取当前AI服务配置
+        状态: AI_CONFIG
+      security:
+        - adminAuth: []
+      responses:
+        '200':
+          description: AI配置
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIConfig'
+
+    put:
+      tags: [Admin]
+      summary: 更新AI配置
+      description: |
+        配置通义千问和其他AI服务
+        状态转换: CONFIG_EDITING → CONFIG_TESTING → CONFIG_SAVED
+      security:
+        - adminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIConfig'
+      responses:
+        '200':
+          description: 配置更新成功
+
+  /admin/config/ai/test:
+    post:
+      tags: [Admin]
+      summary: 测试AI连接
+      description: |
+        验证AI服务配置是否有效
+        状态: CONFIG_TESTING
+      security:
+        - adminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIConfig'
+      responses:
+        '200':
+          description: 测试结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            conversation_count:
+              type: integer
+            last_active:
+              type: string
+              format: date-time
+
+    Book:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        cover_url:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        ai_score:
+          type: integer
+        status:
+          type: string
+          enum: [online, offline]
+
+    BookSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        cover_url:
+          type: string
+
+    BookDetail:
+      allOf:
+        - $ref: '#/components/schemas/Book'
+        - type: object
+          properties:
+            description:
+              type: string
+            publisher:
+              type: string
+            publish_date:
+              type: string
+            conversation_strategy:
+              type: string
+              enum: [ai_native, rag_only, hybrid]
+            has_document:
+              type: boolean
+            character_count:
+              type: integer
+
+    BookInfo:
+      type: object
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        description:
+          type: string
+        publisher:
+          type: string
+        publish_date:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    BookCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/BookInfo'
+        - type: object
+          required: [ai_score]
+          properties:
+            ai_score:
+              type: integer
+            cover_url:
+              type: string
+
+    BookUpdateRequest:
+      $ref: '#/components/schemas/BookInfo'
+
+    Character:
+      type: object
+      properties:
+        id:
+          type: string
+        book_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        personality:
+          type: string
+        speaking_style:
+          type: string
+        background:
+          type: string
+        prompt_template:
+          type: string
+
+    CharacterSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        book_title:
+          type: string
+
+    CharacterUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        personality:
+          type: string
+        speaking_style:
+          type: string
+        background:
+          type: string
+        prompt_template:
+          type: string
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        book_id:
+          type: string
+        type:
+          type: string
+          enum: [book, character]
+        character_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        title:
+          type: string
+        summary:
+          type: string
+
+    ConversationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        book_title:
+          type: string
+        type:
+          type: string
+        character_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        conversation_id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        routing_strategy:
+          type: string
+          enum: [ai_native, rag_retrieval, hybrid]
+        sources:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AIConfig:
+      type: object
+      properties:
+        qwen_api_key:
+          type: string
+        qwen_model:
+          type: string
+          default: qwen-max
+        embedding_model:
+          type: string
+        openai_compatible:
+          type: object
+          properties:
+            base_url:
+              type: string
+            api_key:
+              type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: 用户Session认证
+
+    adminAuth:
+      type: apiKey
+      in: cookie
+      name: admin_session
+      description: 管理员Session认证
+
+# 业务逻辑守恒验证标记
+# 所有API端点都与以下视图完全对应：
+# 1. User Journey: 用户旅程中的每个动作都有对应API
+# 2. Sequence Diagram: 时序图中的每个交互都有API支撑
+# 3. State Diagram: 状态转换的每个触发点都是API调用
+# 4. 双向可推导: 从API可以还原完整业务流程
