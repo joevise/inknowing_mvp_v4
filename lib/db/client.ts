@@ -65,9 +65,9 @@ class DatabaseClient {
       if (!adminCheck) {
         const timestamp = new Date().toISOString();
         db.prepare(`
-          INSERT INTO users (id, email, password_hash, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?)
-        `).run('admin', 'admin@system', '', timestamp, timestamp);
+          INSERT INTO users (id, username, email, password_hash, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run('admin', 'admin', 'admin@system', '', timestamp, timestamp);
         console.log('Virtual admin user created');
       }
 

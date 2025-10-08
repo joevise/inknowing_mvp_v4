@@ -7,6 +7,7 @@ import type { User } from './schema';
 import bcrypt from 'bcryptjs';
 
 export interface CreateUserInput {
+  username: string;
   email: string;
   password: string;
 }
@@ -20,7 +21,7 @@ export interface UpdateUserInput {
  * 创建新用户
  */
 export async function createUser(input: CreateUserInput): Promise<User> {
-  const { email, password } = input;
+  const { username, email, password } = input;
 
   // 检查邮箱是否已存在
   const existing = getUserByEmail(email);
@@ -35,11 +36,11 @@ export async function createUser(input: CreateUserInput): Promise<User> {
   const timestamp = now().toISOString();
 
   const stmt = db().prepare(`
-    INSERT INTO users (id, email, password_hash, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO users (id, username, email, password_hash, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(id, email, passwordHash, timestamp, timestamp);
+  stmt.run(id, username, email, passwordHash, timestamp, timestamp);
 
   return getUserById(id)!;
 }
@@ -58,6 +59,7 @@ export function getUserById(id: string): User | null {
 
   return {
     id: row.id,
+    username: row.username || '',
     email: row.email,
     password_hash: row.password_hash,
     created_at: new Date(row.created_at),
@@ -79,6 +81,7 @@ export function getUserByEmail(email: string): User | null {
 
   return {
     id: row.id,
+    username: row.username || '',
     email: row.email,
     password_hash: row.password_hash,
     created_at: new Date(row.created_at),
@@ -196,6 +199,7 @@ export function listUsers(options?: {
 
   const users = rows.map(row => ({
     id: row.id,
+    username: row.username || '',
     email: row.email,
     password_hash: row.password_hash,
     created_at: new Date(row.created_at),
@@ -220,6 +224,7 @@ export function searchUsers(query: string): User[] {
 
   return rows.map(row => ({
     id: row.id,
+    username: row.username || '',
     email: row.email,
     password_hash: row.password_hash,
     created_at: new Date(row.created_at),

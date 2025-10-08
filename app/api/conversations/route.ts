@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ConversationService } from '@/lib/services/conversation-service';
 import { requireAuth } from '@/lib/auth/middleware';
-import { getUserConversations } from '@/lib/db/conversations';
+import { getConversationsByUserId } from '@/lib/db/conversations';
 
 const conversationService = new ConversationService();
 
@@ -102,10 +102,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // 3. 获取对话列表
-    const conversations = getUserConversations(
+    const result = getConversationsByUserId(
       user.id,
       {
-        bookId: bookId || undefined,
+        book_id: bookId || undefined,
         type: (type as 'book' | 'character') || undefined,
         limit,
         offset,
@@ -115,8 +115,8 @@ export async function GET(request: NextRequest) {
     // 4. 返回结果
     return NextResponse.json({
       success: true,
-      conversations,
-      total: conversations.length,
+      conversations: result.conversations,
+      total: result.total,
     });
 
   } catch (error) {

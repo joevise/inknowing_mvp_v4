@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -40,6 +41,7 @@ export default function RegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          username: formData.username,
           email: formData.email,
           password: formData.password,
         }),
@@ -103,9 +105,29 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {/* 用户名输入 */}
+          <div>
+            <label htmlFor="username" className="block text-sm font-light text-gray-700 mb-1">
+              用户名
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              value={formData.username}
+              onChange={handleChange}
+              disabled={loading}
+              minLength={2}
+              maxLength={20}
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white font-light"
+              placeholder="设置您的用户名"
+            />
+          </div>
+
           {/* 邮箱输入 */}
           <div>
-            <label htmlFor="email" className="block text-sm text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-light text-gray-700 mb-1">
               邮箱
             </label>
             <input
@@ -116,7 +138,7 @@ export default function RegisterPage() {
               value={formData.email}
               onChange={handleChange}
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white font-light"
               placeholder="your@email.com"
             />
           </div>

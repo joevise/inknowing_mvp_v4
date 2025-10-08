@@ -30,15 +30,15 @@ export async function POST(request: NextRequest) {
   try {
     // 1. 解析请求体
     const body = await request.json();
-    const { email, password } = body;
+    const { username, email, password } = body;
 
     // 2. 验证必填字段
-    if (!email || !password) {
+    if (!username || !email || !password) {
       console.log('[Register API] Missing required fields');
       return NextResponse.json(
         {
           error: 'Missing required fields',
-          message: '请提供邮箱和密码'
+          message: '请提供用户名、邮箱和密码'
         },
         { status: 400 }
       );
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
 
     // 6. 创建用户（createUser会自动加密密码）
     const newUser = await createUser({
+      username: username,
       email: email.toLowerCase(),
       password: password,
     });

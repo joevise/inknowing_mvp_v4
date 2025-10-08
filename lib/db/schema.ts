@@ -6,6 +6,7 @@
 // TypeScript类型定义
 export interface User {
   id: string;
+  username: string;
   email: string;
   password_hash: string;
   created_at: Date;
@@ -92,6 +93,7 @@ export const createTablesSQL = `
   -- 用户表
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
+    username TEXT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

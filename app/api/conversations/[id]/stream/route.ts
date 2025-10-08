@@ -21,7 +21,7 @@ export async function POST(
 ) {
   try {
     // 1. 验证用户身份
-    const sessionToken = getSessionFromCookie(request);
+    const sessionToken = request.cookies.get('session')?.value;
     if (!sessionToken) {
       return NextResponse.json(
         { error: '未登录' },
@@ -29,7 +29,7 @@ export async function POST(
       );
     }
 
-    const session = validateSession(sessionToken);
+    const session = await validateSession(sessionToken);
     if (!session) {
       return NextResponse.json(
         { error: 'Session已过期' },
@@ -38,7 +38,7 @@ export async function POST(
     }
 
     // 2. 验证对话权限
-    if (!userOwnsConversation(session.user_id, params.id)) {
+    if (!userOwnsConversation(session.user.id, params.id)) {
       return NextResponse.json(
         { error: '无权访问此对话' },
         { status: 403 }
@@ -59,7 +59,7 @@ export async function POST(
     // 4. 创建流式响应
     console.log('[API] 开始流式对话:', {
       conversationId: params.id,
-      userId: session.user_id,
+      userId: session.user.id,
       contentLength: content.length,
     });
 
@@ -72,7 +72,7 @@ export async function POST(
           // 发送流式响应
           for await (const event of conversationService.streamResponse(
             params.id,
-            session.user_id,
+            session.user.id,
             content.trim()
           )) {
             // 发送SSE格式的数据

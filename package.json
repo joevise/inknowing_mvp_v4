@@ -4,7 +4,7 @@
   "description": "InKnowing - AI知识对话平台 MVP",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 7083",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

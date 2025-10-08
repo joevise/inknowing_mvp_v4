@@ -12,6 +12,7 @@ import {
   validateSession as dbValidateSession,
   createAdminSession as dbCreateAdminSession,
   validateAdminSession as dbValidateAdminSession,
+  getUserById,
   type CreateSessionInput,
 } from '@/lib/db';
 import { randomBytes } from 'crypto';
@@ -85,9 +86,17 @@ export async function validateSession(token: string): Promise<{
       return null;
     }
 
-    console.log('[Session] Session validated for user:', result.userId);
+    // Fetch complete user object from database
+    const fullUser = await getUserById(result.userId);
+
+    if (!fullUser) {
+      console.log('[Session] User not found:', result.userId);
+      return null;
+    }
+
+    console.log('[Session] Session validated for user:', result.userId, 'username:', fullUser.username);
     return {
-      user: { id: result.userId },
+      user: fullUser,
       session: result.session
     };
   } catch (error) {

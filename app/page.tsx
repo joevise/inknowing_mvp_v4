@@ -1,70 +1,75 @@
 /**
- * 首页 - 智能搜索主页面
+ * 首页 - 重新设计的MUJI风格首页
  */
 
 'use client';
 
-import { useState, KeyboardEvent } from 'react';
+import { useState, KeyboardEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 
-interface SearchResult {
-  query: string;
-  intent: string;
-  books: Array<{
-    id: string;
-    title: string;
-    author: string;
-    description: string;
-    cover_url?: string;
-    category?: string;
-    tags?: string[];
-    type: 'book';
-  }>;
-  characters: Array<{
-    id: string;
-    name: string;
-    book_title: string;
-    description: string;
-    type: 'character';
-  }>;
-  suggestions: string[];
-  total: {
-    books: number;
-    characters: number;
-  };
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  cover_url?: string;
+  category?: string;
+  tags?: string[];
+}
+
+interface Character {
+  id: string;
+  name: string;
+  description: string;
+  book_title: string;
+  book_id: string;
 }
 
 export default function HomePage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<SearchResult | null>(null);
-  const [error, setError] = useState('');
+  const [books, setBooks] = useState<Book[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  // 加载书籍和角色数据
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // 加载书籍
+        const booksRes = await fetch('/api/books?status=published&limit=12');
+        if (booksRes.ok) {
+          const booksData = await booksRes.json();
+          setBooks(booksData.books || []);
 
-    setLoading(true);
-    setError('');
+          // 提取分类
+          const cats = new Set<string>();
+          booksData.books?.forEach((book: Book) => {
+            if (book.category) cats.add(book.category);
+          });
+          setCategories(['all', ...Array.from(cats)]);
+        }
 
-    try {
-      const response = await fetch(`/api/search?query=${encodeURIComponent(query.trim())}`);
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '搜索失败');
+        // 加载热门角色
+        const charsRes = await fetch('/api/characters/popular?limit=8');
+        if (charsRes.ok) {
+          const charsData = await charsRes.json();
+          setCharacters(charsData.characters || []);
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
       }
+    };
 
-      const data: SearchResult = await response.json();
-      setResults(data);
+    loadData();
+  }, []);
 
-      console.log('[Search] 搜索结果:', data);
-    } catch (err) {
-      console.error('[Search] 搜索失败:', err);
-      setError(err instanceof Error ? err.message : '搜索失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = () => {
+    if (!query.trim()) return;
+    router.push(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -73,186 +78,218 @@ export default function HomePage() {
     }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion);
-    setResults(null);
+  const filteredBooks = selectedCategory === 'all'
+    ? books
+    : books.filter(book => book.category === selectedCategory);
+
+  const handleStartConversation = async (characterId: string, bookId: string) => {
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId,
+          characterId,
+          type: 'character',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/conversations/${data.conversation.id}`);
+      } else {
+        // 未登录，跳转到登录页
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+    }
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#F5F5DC]">
-      <div className="max-w-4xl w-full text-center">
-        {/* Logo和标题 */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-[#2F5233] mb-4">
-            知应 InKnowing
-          </h1>
-          <p className="text-xl text-gray-600">
-            AI知识对话平台 MVP
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#FAF9F7] flex flex-col">
+      <Header />
 
-        {/* 智能搜索框 */}
-        <div className="mb-16">
-          <div className="relative max-w-2xl mx-auto">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="搜索书籍、角色，或直接提问..."
-              disabled={loading}
-              className="w-full text-lg py-4 pl-6 pr-14 border-2 border-gray-300 rounded-lg
-                         focus:ring-2 focus:ring-[#2F5233] focus:border-transparent
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={loading || !query.trim()}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2
-                         px-4 py-2 bg-[#2F5233] text-white rounded-lg
-                         hover:bg-[#1a2e1c] transition-colors
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? '搜索中...' : '搜索'}
-            </button>
-          </div>
-          <div className="mt-4 text-sm text-gray-500">
-            试试: "我想了解心理学" 或 "和苏格拉底聊天"
-          </div>
-        </div>
+      <main className="flex-1">
+        {/* Hero 区域 */}
+        <section className="py-20 px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* 产品介绍 */}
+            <h1 className="text-4xl font-light text-[#2C5530] mb-4">
+              与经典对话，让知识流动
+            </h1>
+            <p className="text-lg font-light text-gray-600 mb-12 max-w-2xl mx-auto">
+              InKnowing 知应是一个基于 AI 的知识对话平台。
+              在这里，您可以与经典书籍对话，向历史人物提问，开启全新的学习体验。
+            </p>
 
-        {/* 错误提示 */}
-        {error && (
-          <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-lg max-w-2xl mx-auto">
-            {error}
+            {/* 精致搜索框 */}
+            <div className="relative max-w-2xl mx-auto">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="搜索书籍、角色，或直接提问..."
+                className="w-full text-base font-light py-4 pl-6 pr-32
+                         border border-gray-300 rounded-lg
+                         focus:outline-none focus:border-[#2C5530] focus:ring-1 focus:ring-[#2C5530]
+                         transition-all bg-white"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={!query.trim()}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2
+                         px-6 py-2 bg-[#2C5530] text-white rounded-md
+                         font-light text-sm
+                         hover:bg-[#234426] transition-colors
+                         disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                搜索
+              </button>
+            </div>
+            <p className="mt-4 text-xs font-light text-gray-400">
+              试试: "我想了解心理学" 或 "和苏格拉底聊天"
+            </p>
           </div>
-        )}
+        </section>
 
-        {/* 搜索结果 */}
-        {results && (
-          <div className="mb-12 max-w-2xl mx-auto">
-            {/* 结果统计 */}
-            <div className="text-left mb-6 text-gray-600">
-              找到 {results.total.books} 本书籍，{results.total.characters} 个角色
+        {/* 书籍展示区域 */}
+        <section className="py-16 px-6 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-light text-gray-800">精选书籍</h2>
+
+              {/* 分类筛选 */}
+              <div className="flex gap-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-2 rounded-lg text-sm font-light transition-colors
+                              ${selectedCategory === cat
+                                ? 'bg-[#2C5530] text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {cat === 'all' ? '全部' : cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* 书籍结果 */}
-            {results.books.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 text-left">书籍</h3>
-                <div className="space-y-4">
-                  {results.books.map((book) => (
-                    <div
-                      key={book.id}
-                      onClick={() => router.push(`/books/${book.id}`)}
-                      className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer text-left"
-                    >
-                      <div className="flex gap-4">
-                        {book.cover_url && (
-                          <img
-                            src={book.cover_url}
-                            alt={book.title}
-                            className="w-16 h-24 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h4 className="font-bold text-gray-800 mb-1">{book.title}</h4>
-                          <p className="text-sm text-gray-600 mb-2">{book.author}</p>
-                          <p className="text-sm text-gray-500 line-clamp-2">{book.description}</p>
-                          {book.category && (
-                            <span className="inline-block mt-2 px-2 py-1 bg-[#F5F5DC] text-[#2F5233] text-xs rounded">
-                              {book.category}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            {/* 书籍卡片网格 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filteredBooks.map(book => (
+                <div
+                  key={book.id}
+                  onClick={() => router.push(`/books/${book.id}`)}
+                  className="bg-[#FAF9F7] rounded-lg overflow-hidden cursor-pointer
+                           hover:shadow-lg transition-shadow group"
+                >
+                  {/* 封面 */}
+                  {book.cover_url ? (
+                    <div className="aspect-[3/4] bg-gray-200 overflow-hidden">
+                      <img
+                        src={book.cover_url}
+                        alt={book.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 角色结果 */}
-            {results.characters.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 text-left">角色</h3>
-                <div className="space-y-4">
-                  {results.characters.map((char) => (
-                    <div
-                      key={char.id}
-                      className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer text-left"
-                    >
-                      <h4 className="font-bold text-gray-800 mb-1">{char.name}</h4>
-                      <p className="text-sm text-gray-600 mb-2">来自《{char.book_title}》</p>
-                      <p className="text-sm text-gray-500 line-clamp-2">{char.description}</p>
+                  ) : (
+                    <div className="aspect-[3/4] bg-gradient-to-br from-[#2C5530] to-[#234426]
+                                  flex items-center justify-center">
+                      <span className="text-white text-4xl font-light opacity-20">书</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  )}
 
-            {/* 无结果 */}
-            {results.total.books === 0 && results.total.characters === 0 && (
-              <div className="bg-gray-50 p-8 rounded-lg text-gray-600">
-                没有找到相关结果，试试其他关键词
-              </div>
-            )}
-
-            {/* 搜索建议 */}
-            {results.suggestions.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-600 mb-3 text-left">相关搜索</h4>
-                <div className="flex flex-wrap gap-2">
-                  {results.suggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm
-                                 hover:bg-gray-200 transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+                  {/* 信息 */}
+                  <div className="p-4">
+                    <h3 className="font-light text-base text-gray-800 mb-1 line-clamp-1">
+                      {book.title}
+                    </h3>
+                    <p className="font-light text-sm text-gray-500 mb-2">
+                      {book.author}
+                    </p>
+                    <p className="font-light text-xs text-gray-400 line-clamp-2">
+                      {book.description}
+                    </p>
+                    {book.category && (
+                      <span className="inline-block mt-3 px-2 py-1 bg-white text-[#2C5530]
+                                     text-xs font-light rounded">
+                        {book.category}
+                      </span>
+                    )}
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {filteredBooks.length === 0 && (
+              <div className="text-center py-12 text-gray-400 font-light">
+                暂无书籍
               </div>
             )}
           </div>
-        )}
+        </section>
 
-        {/* 快速入口 */}
-        {!results && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <a href="/books" className="bg-white p-6 rounded-lg shadow-sm hover:shadow-lg transition-shadow">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">浏览书籍</h3>
-              <p className="text-gray-600">
-                探索精选的10本经典书籍
+        {/* 角色展示区域 */}
+        <section className="py-16 px-6 bg-[#FAF9F7]">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-8">
+              <h2 className="text-2xl font-light text-gray-800">热门角色</h2>
+              <p className="text-sm font-light text-gray-500 mt-2">
+                直接与经典角色开始对话
               </p>
-            </a>
+            </div>
 
-            <a href="/auth/login" className="bg-white p-6 rounded-lg shadow-sm hover:shadow-lg transition-shadow">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">登录账户</h3>
-              <p className="text-gray-600">
-                保存对话历史，继续学习
-              </p>
-            </a>
+            {/* 角色卡片网格 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {characters.map(char => (
+                <div
+                  key={char.id}
+                  className="bg-white rounded-lg p-6 hover:shadow-lg transition-shadow"
+                >
+                  {/* 角色头像 */}
+                  <div className="w-16 h-16 bg-gradient-to-br from-[#2C5530] to-[#234426]
+                                rounded-full flex items-center justify-center mb-4 mx-auto">
+                    <span className="text-white text-2xl font-light">
+                      {char.name[0]}
+                    </span>
+                  </div>
 
-            <a href="/admin/login" className="bg-white p-6 rounded-lg shadow-sm hover:shadow-lg transition-shadow">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">管理后台</h3>
-              <p className="text-gray-600">
-                管理书籍和系统配置
-              </p>
-            </a>
+                  {/* 角色信息 */}
+                  <h3 className="font-light text-base text-gray-800 mb-1 text-center">
+                    {char.name}
+                  </h3>
+                  <p className="font-light text-xs text-gray-500 mb-3 text-center">
+                    来自《{char.book_title}》
+                  </p>
+                  <p className="font-light text-xs text-gray-400 line-clamp-3 mb-4">
+                    {char.description}
+                  </p>
+
+                  {/* 开始对话按钮 */}
+                  <button
+                    onClick={() => handleStartConversation(char.id, char.book_id)}
+                    className="w-full py-2 bg-[#2C5530] text-white rounded-lg
+                             font-light text-sm hover:bg-[#234426] transition-colors"
+                  >
+                    开始对话
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {characters.length === 0 && (
+              <div className="text-center py-12 text-gray-400 font-light">
+                暂无角色
+              </div>
+            )}
           </div>
-        )}
+        </section>
+      </main>
 
-        {/* 状态信息 */}
-        <div className="mt-16 text-center text-sm text-gray-500">
-          <p>环境: 开发模式 | 版本: 1.0.0 MVP</p>
-          <p className="mt-2">
-            基础架构搭建完成 ✓
-          </p>
-        </div>
-      </div>
-    </main>
+      <Footer />
+    </div>
   );
 }

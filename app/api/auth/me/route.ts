@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { user } = authResult;
+    console.log('[Me API] User from auth:', { id: user.id, username: user.username, email: user.email });
 
     // 2. 获取用户的对话统计
     const userConversations = await getConversationsByUserId(user.id);
@@ -34,13 +35,14 @@ export async function GET(request: NextRequest) {
     const userProfile = {
       id: user.id,
       email: user.email || '',
+      username: user.username || '用户', // 使用数据库中的真实用户名
       created_at: user.created_at ? new Date(user.created_at).toISOString() : new Date().toISOString(),
       conversation_count: userConversations.length,
       last_active: user.updated_at ? new Date(user.updated_at).toISOString() : new Date().toISOString(),
     };
 
-    console.log('[Me API] Returning user info for:', user.email);
-    return NextResponse.json(userProfile, { status: 200 });
+    console.log('[Me API] Returning userProfile:', userProfile);
+    return NextResponse.json({ user: userProfile }, { status: 200 });
 
   } catch (error) {
     console.error('[Me API] Error getting user info:', error);
