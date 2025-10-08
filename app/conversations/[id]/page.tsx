@@ -445,8 +445,10 @@ export default function ConversationPage() {
         {conversation && (
           <BookCharacterSidebar
             conversation={conversation}
-            onCharacterSwitch={(characterId) => {
+            onCharacterSwitch={async (characterId) => {
               console.log('[Conversation] 角色切换:', characterId);
+              // 重新加载对话信息以获取最新的character_id和type
+              await loadConversation();
             }}
           />
         )}

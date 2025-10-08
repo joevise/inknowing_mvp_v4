@@ -543,11 +543,44 @@ export class ConversationService {
       // 创建流式生成器
       const contextMessages = getConversationContext(conversationId, 10);
 
-      let systemPrompt = buildBookChatPrompt({
-        bookTitle: book.title,
-        author: book.author,
-        description: book.description,
-      });
+      // 根据对话类型构建不同的system prompt
+      let systemPrompt: string;
+
+      if (conversation.type === 'character' && conversation.character_id) {
+        // 角色对话：使用角色prompt
+        const character = getCharacterById(conversation.character_id);
+        if (!character) {
+          throw new Error('Character not found');
+        }
+
+        // 安全解析personality_traits
+        let personality: string[] = [];
+        if (character.personality_traits) {
+          try {
+            personality = JSON.parse(character.personality_traits);
+          } catch (e) {
+            // 如果不是有效JSON,尝试按逗号分割
+            personality = character.personality_traits.split(',').map(s => s.trim());
+          }
+        }
+
+        systemPrompt = buildCharacterChatPrompt({
+          bookTitle: book.title,
+          characterName: character.name,
+          description: character.description,
+          personality: personality,
+          speakingStyle: character.speaking_style || '自然对话',
+          backgroundStory: character.background_story,
+          keyQuotes: [],
+        });
+      } else {
+        // 书籍对话：使用书籍prompt
+        systemPrompt = buildBookChatPrompt({
+          bookTitle: book.title,
+          author: book.author,
+          description: book.description,
+        });
+      }
 
       // 如果需要RAG，先检索
       if (routingDecision.strategy === ResponseStrategy.RAG ||

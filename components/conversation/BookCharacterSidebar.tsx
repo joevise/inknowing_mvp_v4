@@ -96,13 +96,10 @@ export default function BookCharacterSidebar({
         throw new Error('切换角色失败');
       }
 
-      // 通知父组件
+      // 通知父组件更新对话状态
       if (onCharacterSwitch) {
         onCharacterSwitch(characterId);
       }
-
-      // 刷新页面以显示新角色
-      window.location.reload();
 
     } catch (err) {
       console.error('[BookCharacterSidebar] 切换角色失败:', err);
