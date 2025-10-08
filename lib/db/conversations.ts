@@ -15,6 +15,7 @@ export interface CreateConversationInput {
 
 export interface UpdateConversationInput {
   title?: string;
+  type?: 'book' | 'character';
   character_id?: string | null;
 }
 
@@ -270,9 +271,15 @@ export function updateConversation(
     values.push(input.title);
   }
 
+  if (input.type !== undefined) {
+    updates.push('type = ?');
+    values.push(input.type);
+  }
+
   if (input.character_id !== undefined) {
-    // 只有角色对话可以切换角色
-    if (conversation.type !== 'character') {
+    // 如果同时更新type为character，或者原本就是character类型，则允许设置character_id
+    const targetType = input.type !== undefined ? input.type : conversation.type;
+    if (targetType !== 'character') {
       throw new Error('Cannot set character_id for book conversation');
     }
     updates.push('character_id = ?');
