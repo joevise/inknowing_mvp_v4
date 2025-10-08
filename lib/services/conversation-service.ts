@@ -557,7 +557,14 @@ export class ConversationService {
         let personality: string[] = [];
         if (character.personality_traits) {
           try {
-            personality = JSON.parse(character.personality_traits);
+            const parsed = JSON.parse(character.personality_traits);
+            // 如果解析成功且是数组,直接使用
+            if (Array.isArray(parsed)) {
+              personality = parsed;
+            } else {
+              // 如果不是数组,当作字符串处理
+              personality = [String(parsed)];
+            }
           } catch (e) {
             // 如果不是有效JSON,尝试按逗号分割
             personality = character.personality_traits.split(',').map(s => s.trim());
