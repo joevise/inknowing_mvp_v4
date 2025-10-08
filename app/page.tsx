@@ -106,6 +106,30 @@ export default function HomePage() {
     }
   };
 
+  const handleStartBookConversation = async (e: React.MouseEvent, bookId: string) => {
+    e.stopPropagation(); // 阻止冒泡到卡片点击
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId,
+          type: 'book',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/conversations/${data.conversation.id}`);
+      } else {
+        // 未登录，跳转到登录页
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Failed to start book conversation:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FAF9F7] flex flex-col">
       <Header />
@@ -177,14 +201,14 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 书籍卡片网格 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {/* 书籍卡片网格 - 更小更紧凑 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {filteredBooks.map(book => (
                 <div
                   key={book.id}
                   onClick={() => router.push(`/books/${book.id}`)}
-                  className="bg-[#FAF9F7] rounded-lg overflow-hidden cursor-pointer
-                           hover:shadow-lg transition-shadow group"
+                  className="bg-white rounded-lg overflow-hidden cursor-pointer
+                           hover:shadow-lg transition-all group relative"
                 >
                   {/* 封面 */}
                   {book.cover_url ? (
@@ -198,27 +222,32 @@ export default function HomePage() {
                   ) : (
                     <div className="aspect-[3/4] bg-gradient-to-br from-[#2C5530] to-[#234426]
                                   flex items-center justify-center">
-                      <span className="text-white text-4xl font-light opacity-20">书</span>
+                      <span className="text-white text-2xl font-light opacity-20">书</span>
                     </div>
                   )}
 
-                  {/* 信息 */}
-                  <div className="p-4">
-                    <h3 className="font-light text-base text-gray-800 mb-1 line-clamp-1">
+                  {/* 信息 - 更紧凑 */}
+                  <div className="p-3">
+                    <h3 className="font-light text-sm text-gray-800 mb-0.5 line-clamp-2">
                       {book.title}
                     </h3>
-                    <p className="font-light text-sm text-gray-500 mb-2">
+                    <p className="font-light text-xs text-gray-500">
                       {book.author}
                     </p>
-                    <p className="font-light text-xs text-gray-400 line-clamp-2">
-                      {book.description}
-                    </p>
-                    {book.category && (
-                      <span className="inline-block mt-3 px-2 py-1 bg-white text-[#2C5530]
-                                     text-xs font-light rounded">
-                        {book.category}
-                      </span>
-                    )}
+                  </div>
+
+                  {/* 悬停显示的对话按钮 */}
+                  <div className="absolute inset-0 bg-white bg-opacity-0 group-hover:bg-opacity-50
+                                transition-all duration-300 flex items-end justify-center pb-4
+                                opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={(e) => handleStartBookConversation(e, book.id)}
+                      className="px-4 py-2 bg-[#2C5530] text-white rounded-lg font-light text-sm
+                               hover:bg-[#234426] transition-colors shadow-lg transform
+                               translate-y-2 group-hover:translate-y-0"
+                    >
+                      开始对话
+                    </button>
                   </div>
                 </div>
               ))}
