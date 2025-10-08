@@ -553,21 +553,24 @@ export class ConversationService {
           throw new Error('Character not found');
         }
 
-        // 安全解析personality_traits
+        // 安全解析personality_traits (可能已经被parseJson解析过)
         let personality: string[] = [];
         if (character.personality_traits) {
-          try {
-            const parsed = JSON.parse(character.personality_traits);
-            // 如果解析成功且是数组,直接使用
-            if (Array.isArray(parsed)) {
-              personality = parsed;
-            } else {
-              // 如果不是数组,当作字符串处理
-              personality = [String(parsed)];
+          if (Array.isArray(character.personality_traits)) {
+            // 已经是数组,直接使用
+            personality = character.personality_traits;
+          } else if (typeof character.personality_traits === 'string') {
+            // 如果是字符串,尝试解析或分割
+            try {
+              const parsed = JSON.parse(character.personality_traits);
+              personality = Array.isArray(parsed) ? parsed : [String(parsed)];
+            } catch (e) {
+              // 如果不是有效JSON,按逗号分割
+              personality = character.personality_traits.split(',').map(s => s.trim());
             }
-          } catch (e) {
-            // 如果不是有效JSON,尝试按逗号分割
-            personality = character.personality_traits.split(',').map(s => s.trim());
+          } else {
+            // 其他类型,转换为数组
+            personality = [String(character.personality_traits)];
           }
         }
 
