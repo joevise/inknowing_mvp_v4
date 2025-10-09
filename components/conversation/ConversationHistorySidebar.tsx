@@ -33,6 +33,7 @@ export default function ConversationHistorySidebar({
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'timeline' | 'book'>('timeline');
   const [error, setError] = useState('');
+  const [expandedBooks, setExpandedBooks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadConversations();
@@ -50,12 +51,44 @@ export default function ConversationHistorySidebar({
       }
 
       const data = await response.json();
+      console.log('[HistorySidebar] API返回的对话数据:', data.conversations);
       setConversations(data.conversations || []);
     } catch (err) {
       console.error('[HistorySidebar] 加载失败:', err);
       setError(err instanceof Error ? err.message : '加载对话历史失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteConversation = async (e: React.MouseEvent, conversationId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm('确定要删除这个对话吗？')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('删除对话失败');
+      }
+
+      // 重新加载对话列表
+      await loadConversations();
+
+      // 如果删除的是当前对话,跳转到书籍列表
+      if (conversationId === currentConversationId) {
+        window.location.href = '/books';
+      }
+    } catch (err) {
+      console.error('[HistorySidebar] 删除失败:', err);
+      alert(err instanceof Error ? err.message : '删除对话失败');
     }
   };
 
@@ -71,6 +104,14 @@ export default function ConversationHistorySidebar({
     groups[bookId].conversations.push(conv);
     return groups;
   }, {} as Record<string, { book_title: string; conversations: Conversation[] }>);
+
+  // 切换书籍展开/折叠状态
+  const toggleBookExpand = (bookId: string) => {
+    setExpandedBooks(prev => ({
+      ...prev,
+      [bookId]: !prev[bookId],
+    }));
+  };
 
   // 时间轴排序
   const sortedByTime = [...conversations].sort(
@@ -91,36 +132,66 @@ export default function ConversationHistorySidebar({
 
   const ConversationItem = ({ conv }: { conv: Conversation }) => {
     const isActive = conv.id === currentConversationId;
+    const [isHovering, setIsHovering] = useState(false);
+
+    // 生成显示标题: 优先使用title, 其次使用角色名/书名, 最后默认文本
+    const displayTitle = conv.title || conv.character_name || conv.book_title || '新对话';
 
     return (
-      <Link
-        href={`/conversations/${conv.id}`}
-        onClick={(e) => {
-          if (onSelectConversation) {
-            e.preventDefault();
-            onSelectConversation(conv.id);
-          }
-        }}
-        className={`block px-4 py-3 rounded-lg transition-colors ${
-          isActive
-            ? 'bg-[#2C5530] text-white'
-            : 'hover:bg-gray-50 text-gray-700'
-        }`}
+      <div
+        className="relative group"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm font-light truncate ${isActive ? 'text-white' : 'text-gray-800'}`}>
-              {conv.character_name || conv.book_title || '对话'}
-            </p>
-            <p className={`text-xs font-light mt-1 ${isActive ? 'text-gray-200' : 'text-gray-500'}`}>
-              {conv.type === 'character' ? '角色对话' : '书籍对话'}
-            </p>
+        <Link
+          href={`/conversations/${conv.id}`}
+          onClick={(e) => {
+            if (onSelectConversation) {
+              e.preventDefault();
+              onSelectConversation(conv.id);
+            }
+          }}
+          className={`block px-4 py-3 rounded-lg transition-colors ${
+            isActive
+              ? 'bg-[#2C5530] text-white'
+              : 'hover:bg-gray-50 text-gray-700'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-6">
+              {/* 对话标题 */}
+              <p className={`text-sm font-light truncate ${isActive ? 'text-white' : 'text-gray-800'}`}>
+                {displayTitle}
+              </p>
+              {/* 副标题: 书名和时间 */}
+              <div className="flex items-center gap-2 mt-1">
+                <p className={`text-xs font-light ${isActive ? 'text-gray-200' : 'text-gray-500'}`}>
+                  {conv.book_title}
+                </p>
+                <span className={`text-xs font-light ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
+                  ·
+                </span>
+                <span className={`text-xs font-light ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
+                  {formatTime(conv.updated_at)}
+                </span>
+              </div>
+            </div>
           </div>
-          <span className={`text-xs font-light flex-shrink-0 ${isActive ? 'text-gray-200' : 'text-gray-400'}`}>
-            {formatTime(conv.updated_at)}
-          </span>
-        </div>
-      </Link>
+        </Link>
+
+        {/* 删除按钮 - 悬停时显示 */}
+        {isHovering && (
+          <button
+            onClick={(e) => handleDeleteConversation(e, conv.id)}
+            className="absolute right-2 top-3 p-1.5 rounded hover:bg-red-50 transition-colors"
+            title="删除对话"
+          >
+            <svg className="w-4 h-4 text-gray-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        )}
+      </div>
     );
   };
 
@@ -184,19 +255,56 @@ export default function ConversationHistorySidebar({
             ))}
           </div>
         ) : (
-          <div className="space-y-4">
-            {Object.entries(groupedByBook).map(([bookId, group]) => (
-              <div key={bookId}>
-                <h3 className="text-xs font-light text-gray-500 mb-2 px-2">
-                  《{group.book_title}》
-                </h3>
-                <div className="space-y-2">
-                  {group.conversations.map((conv) => (
-                    <ConversationItem key={conv.id} conv={conv} />
-                  ))}
+          <div className="space-y-2">
+            {Object.entries(groupedByBook).map(([bookId, group]) => {
+              const isExpanded = expandedBooks[bookId] !== false; // 默认展开
+
+              return (
+                <div key={bookId}>
+                  {/* 书籍文件夹标题 - 可点击展开/折叠 */}
+                  <button
+                    onClick={() => toggleBookExpand(bookId)}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    {/* 展开/折叠图标 */}
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${
+                        isExpanded ? 'rotate-90' : ''
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+
+                    {/* 书籍图标 */}
+                    <svg className="w-4 h-4 text-[#2C5530]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+
+                    {/* 书名 */}
+                    <span className="flex-1 text-left text-sm font-light text-gray-700">
+                      {group.book_title}
+                    </span>
+
+                    {/* 对话数量 */}
+                    <span className="text-xs font-light text-gray-400">
+                      {group.conversations.length}
+                    </span>
+                  </button>
+
+                  {/* 对话列表 - 展开时显示 */}
+                  {isExpanded && (
+                    <div className="ml-6 mt-1 space-y-1">
+                      {group.conversations.map((conv) => (
+                        <ConversationItem key={conv.id} conv={conv} />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

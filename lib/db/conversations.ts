@@ -120,12 +120,18 @@ export function getConversationsByUserId(
   const countRow = countStmt.get(...values) as any;
   const total = countRow.total;
 
-  // 获取对话列表
+  // 获取对话列表 (JOIN books和characters表获取额外信息)
   values.push(limit, offset);
   const stmt = db().prepare(`
-    SELECT * FROM conversations
+    SELECT
+      c.*,
+      b.title as book_title,
+      ch.name as character_name
+    FROM conversations c
+    JOIN books b ON c.book_id = b.id
+    LEFT JOIN characters ch ON c.character_id = ch.id
     WHERE ${whereClause}
-    ORDER BY updated_at DESC
+    ORDER BY c.updated_at DESC
     LIMIT ? OFFSET ?
   `);
 
@@ -140,6 +146,8 @@ export function getConversationsByUserId(
     title: row.title,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
+    book_title: row.book_title,
+    character_name: row.character_name,
   }));
 
   return { conversations, total };
@@ -199,10 +207,12 @@ export function getConversationSummaries(
   }
 ): Array<{
   id: string;
+  book_id: string;
   book_title: string;
   type: string;
   character_name?: string;
   created_at: Date;
+  updated_at: Date;
   message_count: number;
   title?: string;
 }> {
@@ -224,8 +234,10 @@ export function getConversationSummaries(
   const stmt = db().prepare(`
     SELECT
       c.id,
+      c.book_id,
       c.type,
       c.created_at,
+      c.updated_at,
       c.title,
       b.title as book_title,
       ch.name as character_name,
@@ -242,10 +254,12 @@ export function getConversationSummaries(
 
   return rows.map(row => ({
     id: row.id,
+    book_id: row.book_id,
     book_title: row.book_title,
     type: row.type,
     character_name: row.character_name,
     created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
     message_count: row.message_count,
     title: row.title,
   }));
