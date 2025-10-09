@@ -23,6 +23,11 @@ export default function Footer() {
             <h3 className="font-light text-sm text-gray-800 mb-4">快速链接</h3>
             <ul className="space-y-2">
               <li>
+                <a href="/about" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
+                  关于知应
+                </a>
+              </li>
+              <li>
                 <a href="/books" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
                   浏览书籍
                 </a>

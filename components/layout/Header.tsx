@@ -96,6 +96,14 @@ export default function Header() {
             >
               热门角色
             </Link>
+            <Link
+              href="/about"
+              className={`font-light text-sm transition-opacity ${
+                isActive('/about') ? 'opacity-100 border-b border-white' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              关于知应
+            </Link>
           </nav>
 
           {/* 右侧：用户信息/登录 */}

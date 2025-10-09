@@ -12,7 +12,9 @@ import Footer from '@/components/layout/Footer';
 interface Conversation {
   id: string;
   book_id: string;
+  book_title?: string;
   character_id?: string;
+  character_name?: string;
   type: 'book' | 'character';
   title?: string;
   created_at: string;
@@ -34,18 +36,30 @@ export default function ConversationsPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/me');
+      // 1. 检查登录状态
+      const authResponse = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
 
-      if (!response.ok) {
+      if (!authResponse.ok) {
         // 未登录，跳转到登录页
         router.push('/auth/login');
         return;
       }
 
-      const data = await response.json();
-      // 这里需要从用户信息中获取对话列表
-      // 暂时返回空数组，需要实现获取对话列表的API
-      setConversations([]);
+      // 2. 获取对话列表
+      const conversationsResponse = await fetch('/api/conversations', {
+        credentials: 'include',
+      });
+
+      if (!conversationsResponse.ok) {
+        throw new Error('获取对话列表失败');
+      }
+
+      const data = await conversationsResponse.json();
+      setConversations(data.conversations || []);
+
+      console.log('[Conversations] 获取对话列表:', data.conversations);
 
     } catch (err) {
       console.error('[Conversations] 获取失败:', err);
@@ -89,30 +103,53 @@ export default function ConversationsPage() {
 
             {/* 对话列表 */}
             {!loading && conversations.length > 0 && (
-              <div className="space-y-4">
-                {conversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => router.push(`/conversations/${conv.id}`)}
-                    className="bg-white rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-light text-lg text-gray-800 mb-2">
-                          {conv.title || '未命名对话'}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {conversations.map((conv) => {
+                  const displayTitle = conv.title || conv.character_name || conv.book_title || '未命名对话';
+
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => router.push(`/conversations/${conv.id}`)}
+                      className="bg-white rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer border border-gray-100 group"
+                    >
+                      <div className="flex flex-col h-full">
+                        {/* 标题 */}
+                        <h3 className="font-light text-base text-gray-800 mb-2 line-clamp-2 group-hover:text-[#2C5530] transition-colors">
+                          {displayTitle}
                         </h3>
-                        <p className="text-sm font-light text-gray-500">
-                          {conv.type === 'book' ? '书籍对话' : '角色对话'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-light text-gray-400">
-                          {new Date(conv.updated_at).toLocaleDateString('zh-CN')}
-                        </p>
+
+                        {/* 书籍和类型信息 */}
+                        <div className="flex items-center gap-2 mb-3">
+                          {conv.book_title && (
+                            <span className="text-xs font-light text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                              📖 {conv.book_title}
+                            </span>
+                          )}
+                          <span className={`text-xs font-light px-2 py-1 rounded ${
+                            conv.type === 'character'
+                              ? 'bg-[#2C5530] text-white'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {conv.type === 'character' ? '角色对话' : '书籍对话'}
+                          </span>
+                        </div>
+
+                        {/* 时间 */}
+                        <div className="mt-auto pt-3 border-t border-gray-100">
+                          <p className="text-xs font-light text-gray-400">
+                            最后更新: {new Date(conv.updated_at).toLocaleString('zh-CN', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
