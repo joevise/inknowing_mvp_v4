@@ -5,8 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/middleware/admin-auth';
-import { recognizeAndCreateBook } from '@/lib/services/book-service';
+import { recognizeAndCreateBook, recognizeCharacters } from '@/lib/services/book-service';
 import { fetchDoubanCover } from '@/lib/services/douban-service';
+import { createCharacter } from '@/lib/db/characters';
 
 interface BatchBookInput {
   title: string;
@@ -78,10 +79,34 @@ export async function POST(request: NextRequest) {
 
         // 3. 可选：自动识别并创建角色
         if (createCharacters) {
-          // TODO: 实现角色自动识别和创建逻辑
-          // 这里可以调用 /api/admin/books/{bookId}/characters/recognize
-          // 并自动创建返回的角色
-          console.log(`[Batch Create] Character creation requested for ${book.title}`);
+          try {
+            console.log(`[Batch Create] Recognizing characters for ${book.title}...`);
+            const characters = await recognizeCharacters(book.title, book.author);
+
+            if (characters && characters.length > 0) {
+              for (const char of characters) {
+                try {
+                  createCharacter({
+                    book_id: result.book.id,
+                    name: char.name,
+                    description: char.description,
+                    personality_traits: char.personality_traits,
+                    speaking_style: char.speaking_style,
+                    background_story: char.background_story,
+                  });
+                  console.log(`[Batch Create] Created character: ${char.name} for ${book.title}`);
+                } catch (charError) {
+                  console.error(`[Batch Create] Failed to create character ${char.name}:`, charError);
+                }
+              }
+              console.log(`[Batch Create] Created ${characters.length} characters for ${book.title}`);
+            } else {
+              console.log(`[Batch Create] No characters recognized for ${book.title}`);
+            }
+          } catch (charError) {
+            console.error(`[Batch Create] Character recognition failed for ${book.title}:`, charError);
+            // 不影响书籍创建，继续处理
+          }
         }
 
         // 添加短暂延迟，避免请求过快

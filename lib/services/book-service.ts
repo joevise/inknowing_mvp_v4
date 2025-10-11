@@ -476,3 +476,89 @@ export async function getRecommendedBooks(bookId?: string, limit: number = 5): P
     updated_at: new Date(book.updated_at),
   })) as Book[];
 }
+/**
+ * 识别书籍中的主要角色
+ */
+export async function recognizeCharacters(bookTitle: string, bookAuthor: string): Promise<Array<{
+  name: string;
+  description: string;
+  personality_traits: Record<string, any>;
+  speaking_style: string;
+  background_story: string;
+}>> {
+  try {
+    const prompt = `
+请识别《${bookTitle}》（作者：${bookAuthor}）中的3-5个主要角色，并提供以下信息（以JSON数组格式返回）：
+
+1. name（角色名字）
+2. description（角色简介，50字内）
+3. personality_traits（性格特征，JSON对象，包含3-5个关键特质）
+4. speaking_style（说话风格，30字内）
+5. background_story（背景故事，100字内）
+
+只返回JSON数组，不要其他内容。
+
+示例格式：
+[
+  {
+    "name": "孙悟空",
+    "description": "齐天大圣，护送唐僧西天取经的大徒弟",
+    "personality_traits": {
+      "勇敢": "不畏强权，敢于斗争",
+      "机智": "善于变化，智慧过人",
+      "忠诚": "对师父忠心耿耿"
+    },
+    "speaking_style": "直率豪爽，常带有猴性的顽皮和傲气",
+    "background_story": "花果山水帘洞美猴王，大闹天宫后被压五行山下五百年，后被唐僧救出，保护唐僧西天取经"
+  }
+]
+`;
+
+    const { getConfig } = await import('@/lib/services/runtime-config');
+    const provider = getConfig('AI_PROVIDER') || 'aliyun';
+
+    let client: OpenAI;
+    let model: string;
+
+    if (provider === 'openai') {
+      client = new OpenAI({
+        apiKey: getConfig('OPENAI_API_KEY') || '',
+        baseURL: getConfig('OPENAI_BASE_URL') || '',
+      });
+      model = getConfig('OPENAI_MODEL') || 'gpt-4';
+    } else {
+      client = qwenClient;
+      model = getConfig('QWEN_MODEL') || 'qwen-max';
+    }
+
+    const completion = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: '你是一个专业的文学评论家，熟悉各类书籍中的角色。' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '[]';
+
+    // 解析JSON响应
+    try {
+      const jsonStr = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      const characters = JSON.parse(jsonStr);
+
+      if (!Array.isArray(characters)) {
+        throw new Error('Response is not an array');
+      }
+
+      return characters.slice(0, 5); // 最多返回5个角色
+    } catch (error) {
+      console.error('[Recognize Characters] JSON parse error:', error);
+      return [];
+    }
+
+  } catch (error) {
+    console.error('[Recognize Characters] Error:', error);
+    return [];
+  }
+}
