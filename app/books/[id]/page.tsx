@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
+import FavoriteButton from '@/components/book/FavoriteButton';
 
 interface Character {
   id: string;
@@ -170,7 +171,7 @@ export default function BookDetailPage() {
                       <p className="text-gray-600 font-light leading-relaxed">{book.description}</p>
                     </div>
 
-                    {/* 开始对话按钮 */}
+                    {/* 开始对话按钮和收藏 */}
                     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                       <button
                         onClick={() => handleStartConversation()}
@@ -178,6 +179,11 @@ export default function BookDetailPage() {
                       >
                         开始智能对话
                       </button>
+                      <FavoriteButton
+                        bookId={bookId}
+                        showCount={true}
+                        size="md"
+                      />
                       <div className="text-sm font-light text-gray-500">
                         {book.character_count} 个可对话角色
                       </div>

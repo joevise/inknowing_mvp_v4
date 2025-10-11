@@ -188,7 +188,7 @@ export function deleteBook(id: string): boolean {
 }
 
 /**
- * 获取书籍列表
+ * 获取书籍列表（包含收藏数）
  */
 export function listBooks(options?: {
   category?: string;
@@ -196,7 +196,7 @@ export function listBooks(options?: {
   status?: 'published' | 'draft';
   limit?: number;
   offset?: number;
-}): { books: Book[]; total: number } {
+}): { books: (Book & { favorite_count?: number })[]; total: number } {
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
@@ -227,17 +227,22 @@ export function listBooks(options?: {
 
   // 获取总数
   const countStmt = db().prepare(`
-    SELECT COUNT(*) as total FROM books ${whereClause}
+    SELECT COUNT(*) as total FROM books b ${whereClause ? whereClause.replace('books', 'b') : ''}
   `);
   const countRow = countStmt.get(...values) as any;
   const total = countRow.total;
 
-  // 获取书籍列表
+  // 获取书籍列表（JOIN favorites 表统计收藏数）
   values.push(limit, offset);
   const stmt = db().prepare(`
-    SELECT * FROM books
-    ${whereClause}
-    ORDER BY created_at DESC
+    SELECT
+      b.*,
+      COUNT(f.id) as favorite_count
+    FROM books b
+    LEFT JOIN favorites f ON b.id = f.book_id
+    ${whereClause ? whereClause.replace('books', 'b') : ''}
+    GROUP BY b.id
+    ORDER BY b.created_at DESC
     LIMIT ? OFFSET ?
   `);
 
@@ -257,6 +262,7 @@ export function listBooks(options?: {
     status: row.status,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
+    favorite_count: row.favorite_count || 0,
   }));
 
   return { books, total };

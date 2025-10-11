@@ -345,7 +345,8 @@ export async function getAllBooks(options?: {
 
   // 获取总数
   const countResult = database.prepare(
-    `SELECT COUNT(*) as total FROM books ${whereClause}`
+    `SELECT COUNT(DISTINCT b.id) as total
+     FROM books b ${whereClause ? whereClause.replace(/\bbooks\b/g, 'b') : ''}`
   ).get(...params);
   const total = countResult?.total || 0;
 
@@ -354,8 +355,12 @@ export async function getAllBooks(options?: {
   const offset = options?.offset || 0;
 
   const books = database.prepare(
-    `SELECT * FROM books ${whereClause}
-     ORDER BY created_at DESC
+    `SELECT b.*, COUNT(f.id) as favorite_count
+     FROM books b
+     LEFT JOIN favorites f ON b.id = f.book_id
+     ${whereClause ? whereClause.replace(/\bbooks\b/g, 'b') : ''}
+     GROUP BY b.id
+     ORDER BY b.created_at DESC
      LIMIT ? OFFSET ?`
   ).all(...params, limit, offset);
 
@@ -366,6 +371,7 @@ export async function getAllBooks(options?: {
     requires_document: book.requires_document === 1,
     created_at: new Date(book.created_at),
     updated_at: new Date(book.updated_at),
+    favorite_count: book.favorite_count || 0,
   })) as Book[];
 
   return { books: formattedBooks, total };

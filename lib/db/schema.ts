@@ -88,6 +88,13 @@ export interface Config {
   updated_at: Date;
 }
 
+export interface Favorite {
+  id: string;
+  user_id: string;
+  book_id: string;
+  created_at: Date;
+}
+
 // 创建表的SQL语句
 export const createTablesSQL = `
   -- 用户表
@@ -216,6 +223,21 @@ export const createTablesSQL = `
     value TEXT NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- 收藏表
+  CREATE TABLE IF NOT EXISTS favorites (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    book_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    UNIQUE(user_id, book_id)
+  );
+
+  -- 创建索引
+  CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+  CREATE INDEX IF NOT EXISTS idx_favorites_book_id ON favorites(book_id);
 `;
 
 // 添加触发器更新updated_at字段
@@ -274,6 +296,7 @@ export const dropTablesSQL = `
   DROP TABLE IF EXISTS messages;
   DROP TABLE IF EXISTS sessions;
   DROP TABLE IF EXISTS conversations;
+  DROP TABLE IF EXISTS favorites;
   DROP TABLE IF EXISTS documents;
   DROP TABLE IF EXISTS characters;
   DROP TABLE IF EXISTS books;

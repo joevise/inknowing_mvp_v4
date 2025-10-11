@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import FavoriteButton from '@/components/book/FavoriteButton';
 
 interface Book {
   id: string;
@@ -17,6 +18,7 @@ interface Book {
   cover_url?: string;
   category?: string;
   tags?: string[];
+  favorite_count?: number;
 }
 
 interface BooksResponse {
@@ -35,6 +37,7 @@ export default function BooksPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState('');
+  const [favoritedBookIds, setFavoritedBookIds] = useState<Set<string>>(new Set());
 
   // 筛选状态
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -44,6 +47,7 @@ export default function BooksPage() {
 
   useEffect(() => {
     fetchBooks();
+    fetchFavorites();
   }, [selectedCategory, selectedTags]);
 
   const fetchBooks = async () => {
@@ -76,6 +80,24 @@ export default function BooksPage() {
       setError(err instanceof Error ? err.message : '获取书籍列表失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const favoritesRes = await fetch('/api/favorites', {
+        credentials: 'include',
+      });
+      if (favoritesRes.ok) {
+        const favoritesData = await favoritesRes.json();
+        const bookIds = new Set(
+          favoritesData.favorites?.map((fav: any) => fav.book_id) || []
+        );
+        setFavoritedBookIds(bookIds);
+      }
+    } catch (err) {
+      // 用户未登录或获取失败，忽略错误
+      console.log('User not logged in or failed to fetch favorites');
     }
   };
 
@@ -207,7 +229,29 @@ export default function BooksPage() {
                         <h3 className="font-light text-sm text-gray-800 mb-0.5 line-clamp-2">
                           {book.title}
                         </h3>
-                        <p className="text-xs font-light text-gray-500">{book.author}</p>
+                        <p className="text-xs font-light text-gray-500 mb-2">{book.author}</p>
+                        {/* 收藏按钮 */}
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <FavoriteButton
+                            bookId={book.id}
+                            initialFavorited={favoritedBookIds.has(book.id)}
+                            showCount={true}
+                            favoriteCount={book.favorite_count}
+                            size="sm"
+                            onToggle={(favorited) => {
+                              // 更新本地状态
+                              setFavoritedBookIds(prev => {
+                                const newSet = new Set(prev);
+                                if (favorited) {
+                                  newSet.add(book.id);
+                                } else {
+                                  newSet.delete(book.id);
+                                }
+                                return newSet;
+                              });
+                            }}
+                          />
+                        </div>
                       </div>
 
                       {/* 悬停显示的对话按钮 */}

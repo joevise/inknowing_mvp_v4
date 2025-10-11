@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
       cover_url: book.cover_url,
       category: book.category,
       tags: book.tags,
+      favorite_count: (book as any).favorite_count || 0,
       // 不返回 ai_knowledge_level 等管理信息
     }));
 
