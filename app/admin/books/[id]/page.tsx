@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 interface BookData {
   id: string;
@@ -149,58 +150,24 @@ export default function EditBookPage() {
     });
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.push('/admin/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5DC]">
-        <div className="text-gray-600">加载中...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-600">加载中...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b px-8 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-[#2F5233]">编辑书籍</h1>
-          <div className="flex gap-6">
-            <Link href="/admin" className="text-gray-600 hover:text-[#2F5233]">
-              仪表板
-            </Link>
-            <Link href="/admin/books" className="text-gray-600 hover:text-[#2F5233]">
-              书籍管理
-            </Link>
-            <Link href="/admin/characters" className="text-gray-600 hover:text-[#2F5233]">
-              角色管理
-            </Link>
-            <Link href="/admin/documents" className="text-gray-600 hover:text-[#2F5233]">
-              文档管理
-            </Link>
-            <Link href="/admin/settings" className="text-gray-600 hover:text-[#2F5233]">
-              系统设置
-            </Link>
-            <button onClick={handleLogout} className="text-red-600 hover:text-red-700">
-              退出登录
-            </button>
-          </div>
-        </div>
-      </nav>
-
+    <AdminLayout title="编辑书籍">
       <main className="max-w-4xl mx-auto px-8 py-12">
         {/* 返回按钮 */}
         <div className="mb-6">
           <Link
             href="/admin/books"
-            className="text-gray-600 hover:text-[#2F5233]"
+            className="text-gray-600 hover:text-[#2C5530] font-light"
           >
             ← 返回书籍列表
           </Link>
@@ -220,12 +187,12 @@ export default function EditBookPage() {
 
         {/* 编辑表单 */}
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">书籍信息</h2>
+          <h2 className="text-2xl font-light text-gray-800 mb-6">书籍信息</h2>
 
           <div className="space-y-6">
             {/* 书名 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 书名 <span className="text-red-500">*</span>
               </label>
               <input
@@ -233,13 +200,13 @@ export default function EditBookPage() {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               />
             </div>
 
             {/* 作者 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 作者 <span className="text-red-500">*</span>
               </label>
               <input
@@ -247,13 +214,13 @@ export default function EditBookPage() {
                 required
                 value={formData.author}
                 onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               />
             </div>
 
             {/* 简介 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 简介 <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -261,19 +228,19 @@ export default function EditBookPage() {
                 rows={4}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               />
             </div>
 
             {/* 分类 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 分类
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               >
                 <option value="文学">文学</option>
                 <option value="商业">商业</option>
@@ -285,7 +252,7 @@ export default function EditBookPage() {
 
             {/* 标签 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 标签
               </label>
               <div className="flex gap-2 mb-2">
@@ -300,7 +267,7 @@ export default function EditBookPage() {
                     }
                   }}
                   placeholder="输入标签后按回车"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 />
                 <button
                   type="button"
@@ -331,7 +298,7 @@ export default function EditBookPage() {
 
             {/* AI了解度 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 AI了解度: {formData.ai_knowledge_level}/10
               </label>
               <input
@@ -349,13 +316,13 @@ export default function EditBookPage() {
 
             {/* 对话策略 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 对话策略
               </label>
               <select
                 value={formData.conversation_strategy}
                 onChange={(e) => setFormData({ ...formData, conversation_strategy: e.target.value as any })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               >
                 <option value="ai_native">AI原生 - 仅使用AI知识</option>
                 <option value="rag_only">RAG检索 - 仅使用文档知识</option>
@@ -365,7 +332,7 @@ export default function EditBookPage() {
 
             {/* 封面URL */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 封面URL
               </label>
               <input
@@ -373,19 +340,19 @@ export default function EditBookPage() {
                 value={formData.cover_url}
                 onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
                 placeholder="https://example.com/cover.jpg 或 /covers/xxx.jpg"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               />
             </div>
 
             {/* 状态 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 状态
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               >
                 <option value="draft">草稿</option>
                 <option value="published">已上架</option>
@@ -398,20 +365,20 @@ export default function EditBookPage() {
             <button
               type="button"
               onClick={() => router.push('/admin/books')}
-              className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-light"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 bg-[#2F5233] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? '保存中...' : '保存更改'}
             </button>
           </div>
         </form>
       </main>
-    </div>
+    </AdminLayout>
   );
 }

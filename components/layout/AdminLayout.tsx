@@ -1,0 +1,162 @@
+/**
+ * 管理后台统一布局组件
+ * 与主首页保持一致的MUJI风格设计
+ */
+
+'use client';
+
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const isActive = (path: string) => {
+    return pathname === path || pathname?.startsWith(path + '/');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('登出失败:', error);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FAF9F7] flex flex-col">
+      {/* 统一的Header - 与主首页相同的深绿色风格 */}
+      <header className="bg-[#2C5530] text-white sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* 左侧：Logo + 品牌名 */}
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center">
+                <span className="text-[#2C5530] font-light text-lg">知</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-light text-lg leading-tight">InKnowing</span>
+                <span className="font-light text-xs opacity-90">管理后台</span>
+              </div>
+            </Link>
+
+            {/* 中间：导航菜单 - 所有页面统一 */}
+            <nav className="hidden md:flex items-center gap-8">
+              <Link
+                href="/admin"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin') && pathname === '/admin'
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                仪表板
+              </Link>
+              <Link
+                href="/admin/books"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin/books')
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                书籍管理
+              </Link>
+              <Link
+                href="/admin/characters"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin/characters')
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                角色管理
+              </Link>
+              <Link
+                href="/admin/documents"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin/documents')
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                文档管理
+              </Link>
+              <Link
+                href="/admin/settings"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin/settings')
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                系统设置
+              </Link>
+            </nav>
+
+            {/* 右侧：用户菜单 */}
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="font-light text-sm">管</span>
+                  </div>
+                  <span className="font-light text-sm hidden md:block">管理员</span>
+                </button>
+
+                {/* 用户下拉菜单 */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2">
+                    <Link
+                      href="/"
+                      className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      返回前台
+                    </Link>
+                    <hr className="my-2 border-gray-100" />
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm font-light text-red-600 hover:bg-gray-50 transition-colors"
+                    >
+                      退出登录
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* 主内容区域 */}
+      <main className="flex-1">
+        {children}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-[#FAF9F7] border-t border-gray-200 mt-auto">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="text-center">
+            <p className="font-light text-xs text-gray-500">
+              © {new Date().getFullYear()} InKnowing 知应 管理后台
+            </p>
+            <p className="font-light text-xs text-gray-400 mt-2">
+              Powered by AI · Made with care
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

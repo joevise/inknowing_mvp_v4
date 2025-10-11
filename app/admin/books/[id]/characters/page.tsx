@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 interface Book {
   id: string;
@@ -155,66 +156,34 @@ export default function BookCharactersPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.push('/admin/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5DC]">
-        <div className="text-gray-600">加载中...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-600">加载中...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   if (!book) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5DC]">
-        <div className="text-red-600">书籍不存在</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-red-600">书籍不存在</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b px-8 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-[#2F5233]">角色管理</h1>
-          <div className="flex gap-6">
-            <Link href="/admin" className="text-gray-600 hover:text-[#2F5233]">
-              仪表板
-            </Link>
-            <Link href="/admin/books" className="text-gray-600 hover:text-[#2F5233]">
-              书籍管理
-            </Link>
-            <Link href="/admin/characters" className="text-gray-600 hover:text-[#2F5233]">
-              角色管理
-            </Link>
-            <Link href="/admin/documents" className="text-gray-600 hover:text-[#2F5233]">
-              文档管理
-            </Link>
-            <Link href="/admin/settings" className="text-gray-600 hover:text-[#2F5233]">
-              系统设置
-            </Link>
-            <button onClick={handleLogout} className="text-red-600 hover:text-red-700">
-              退出登录
-            </button>
-          </div>
-        </div>
-      </nav>
-
+    <AdminLayout title="角色管理">
       <main className="max-w-7xl mx-auto px-8 py-12">
         {/* 返回按钮 */}
         <div className="mb-6">
           <Link
             href="/admin/characters"
-            className="text-gray-600 hover:text-[#2F5233]"
+            className="text-gray-600 hover:text-[#2C5530] font-light"
           >
             ← 返回角色列表
           </Link>
@@ -222,7 +191,7 @@ export default function BookCharactersPage() {
 
         {/* 书籍信息 */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">{book.title}</h2>
+          <h2 className="text-2xl font-light text-gray-800 mb-2">{book.title}</h2>
           <p className="text-gray-600 mb-1">作者：{book.author}</p>
           <p className="text-sm text-gray-500">{book.description}</p>
         </div>
@@ -241,19 +210,19 @@ export default function BookCharactersPage() {
 
         {/* 操作区域 */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">添加角色</h3>
+          <h3 className="text-lg font-light text-gray-800 mb-4">添加角色</h3>
 
           <div className="flex gap-4 mb-6">
             <button
               onClick={handleAIExtract}
               disabled={extracting}
-              className="flex-1 bg-[#2F5233] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {extracting ? 'AI提取中...' : '🤖 AI自动提取角色'}
             </button>
             <button
               onClick={() => setShowManualForm(!showManualForm)}
-              className="flex-1 border-2 border-[#2F5233] text-[#2F5233] py-3 rounded-lg hover:bg-[#2F5233] hover:text-white transition-colors font-medium"
+              className="flex-1 border-2 border-[#2C5530] text-[#2C5530] py-3 rounded-lg hover:bg-[#2C5530] hover:text-white transition-colors font-light"
             >
               ✏️ 手动添加角色
             </button>
@@ -264,7 +233,7 @@ export default function BookCharactersPage() {
             <form onSubmit={handleManualAdd} className="border-t pt-4">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-light text-gray-700 mb-2">
                     角色名称 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -272,19 +241,19 @@ export default function BookCharactersPage() {
                     required
                     value={manualCharacter.name}
                     onChange={(e) => setManualCharacter({ ...manualCharacter, name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                     placeholder="例如：叶文洁"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-light text-gray-700 mb-2">
                     角色简介
                   </label>
                   <textarea
                     rows={3}
                     value={manualCharacter.description}
                     onChange={(e) => setManualCharacter({ ...manualCharacter, description: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                     placeholder="简要描述这个角色..."
                   />
                 </div>
@@ -292,13 +261,13 @@ export default function BookCharactersPage() {
                   <button
                     type="button"
                     onClick={() => setShowManualForm(false)}
-                    className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50"
+                    className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-light"
                   >
                     取消
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-[#2F5233] text-white py-2 rounded-lg hover:bg-[#1a2e1c]"
+                    className="flex-1 bg-[#2C5530] text-white py-2 rounded-lg hover:bg-[#1a2e1c] font-light"
                   >
                     创建角色
                   </button>
@@ -309,7 +278,7 @@ export default function BookCharactersPage() {
 
           {/* 说明 */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-            <h4 className="font-medium text-blue-900 mb-2">💡 提示</h4>
+            <h4 className="font-light text-blue-900 mb-2">💡 提示</h4>
             <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
               <li><strong>AI自动提取</strong>：让AI根据书籍信息自动识别并创建主要角色</li>
               <li><strong>手动添加</strong>：自己创建角色，可以添加AI未识别的角色</li>
@@ -322,7 +291,7 @@ export default function BookCharactersPage() {
         {characters.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800">
+              <h3 className="text-lg font-light text-gray-800">
                 现有角色 ({characters.length})
               </h3>
             </div>
@@ -330,15 +299,15 @@ export default function BookCharactersPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">角色名</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">简介</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+                    <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">角色名</th>
+                    <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">简介</th>
+                    <th className="px-6 py-3 text-center text-xs font-light text-gray-500 uppercase">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {characters.map((char) => (
                     <tr key={char.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap font-light text-gray-900">
                         {char.name}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
@@ -347,7 +316,7 @@ export default function BookCharactersPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <Link
                           href={`/admin/characters/${char.id}/edit`}
-                          className="text-[#2F5233] hover:text-[#1a2e1c] text-sm font-medium"
+                          className="text-[#2C5530] hover:text-[#1a2e1c] text-sm font-light"
                         >
                           编辑
                         </Link>
@@ -360,6 +329,6 @@ export default function BookCharactersPage() {
           </div>
         )}
       </main>
-    </div>
+    </AdminLayout>
   );
 }

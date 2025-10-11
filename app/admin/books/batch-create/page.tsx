@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 interface RecommendedBook {
   title: string;
@@ -157,24 +158,7 @@ export default function BatchCreatePage() {
   const selectedCount = recommendedBooks.filter(book => book.selected).length;
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      <nav className="bg-white border-b px-8 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-[#2F5233]">批量创建书籍</h1>
-          <div className="flex gap-6">
-            <Link href="/admin" className="text-gray-600 hover:text-[#2F5233]">
-              仪表板
-            </Link>
-            <Link href="/admin/books" className="text-gray-600 hover:text-[#2F5233]">
-              书籍管理
-            </Link>
-            <Link href="/admin/books/new" className="text-gray-600 hover:text-[#2F5233]">
-              单个添加
-            </Link>
-          </div>
-        </div>
-      </nav>
-
+    <AdminLayout title="批量创建书籍">
       <main className="max-w-7xl mx-auto px-8 py-12">
         {/* 错误提示 */}
         {error && (
@@ -185,10 +169,10 @@ export default function BatchCreatePage() {
 
         {/* 查询输入区域 */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">获取AI推荐</h2>
+          <h2 className="text-lg font-light text-gray-900 mb-4">获取AI推荐</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 查询条件
               </label>
               <input
@@ -196,13 +180,13 @@ export default function BatchCreatePage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="例如：人生成长方面的书籍、莎士比亚的所有作品"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C5530]"
                 disabled={loading || creating}
               />
             </div>
             <div className="flex items-center gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-light text-gray-700 mb-2">
                   推荐数量
                 </label>
                 <input
@@ -211,7 +195,7 @@ export default function BatchCreatePage() {
                   onChange={(e) => setCount(parseInt(e.target.value) || 20)}
                   min="1"
                   max="50"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C5530]"
                   disabled={loading || creating}
                 />
               </div>
@@ -219,7 +203,7 @@ export default function BatchCreatePage() {
                 <button
                   onClick={handleGetRecommendations}
                   disabled={loading || creating}
-                  className="w-full px-6 py-2 bg-[#2F5233] text-white rounded-lg hover:bg-[#1a2e1c] disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full px-6 py-2 bg-[#2C5530] text-white rounded-lg hover:bg-[#1a2e1c] disabled:bg-gray-300 disabled:cursor-not-allowed font-light"
                 >
                   {loading ? '获取中...' : '获取推荐'}
                 </button>
@@ -232,13 +216,13 @@ export default function BatchCreatePage() {
         {recommendedBooks.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium text-gray-900">
+              <h2 className="text-lg font-light text-gray-900">
                 推荐书籍 ({recommendedBooks.length}本)
               </h2>
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleSelectAll}
-                  className="text-sm text-[#2F5233] hover:underline"
+                  className="text-sm text-[#2C5530] hover:underline font-light"
                   disabled={creating}
                 >
                   {recommendedBooks.every(book => book.selected) ? '取消全选' : '全选'}
@@ -255,7 +239,7 @@ export default function BatchCreatePage() {
                   key={index}
                   className={`p-4 border rounded-lg cursor-pointer transition ${
                     book.selected
-                      ? 'border-[#2F5233] bg-green-50'
+                      ? 'border-[#2C5530] bg-green-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                   onClick={() => handleToggleBook(index)}
@@ -270,7 +254,7 @@ export default function BatchCreatePage() {
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-900">{book.title}</span>
+                        <span className="font-light text-gray-900">{book.title}</span>
                         <span className="text-sm text-gray-500">- {book.author}</span>
                       </div>
                       <p className="text-sm text-gray-600">{book.brief_reason}</p>
@@ -295,7 +279,7 @@ export default function BatchCreatePage() {
               <button
                 onClick={handleBatchCreate}
                 disabled={creating || selectedCount === 0}
-                className="w-full px-6 py-3 bg-[#2F5233] text-white rounded-lg hover:bg-[#1a2e1c] disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 bg-[#2C5530] text-white rounded-lg hover:bg-[#1a2e1c] disabled:bg-gray-300 disabled:cursor-not-allowed font-light"
               >
                 {creating ? `创建中... (${progress.current}/${progress.total})` : `批量创建 (${selectedCount}本)`}
               </button>
@@ -306,7 +290,7 @@ export default function BatchCreatePage() {
         {/* 创建结果 */}
         {results.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
+            <h2 className="text-lg font-light text-gray-900 mb-4">
               创建结果
             </h2>
             <div className="space-y-2">
@@ -326,7 +310,7 @@ export default function BatchCreatePage() {
                   {result.success ? (
                     <Link
                       href={`/admin/books/${result.bookId}`}
-                      className="text-sm text-[#2F5233] hover:underline"
+                      className="text-sm text-[#2C5530] hover:underline font-light"
                     >
                       查看详情
                     </Link>
@@ -363,7 +347,7 @@ export default function BatchCreatePage() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">批量创建书籍</h3>
+            <h3 className="text-lg font-light text-gray-900 mb-2">批量创建书籍</h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
               输入查询条件（如"科幻小说"、"村上春树的作品"），AI会推荐相关书籍。
               选择您需要的书籍后，系统会自动识别详细信息、抓取豆瓣封面并创建书籍记录。
@@ -378,6 +362,6 @@ export default function BatchCreatePage() {
           </div>
         )}
       </main>
-    </div>
+    </AdminLayout>
   );
 }

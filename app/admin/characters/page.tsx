@@ -5,6 +5,8 @@
 
 'use client';
 
+import AdminLayout from '@/components/layout/AdminLayout';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -81,56 +83,21 @@ export default function CharactersPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.push('/admin/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">加载中...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-600">加载中...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b border-gray-200 px-8 py-4">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#2F5233]">角色管理</h1>
-          <div className="flex gap-6">
-            <Link href="/admin" className="text-gray-600 hover:text-[#2F5233]">
-              仪表板
-            </Link>
-            <Link href="/admin/books" className="text-gray-600 hover:text-[#2F5233]">
-              书籍管理
-            </Link>
-            <Link
-              href="/admin/characters"
-              className="text-[#2F5233] hover:text-[#1a2e1c] font-medium"
-            >
-              角色管理
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700"
-            >
-              退出登录
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* 主内容区 */}
+    <AdminLayout title="角色管理">
       <main className="max-w-7xl mx-auto px-8 py-12">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">角色总览</h2>
+          <h2 className="text-3xl font-light text-gray-800 mb-2">角色总览</h2>
           <p className="text-gray-600">
             管理所有书籍中的角色信息，包括性格特征、说话风格等
           </p>
@@ -141,7 +108,7 @@ export default function CharactersPage() {
             <p className="text-gray-500 mb-4">还没有任何书籍</p>
             <Link
               href="/admin/books/new"
-              className="inline-block bg-[#2F5233] text-white px-6 py-2 rounded-lg hover:bg-[#1a2e1c]"
+              className="inline-block bg-[#2C5530] text-white px-6 py-2 rounded-lg hover:bg-[#1a2e1c]"
             >
               添加第一本书
             </Link>
@@ -159,7 +126,7 @@ export default function CharactersPage() {
           </div>
         )}
       </main>
-    </div>
+    </AdminLayout>
   );
 }
 
@@ -178,7 +145,7 @@ function BookCharactersSection({
       {/* 书籍标题 */}
       <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-bold text-gray-800">{book.title}</h3>
+          <h3 className="text-lg font-light text-gray-800">{book.title}</h3>
           <p className="text-sm text-gray-500">作者: {book.author}</p>
         </div>
         <div className="text-sm text-gray-500">
@@ -192,7 +159,7 @@ function BookCharactersSection({
           <p className="mb-4">暂无角色信息</p>
           <Link
             href={`/admin/books/${book.id}/characters`}
-            className="text-[#2F5233] hover:underline"
+            className="text-[#2C5530] hover:underline"
           >
             为此书添加角色 →
           </Link>
@@ -202,16 +169,16 @@ function BookCharactersSection({
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase tracking-wider">
                   角色名
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase tracking-wider">
                   简介
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase tracking-wider">
                   创建时间
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-light text-gray-500 uppercase tracking-wider">
                   操作
                 </th>
               </tr>
@@ -220,7 +187,7 @@ function BookCharactersSection({
               {characters.map((character) => (
                 <tr key={character.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="font-medium text-gray-900">{character.name}</span>
+                    <span className="font-light text-gray-900">{character.name}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-gray-600 line-clamp-2">
@@ -233,7 +200,7 @@ function BookCharactersSection({
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <Link
                       href={`/admin/characters/${character.id}/edit`}
-                      className="text-[#2F5233] hover:text-[#1a2e1c] text-sm font-medium"
+                      className="text-[#2C5530] hover:text-[#1a2e1c] text-sm font-light"
                     >
                       编辑
                     </Link>

@@ -1,5 +1,6 @@
 /**
  * 管理后台首页 - 仪表板
+ * 使用统一的MUJI风格设计
  */
 
 'use client';
@@ -7,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 interface Stats {
   bookCount: number;
@@ -70,61 +72,21 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.push('/admin/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">加载中...</div>
-      </div>
+      <AdminLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-gray-600 font-light">加载中...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b border-gray-200 px-8 py-4">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#2F5233]">知应管理后台</h1>
-          <div className="flex gap-6">
-            <Link
-              href="/admin"
-              className="text-[#2F5233] hover:text-[#1a2e1c] font-medium"
-            >
-              仪表板
-            </Link>
-            <Link
-              href="/admin/books"
-              className="text-gray-600 hover:text-[#2F5233]"
-            >
-              书籍管理
-            </Link>
-            <Link
-              href="/admin/characters"
-              className="text-gray-600 hover:text-[#2F5233]"
-            >
-              角色管理
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700"
-            >
-              退出登录
-            </button>
-          </div>
-        </div>
-      </nav>
-
+    <AdminLayout>
       {/* 主内容区 */}
-      <main className="max-w-7xl mx-auto px-8 py-12">
-        <h2 className="text-3xl font-bold text-gray-800 mb-8">系统概览</h2>
+      <div className="max-w-7xl mx-auto px-8 py-12">
+        <h2 className="text-3xl font-light text-gray-800 mb-8">系统概览</h2>
 
         {/* 统计卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
@@ -156,7 +118,7 @@ export default function AdminDashboard() {
 
         {/* 快捷操作 */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">快捷操作</h3>
+          <h3 className="text-xl font-light text-gray-800 mb-4">快捷操作</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <ActionButton
               title="添加新书籍"
@@ -181,7 +143,7 @@ export default function AdminDashboard() {
 
         {/* 最近活动 */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">最近活动</h3>
+          <h3 className="text-xl font-light text-gray-800 mb-4">最近活动</h3>
           <div className="space-y-3">
             <ActivityItem
               text="用户 user@example.com 创建了新对话"
@@ -197,8 +159,8 @@ export default function AdminDashboard() {
             />
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
 
@@ -221,9 +183,9 @@ function StatCard({
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-4xl">{icon}</span>
-        <span className="text-3xl font-bold text-[#2F5233]">{value}</span>
+        <span className="text-3xl font-light text-[#2C5530]">{value}</span>
       </div>
-      <h3 className="text-sm font-medium text-gray-600">{title}</h3>
+      <h3 className="text-sm font-light text-gray-600">{title}</h3>
     </Link>
   );
 }
@@ -243,13 +205,13 @@ function ActionButton({
   return (
     <Link
       href={link}
-      className="border-2 border-gray-200 rounded-lg p-4 hover:border-[#2F5233] hover:bg-gray-50 transition-colors"
+      className="border-2 border-gray-200 rounded-lg p-4 hover:border-[#2C5530] hover:bg-gray-50 transition-colors"
     >
       <div className="flex items-start gap-3">
         <span className="text-3xl">{icon}</span>
         <div>
-          <h4 className="font-bold text-gray-800 mb-1">{title}</h4>
-          <p className="text-sm text-gray-600">{description}</p>
+          <h4 className="font-light text-gray-800 mb-1">{title}</h4>
+          <p className="text-sm font-light text-gray-600">{description}</p>
         </div>
       </div>
     </Link>
@@ -260,8 +222,8 @@ function ActionButton({
 function ActivityItem({ text, time }: { text: string; time: string }) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-      <span className="text-gray-700">{text}</span>
-      <span className="text-sm text-gray-500">{time}</span>
+      <span className="font-light text-gray-700">{text}</span>
+      <span className="text-sm font-light text-gray-500">{time}</span>
     </div>
   );
 }

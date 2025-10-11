@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 interface BookInfo {
   title: string;
@@ -101,22 +102,18 @@ export default function NewBookPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b border-gray-200 px-8 py-4">
-        <div className="flex items-center gap-4 max-w-4xl mx-auto">
+    <AdminLayout title="添加新书">
+      {/* 主内容 */}
+      <main className="max-w-4xl mx-auto px-8 py-12">
+        <div className="mb-6">
           <Link
             href="/admin/books"
-            className="text-gray-600 hover:text-[#2F5233]"
+            className="text-gray-600 hover:text-[#2C5530] font-light"
           >
             ← 返回书籍列表
           </Link>
-          <h1 className="text-2xl font-bold text-[#2F5233]">添加新书</h1>
         </div>
-      </nav>
 
-      {/* 主内容 */}
-      <main className="max-w-4xl mx-auto px-8 py-12">
         {/* 步骤指示器 */}
         <div className="mb-8">
           <div className="flex items-center gap-4">
@@ -138,14 +135,14 @@ export default function NewBookPage() {
         {/* 步骤1: 输入书名 */}
         {step === 'input' && (
           <div className="bg-white rounded-lg shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">请输入书籍名称</h2>
+            <h2 className="text-xl font-light text-gray-800 mb-4">请输入书籍名称</h2>
             <p className="text-gray-600 mb-6">
               AI将自动识别书籍信息，包括作者、简介、分类等。
             </p>
 
             <form onSubmit={handleIdentify}>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-light text-gray-700 mb-2">
                   书籍名称
                 </label>
                 <input
@@ -153,14 +150,14 @@ export default function NewBookPage() {
                   value={bookTitle}
                   onChange={(e) => setBookTitle(e.target.value)}
                   placeholder="例如：三体"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                   autoFocus
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-[#2F5233] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-medium"
+                className="w-full bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light"
               >
                 开始AI识别
               </button>
@@ -172,7 +169,7 @@ export default function NewBookPage() {
         {step === 'identifying' && (
           <div className="bg-white rounded-lg shadow-sm p-8">
             <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 border-4 border-[#2F5233] border-t-transparent rounded-full animate-spin" />
+              <div className="w-16 h-16 border-4 border-[#2C5530] border-t-transparent rounded-full animate-spin" />
               <p className="text-lg text-gray-700">AI正在识别《{bookTitle}》...</p>
               <p className="text-sm text-gray-500">这可能需要几秒钟时间</p>
             </div>
@@ -182,7 +179,7 @@ export default function NewBookPage() {
         {/* 步骤3: 确认信息 */}
         {step === 'review' && identifyResult && (
           <div className="bg-white rounded-lg shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">确认书籍信息</h2>
+            <h2 className="text-xl font-light text-gray-800 mb-6">确认书籍信息</h2>
 
             <div className="space-y-4 mb-6">
               <InfoRow label="书名" value={identifyResult.bookInfo.title} />
@@ -208,7 +205,7 @@ export default function NewBookPage() {
                 : 'bg-yellow-50 border border-yellow-200'
             }`}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium">
+                <span className="font-light">
                   AI了解度: {identifyResult.aiScore}/10
                 </span>
                 {identifyResult.requiresDocument && (
@@ -231,13 +228,13 @@ export default function NewBookPage() {
                   setStep('input');
                   setIdentifyResult(null);
                 }}
-                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-light"
               >
                 重新识别
               </button>
               <button
                 onClick={handleCreate}
-                className="flex-1 bg-[#2F5233] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-medium"
+                className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light"
               >
                 确认创建
               </button>
@@ -249,13 +246,13 @@ export default function NewBookPage() {
         {step === 'creating' && (
           <div className="bg-white rounded-lg shadow-sm p-8">
             <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 border-4 border-[#2F5233] border-t-transparent rounded-full animate-spin" />
+              <div className="w-16 h-16 border-4 border-[#2C5530] border-t-transparent rounded-full animate-spin" />
               <p className="text-lg text-gray-700">正在创建书籍...</p>
             </div>
           </div>
         )}
       </main>
-    </div>
+    </AdminLayout>
   );
 }
 
@@ -269,14 +266,14 @@ function Step({ number, label, active, completed }: {
   return (
     <div className="flex flex-col items-center gap-2">
       <div className={`
-        w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
-        ${completed ? 'bg-[#2F5233] text-white' :
-          active ? 'bg-[#2F5233] text-white' :
+        w-10 h-10 rounded-full flex items-center justify-center font-light text-sm
+        ${completed ? 'bg-[#2C5530] text-white' :
+          active ? 'bg-[#2C5530] text-white' :
           'bg-gray-200 text-gray-500'}
       `}>
         {completed ? '✓' : number}
       </div>
-      <span className={`text-sm ${active || completed ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
+      <span className={`text-sm ${active || completed ? 'text-gray-800 font-light' : 'text-gray-500'}`}>
         {label}
       </span>
     </div>

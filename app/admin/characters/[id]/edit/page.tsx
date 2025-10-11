@@ -5,6 +5,8 @@
 
 'use client';
 
+import AdminLayout from '@/components/layout/AdminLayout';
+
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -135,40 +137,38 @@ export default function EditCharacterPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">加载中...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-600">加载中...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   if (!character) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-600">角色不存在</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-red-600">角色不存在</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b border-gray-200 px-8 py-4">
-        <div className="flex items-center gap-4 max-w-4xl mx-auto">
+    <AdminLayout title="编辑角色">
+      <main className="max-w-4xl mx-auto px-8 py-12">
+        <div className="mb-6">
           <Link
             href="/admin/characters"
-            className="text-gray-600 hover:text-[#2F5233]"
+            className="text-gray-600 hover:text-[#2C5530] font-light"
           >
             ← 返回角色列表
           </Link>
-          <h1 className="text-2xl font-bold text-[#2F5233]">编辑角色</h1>
         </div>
-      </nav>
-
-      {/* 主内容 */}
-      <main className="max-w-4xl mx-auto px-8 py-12">
         <form onSubmit={handleSubmit}>
           <div className="bg-white rounded-lg shadow-sm p-8 space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">角色信息</h2>
+            <h2 className="text-xl font-light text-gray-800 mb-4">角色信息</h2>
 
             {/* 错误提示 */}
             {error && (
@@ -186,42 +186,42 @@ export default function EditCharacterPage() {
 
             {/* 角色名 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 角色名 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 required
               />
             </div>
 
             {/* 简介 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 简介
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 placeholder="角色的基本描述"
               />
             </div>
 
             {/* 性格特征 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 性格特征 (JSON格式)
               </label>
               <textarea
                 value={formData.personalityTraits}
                 onChange={(e) => setFormData({ ...formData, personalityTraits: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent font-mono text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
                 placeholder='{"勇敢": 9, "聪明": 8}'
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -231,42 +231,42 @@ export default function EditCharacterPage() {
 
             {/* 说话风格 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 说话风格
               </label>
               <textarea
                 value={formData.speakingStyle}
                 onChange={(e) => setFormData({ ...formData, speakingStyle: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 placeholder="描述角色的说话方式、用词习惯等"
               />
             </div>
 
             {/* 背景故事 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 背景故事
               </label>
               <textarea
                 value={formData.backgroundStory}
                 onChange={(e) => setFormData({ ...formData, backgroundStory: e.target.value })}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 placeholder="角色的成长经历、重要事件等"
               />
             </div>
 
             {/* Prompt模板 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-light text-gray-700 mb-2">
                 Prompt模板 (高级)
               </label>
               <textarea
                 value={formData.promptTemplate}
                 onChange={(e) => setFormData({ ...formData, promptTemplate: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent font-mono text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
                 placeholder="自定义AI对话时使用的prompt模板"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -279,14 +279,14 @@ export default function EditCharacterPage() {
               <button
                 type="button"
                 onClick={() => router.push('/admin/characters')}
-                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-light"
                 disabled={saving}
               >
                 取消
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-[#2F5233] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-medium disabled:opacity-50"
+                className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50"
                 disabled={saving}
               >
                 {saving ? '保存中...' : '保存更新'}
@@ -295,6 +295,6 @@ export default function EditCharacterPage() {
           </div>
         </form>
       </main>
-    </div>
+    </AdminLayout>
   );
 }

@@ -5,6 +5,8 @@
 
 'use client';
 
+import AdminLayout from '@/components/layout/AdminLayout';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -161,56 +163,21 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.push('/admin/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">加载中...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-600">加载中...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC]">
-      {/* 导航栏 */}
-      <nav className="bg-white border-b border-gray-200 px-8 py-4">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#2F5233]">文档管理</h1>
-          <div className="flex gap-6">
-            <Link href="/admin" className="text-gray-600 hover:text-[#2F5233]">
-              仪表板
-            </Link>
-            <Link href="/admin/books" className="text-gray-600 hover:text-[#2F5233]">
-              书籍管理
-            </Link>
-            <Link href="/admin/characters" className="text-gray-600 hover:text-[#2F5233]">
-              角色管理
-            </Link>
-            <Link
-              href="/admin/documents"
-              className="text-[#2F5233] hover:text-[#1a2e1c] font-medium"
-            >
-              文档管理
-            </Link>
-            <button onClick={handleLogout} className="text-red-600 hover:text-red-700">
-              退出登录
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* 主内容区 */}
+    <AdminLayout title="文档管理">
       <main className="max-w-7xl mx-auto px-8 py-12">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">文档与向量化管理</h2>
+          <h2 className="text-3xl font-light text-gray-800 mb-2">文档与向量化管理</h2>
           <p className="text-gray-600">
             上传书籍文档并进行向量化处理，以支持RAG智能检索
           </p>
@@ -233,7 +200,7 @@ export default function DocumentsPage() {
             <p className="text-gray-500 mb-4">还没有任何书籍</p>
             <Link
               href="/admin/books/new"
-              className="inline-block bg-[#2F5233] text-white px-6 py-2 rounded-lg hover:bg-[#1a2e1c]"
+              className="inline-block bg-[#2C5530] text-white px-6 py-2 rounded-lg hover:bg-[#1a2e1c]"
             >
               添加第一本书
             </Link>
@@ -244,11 +211,11 @@ export default function DocumentsPage() {
             <div className="lg:col-span-1 space-y-6">
               {/* 书籍选择 */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">选择书籍</h3>
+                <h3 className="text-lg font-light text-gray-800 mb-4">选择书籍</h3>
                 <select
                   value={selectedBook}
                   onChange={(e) => setSelectedBook(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 >
                   {books.map((book) => (
                     <option key={book.id} value={book.id}>
@@ -261,29 +228,29 @@ export default function DocumentsPage() {
 
               {/* 文档上传 */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">上传文档</h3>
+                <h3 className="text-lg font-light text-gray-800 mb-4">上传文档</h3>
                 <form onSubmit={handleFileUpload} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-light text-gray-700 mb-2">
                       文档标题 <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="title"
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                       placeholder="例如: 三体第一部"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-light text-gray-700 mb-2">
                       文档类型 <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="type"
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                     >
                       <option value="main">主文档</option>
                       <option value="supplement">补充文档</option>
@@ -291,7 +258,7 @@ export default function DocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-light text-gray-700 mb-2">
                       选择文件 <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -299,7 +266,7 @@ export default function DocumentsPage() {
                       name="file"
                       required
                       accept=".txt,.md,.markdown"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       支持格式: TXT, Markdown (.md)
@@ -309,7 +276,7 @@ export default function DocumentsPage() {
                   <button
                     type="submit"
                     disabled={uploading}
-                    className="w-full bg-[#2F5233] text-white py-2 rounded-lg hover:bg-[#1a2e1c] transition-colors disabled:opacity-50"
+                    className="w-full bg-[#2C5530] text-white py-2 rounded-lg hover:bg-[#1a2e1c] transition-colors disabled:opacity-50"
                   >
                     {uploading ? '上传中...' : '上传文档'}
                   </button>
@@ -321,12 +288,12 @@ export default function DocumentsPage() {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-gray-800">文档列表</h3>
+                  <h3 className="text-lg font-light text-gray-800">文档列表</h3>
                   {documents.length > 0 && (
                     <button
                       onClick={() => handleVectorize(selectedBook)}
                       disabled={vectorizing}
-                      className="bg-[#2F5233] text-white px-4 py-2 rounded-lg hover:bg-[#1a2e1c] transition-colors text-sm disabled:opacity-50"
+                      className="bg-[#2C5530] text-white px-4 py-2 rounded-lg hover:bg-[#1a2e1c] transition-colors text-sm disabled:opacity-50"
                     >
                       {vectorizing ? '向量化中...' : '批量向量化'}
                     </button>
@@ -342,19 +309,19 @@ export default function DocumentsPage() {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">
                             标题
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">
                             类型
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">
                             大小
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">
                             向量化
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">
                             上传时间
                           </th>
                         </tr>
@@ -363,7 +330,7 @@ export default function DocumentsPage() {
                         {documents.map((doc) => (
                           <tr key={doc.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4">
-                              <span className="font-medium text-gray-900">{doc.title}</span>
+                              <span className="font-light text-gray-900">{doc.title}</span>
                             </td>
                             <td className="px-6 py-4">
                               <span
@@ -400,6 +367,6 @@ export default function DocumentsPage() {
           </div>
         )}
       </main>
-    </div>
+    </AdminLayout>
   );
 }
