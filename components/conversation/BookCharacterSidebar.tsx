@@ -109,6 +109,37 @@ export default function BookCharacterSidebar({
     }
   };
 
+  const handleSwitchToBook = async () => {
+    if (conversation.type === 'book') return;
+
+    try {
+      setSwitching(true);
+      setError('');
+
+      const response = await fetch(`/api/conversations/${conversation.id}/character`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ characterId: null }), // null表示切换回书籍对话
+      });
+
+      if (!response.ok) {
+        throw new Error('切换到书籍对话失败');
+      }
+
+      // 通知父组件更新对话状态
+      if (onCharacterSwitch) {
+        onCharacterSwitch(''); // 空字符串表示书籍对话
+      }
+
+    } catch (err) {
+      console.error('[BookCharacterSidebar] 切换到书籍对话失败:', err);
+      setError(err instanceof Error ? err.message : '切换到书籍对话失败');
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-80 h-full bg-white border-l border-gray-200 flex items-center justify-center">
@@ -176,10 +207,7 @@ export default function BookCharacterSidebar({
           <div className="space-y-3">
             {/* 书籍对话模式 */}
             <button
-              onClick={() => {
-                if (conversation.type === 'book') return;
-                // TODO: 切换回书籍对话模式
-              }}
+              onClick={() => handleSwitchToBook()}
               disabled={switching || conversation.type === 'book'}
               className={`w-full p-4 rounded-lg text-left transition-all ${
                 conversation.type === 'book'

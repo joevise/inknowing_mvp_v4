@@ -191,11 +191,29 @@ export class ConversationService {
         break;
     }
 
-    // 保存AI回复
+    // 获取头像信息
+    let cover_url: string | undefined;
+    let character_name: string | undefined;
+    let book_title = book.title;
+
+    if (conversation.type === 'character' && conversation.character_id) {
+      const character = getCharacterById(conversation.character_id);
+      if (character) {
+        cover_url = character.avatar_url || undefined;
+        character_name = character.name;
+      }
+    } else {
+      cover_url = book.cover_url || undefined;
+    }
+
+    // 保存AI回复（包含头像信息）
     const metadata: any = {
       strategy: routingDecision.strategy,
       query_type: routingDecision.queryType,
       response_time: Date.now() - startTime,
+      cover_url,
+      character_name,
+      book_title,
     };
 
     if (sources) {
