@@ -51,6 +51,26 @@ export async function PUT(
     const body = await request.json();
     const { characterId } = body;
 
+    // 如果characterId为null，表示切换回书籍对话
+    if (characterId === null) {
+      updateConversation(params.id, {
+        character_id: null,
+        type: 'book',
+        updated_at: new Date(),
+      });
+
+      console.log('[API] 切换回书籍对话成功:', {
+        conversationId: params.id,
+      });
+
+      const updatedConversation = getConversationById(params.id);
+      return NextResponse.json({
+        success: true,
+        conversation: updatedConversation,
+      });
+    }
+
+    // 5. 验证角色是否存在且属于同一本书
     if (!characterId) {
       return NextResponse.json(
         { error: '缺少 characterId 参数' },
@@ -58,7 +78,6 @@ export async function PUT(
       );
     }
 
-    // 5. 验证角色是否存在且属于同一本书
     const character = getCharacterById(characterId);
     if (!character) {
       return NextResponse.json(

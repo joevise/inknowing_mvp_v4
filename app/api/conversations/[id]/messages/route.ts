@@ -7,8 +7,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ConversationService } from '@/lib/services/conversation-service';
 import { requireAuth } from '@/lib/auth/middleware';
-import { userOwnsConversation } from '@/lib/db/conversations';
+import { userOwnsConversation, getConversationById } from '@/lib/db/conversations';
 import { getMessagesByConversationId } from '@/lib/db/messages';
+import { getBookById } from '@/lib/db/books';
+import { getCharacterById } from '@/lib/db/characters';
 
 const conversationService = new ConversationService();
 
@@ -135,11 +137,35 @@ export async function GET(
     // 4. 获取消息列表
     const messages = getMessagesByConversationId(params.id, limit, offset);
 
-    // 5. 返回结果
+    // 5. 为没有头像信息的消息补充默认头像（使用书籍封面）
+    const conversation = getConversationById(params.id);
+    const book = conversation ? getBookById(conversation.book_id) : null;
+
+    const messagesWithAvatar = messages.map((msg: any) => {
+      // 只处理assistant消息
+      if (msg.role === 'assistant' && msg.metadata) {
+        const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+
+        // 如果metadata里没有头像信息，补充书籍封面作为默认值
+        if (!metadata.cover_url && book) {
+          return {
+            ...msg,
+            metadata: {
+              ...metadata,
+              cover_url: book.cover_url || undefined,
+              book_title: book.title,
+            }
+          };
+        }
+      }
+      return msg;
+    });
+
+    // 6. 返回结果
     return NextResponse.json({
       success: true,
-      messages,
-      total: messages.length,
+      messages: messagesWithAvatar,
+      total: messagesWithAvatar.length,
     });
 
   } catch (error) {

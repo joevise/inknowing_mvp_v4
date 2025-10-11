@@ -292,8 +292,9 @@ export function updateConversation(
 
   if (input.character_id !== undefined) {
     // 如果同时更新type为character，或者原本就是character类型，则允许设置character_id
+    // 如果character_id为null且type为book，也允许（这是切换回书籍对话的情况）
     const targetType = input.type !== undefined ? input.type : conversation.type;
-    if (targetType !== 'character') {
+    if (targetType !== 'character' && input.character_id !== null) {
       throw new Error('Cannot set character_id for book conversation');
     }
     updates.push('character_id = ?');
