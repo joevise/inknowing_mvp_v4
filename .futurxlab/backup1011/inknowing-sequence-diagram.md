@@ -227,7 +227,6 @@ sequenceDiagram
     participant ChromaDB as ChromaDB
     participant DB as SQLite数据库
     participant FS as 文件系统
-    participant RuntimeConfig as 运行时配置
 
     Note over A,DB: 管理员登录 #REF-ADMIN-LOGIN
     A->>UI: 访问/admin
@@ -237,49 +236,6 @@ sequenceDiagram
     API->>API: 验证环境变量密码
     API-->>UI: {"admin_session": "..."}
     UI->>A: 进入管理后台
-
-    Note over A,RuntimeConfig: AI配置管理 #REF-AI-CONFIG-MANAGE
-    A->>UI: 访问AI配置页面
-    UI->>API: [GET /api/admin/config/ai]
-    API->>RuntimeConfig: 读取当前配置
-    RuntimeConfig-->>API: 返回配置（脱敏）
-    API-->>UI: {"config": {provider, qwen_api_key: "***1234", ...}}
-    UI->>A: 显示配置表单
-
-    A->>UI: 选择AI服务提供商
-    A->>UI: 输入API配置信息
-    UI->>API: [PUT /api/admin/config/ai]<br/>{provider, qwen_api_key, ...}
-    API->>API: 验证配置完整性
-
-    alt 配置验证失败
-        API-->>UI: {"error": "必填字段缺失"}
-        UI->>A: 显示错误提示
-    else 配置验证通过
-        API->>RuntimeConfig: 更新配置到内存缓存
-        RuntimeConfig->>DB: 持久化到config表
-        DB-->>RuntimeConfig: 保存成功
-        RuntimeConfig-->>API: 更新成功（立即生效）
-        API-->>UI: {"success": true, "needRestart": false}
-        UI->>A: 配置已保存并生效
-    end
-
-    Note over A,RuntimeConfig: 测试AI连接 #REF-AI-CONFIG-TEST
-    A->>UI: 点击"测试连接"
-    UI->>API: [POST /api/admin/config/ai/test]<br/>{provider, api_key, ...}
-    API->>RuntimeConfig: 临时使用测试配置
-    RuntimeConfig->>AI: 发送测试请求
-
-    alt AI连接失败
-        AI-->>RuntimeConfig: 连接错误
-        RuntimeConfig-->>API: {"success": false, "error": "..."}
-        API-->>UI: 测试失败信息
-        UI->>A: 显示连接失败原因
-    else AI连接成功
-        AI-->>RuntimeConfig: 测试成功
-        RuntimeConfig-->>API: {"success": true}
-        API-->>UI: 测试成功
-        UI->>A: 显示连接成功提示
-    end
 
     Note over A,DB: AI识别书籍 #REF-BOOK-IDENTIFY
     A->>UI: 输入书名
@@ -339,97 +295,7 @@ sequenceDiagram
     UI->>A: 更新成功提示
 ```
 
-## 6. 收藏管理时序 (FAVORITE_SEQUENCE)
-
-```mermaid
-sequenceDiagram
-    participant U as 用户
-    participant UI as 前端界面
-    participant API as API网关
-    participant DB as SQLite数据库
-
-    Note over U,DB: 添加收藏 #REF-FAVORITE-ADD
-    U->>UI: 点击收藏按钮
-    UI->>API: [POST /api/favorites]<br/>{bookId: "..."}
-    API->>API: 验证用户登录状态
-    API->>DB: 检查是否已收藏
-
-    alt 已收藏
-        DB-->>API: 返回现有记录
-        API-->>UI: {"favorite": {...}}
-        UI->>U: 显示已收藏状态
-    else 未收藏
-        API->>DB: 创建收藏记录
-        DB-->>API: 收藏成功
-        API-->>UI: {"favorite": {...}}
-        UI->>U: 更新为已收藏状态
-    end
-
-    Note over U,DB: 取消收藏 #REF-FAVORITE-REMOVE
-    U->>UI: 再次点击收藏按钮
-    UI->>API: [DELETE /api/favorites/{bookId}]
-    API->>DB: 删除收藏记录
-    DB-->>API: 删除成功
-    API-->>UI: {"success": true}
-    UI->>U: 更新为未收藏状态
-
-    Note over U,DB: 查看收藏列表 #REF-FAVORITE-LIST
-    U->>UI: 访问"我的收藏"页面
-    UI->>API: [GET /api/auth/me]<br/>验证登录状态
-    API-->>UI: 用户信息
-    UI->>API: [GET /api/favorites]
-    API->>DB: 查询用户收藏
-    DB->>DB: JOIN books表获取书籍信息
-    DB-->>API: 返回收藏列表+书籍详情
-    API-->>UI: {"favorites": [...]}
-    UI->>U: 展示收藏书籍网格
-
-    Note over U,DB: 从收藏进入书籍 #REF-FAVORITE-NAVIGATE
-    U->>UI: 点击收藏的书籍
-    UI->>API: [GET /api/books/{id}]
-    API->>DB: 查询书籍详情
-    DB-->>API: 返回书籍信息
-    API-->>UI: {"book": {...}}
-    UI->>U: 显示书籍详情页
-```
-
-## 7. 用户信息管理时序 (USER_MANAGEMENT_SEQUENCE)
-
-```mermaid
-sequenceDiagram
-    participant U as 用户
-    participant UI as 前端界面
-    participant API as API网关
-    participant DB as SQLite数据库
-
-    Note over U,DB: 查看个人信息 #REF-USER-PROFILE
-    U->>UI: 访问个人中心
-    UI->>API: [GET /api/auth/me]
-    API->>API: 验证Session
-    API->>DB: 查询用户信息
-    DB-->>API: 返回用户数据
-    API-->>UI: {"user": {id, email, username, created_at}}
-    UI->>U: 显示个人信息
-
-    Note over U,DB: 更新用户名 #REF-USER-UPDATE
-    U->>UI: 编辑用户名
-    UI->>U: 显示编辑表单
-    U->>UI: 输入新用户名
-    UI->>API: [PUT /api/user/update-username]<br/>{username: "新用户名"}
-    API->>API: 验证用户名格式
-
-    alt 用户名无效
-        API-->>UI: {"error": "用户名格式不正确"}
-        UI->>U: 显示错误提示
-    else 用户名有效
-        API->>DB: 更新用户名
-        DB-->>API: 更新成功
-        API-->>UI: {"success": true, "user": {...}}
-        UI->>U: 显示更新成功
-    end
-```
-
-## 8. 历史管理时序 (HISTORY_SEQUENCE)
+## 6. 历史管理时序 (HISTORY_SEQUENCE)
 
 ```mermaid
 sequenceDiagram
@@ -479,8 +345,6 @@ sequenceDiagram
 | CHAT_SEQUENCE | 智能对话 | BROWSING→CONVERSING | /api/conversations/* |
 | CHARACTER_SEQUENCE | 角色扮演 | CONVERSING→CHARACTER_MODE | /api/conversations/character |
 | ADMIN_SEQUENCE | 管理员操作 | IDLE→ADMIN_MODE | /api/admin/* |
-| FAVORITE_SEQUENCE | 收藏管理 | BROWSING→FAVORITED | /api/favorites/* |
-| USER_MANAGEMENT_SEQUENCE | 用户信息管理 | USER_ACTIVE→USER_MANAGING | /api/auth/me, /api/user/* |
 | HISTORY_SEQUENCE | 历史管理 | IDLE→REVIEWING | /api/conversations/history |
 
 ### 关键交互点标注
@@ -491,11 +355,4 @@ sequenceDiagram
 - #REF-SMART-CHAT: 智能路由决策
 - #REF-CHAR-INIT: 角色初始化
 - #REF-DOC-VECTOR: 文档向量化
-- #REF-AI-CONFIG-MANAGE: AI配置管理交互
-- #REF-AI-CONFIG-TEST: AI配置测试交互
-- #REF-FAVORITE-ADD: 添加收藏交互
-- #REF-FAVORITE-REMOVE: 取消收藏交互
-- #REF-FAVORITE-LIST: 收藏列表查看交互
-- #REF-USER-PROFILE: 用户信息查看交互
-- #REF-USER-UPDATE: 用户信息更新交互
 - #REF-HISTORY-VIEW: 历史查看

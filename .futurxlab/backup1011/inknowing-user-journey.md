@@ -18,8 +18,6 @@ journey
       按分类筛选 {API: GET /api/books?category=}: 4: 注册用户
       查看书籍详情 {API: GET /api/books/{id}}: 5: 注册用户
       查看角色列表 {API: GET /api/books/{id}/characters}: 4: 注册用户
-      收藏感兴趣的书 {API: POST /api/favorites}: 5: 注册用户
-      访问我的收藏 {API: GET /api/favorites}: 5: 注册用户
 
     section 智能对话
       选择与书籍对话 {API: POST /api/conversations/create}: 5: 注册用户
@@ -36,31 +34,21 @@ journey
       切换其他角色 {API: PUT /api/conversations/{id}/character}: 4: 注册用户
       沉浸式学习: 5: 注册用户
 
-    section 个人中心管理
-      访问个人中心 {API: GET /api/auth/me}: 5: 注册用户
-      更新用户名 {API: PUT /api/user/update-username}: 4: 注册用户
+    section 历史管理
+      访问个人中心 {API: GET /api/users/profile}: 5: 注册用户
       查看对话历史 {API: GET /api/conversations}: 5: 注册用户
       搜索历史记录 {API: GET /api/conversations/search}: 4: 注册用户
       继续历史对话 {API: GET /api/conversations/{id}}: 5: 注册用户
       删除对话记录 {API: DELETE /api/conversations/{id}}: 3: 注册用户
-      查看收藏书籍 {API: GET /api/favorites}: 5: 注册用户
-      取消收藏 {API: DELETE /api/favorites/{bookId}}: 3: 注册用户
 
     section 管理员操作
       登录管理后台 {API: POST /api/admin/login}: 5: 管理员
-      查看系统统计 {API: GET /api/admin/stats}: 5: 管理员
-      配置AI服务提供商 #REF-AI-CONFIG {API: PUT /api/admin/config/ai}: 5: 管理员
-      测试AI连接 {API: POST /api/admin/config/ai/test}: 4: 管理员
       AI识别书籍 {API: POST /api/admin/books/identify}: 5: 管理员
       上传书籍文档 {API: POST /api/admin/books/{id}/documents}: 5: 管理员
       向量化处理 #REF-VECTOR-001 {API: POST /api/admin/books/{id}/vectorize}: 4: 管理员
       管理角色信息 {API: PUT /api/admin/characters/{id}}: 4: 管理员
+      配置AI服务 {API: PUT /api/admin/config/ai}: 5: 管理员
       上下架书籍 {API: PUT /api/admin/books/{id}/status}: 5: 管理员
-
-    section 了解平台
-      访问关于页面: 5: 游客, 注册用户
-      了解平台理念: 5: 游客, 注册用户
-      查看技术特色: 4: 游客, 注册用户
 ```
 
 ## 用户旅程关键决策点
@@ -95,18 +83,6 @@ journey
 - **状态转换**: 文档已上传 → 向量化中 → 就绪
 - **时序起点**: 向量化处理流程
 
-### 6. 收藏管理决策 #REF-FAVORITE-001
-- **触发条件**: 用户喜欢某本书
-- **API映射**: POST /api/favorites, DELETE /api/favorites/{bookId}
-- **状态转换**: 未收藏 ⟷ 已收藏
-- **时序起点**: 收藏操作流程
-
-### 7. AI配置切换决策 #REF-AI-CONFIG
-- **触发条件**: 管理员更改AI服务提供商
-- **API映射**: PUT /api/admin/config/ai
-- **状态转换**: 阿里云模式 ⟷ OpenAI模式
-- **时序起点**: AI配置管理流程
-
 ## 业务逻辑守恒验证
 
 ### 守恒原理验证点
@@ -127,9 +103,8 @@ journey
 | 用户旅程阶段 | 时序图映射 | 状态图映射 | API端点映射 |
 |------------|-----------|-----------|------------|
 | 发现与注册 | AUTH_SEQUENCE | GUEST→REGISTERED | /api/auth/* |
-| 探索书籍 | BROWSE_SEQUENCE | BROWSING | /api/books/*, /api/favorites/* |
+| 探索书籍 | BROWSE_SEQUENCE | BROWSING | /api/books/* |
 | 智能对话 | CHAT_SEQUENCE | CONVERSING | /api/conversations/* |
 | 角色扮演 | CHARACTER_SEQUENCE | CHARACTER_MODE | /api/conversations/character |
-| 个人中心管理 | USER_MANAGEMENT_SEQUENCE | USER_MANAGING | /api/auth/me, /api/user/*, /api/conversations/*, /api/favorites/* |
+| 历史管理 | HISTORY_SEQUENCE | REVIEWING | /api/conversations/history |
 | 管理员操作 | ADMIN_SEQUENCE | ADMIN_MODE | /api/admin/* |
-| 了解平台 | INFO_SEQUENCE | INFO_VIEWING | /about |

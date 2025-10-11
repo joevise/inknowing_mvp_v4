@@ -217,130 +217,7 @@ stateDiagram-v2
     note right of VECTORIZING: 向量化处理状态
 ```
 
-## 6. 收藏管理状态机 (FAVORITE_STATE_MACHINE)
-
-```mermaid
-stateDiagram-v2
-    [*] --> NOT_FAVORITED: 初始状态
-
-    NOT_FAVORITED --> ADDING_FAVORITE: 点击收藏 [API: POST /api/favorites]
-    ADDING_FAVORITE --> CHECKING_AUTH: 验证登录状态
-    CHECKING_AUTH --> NOT_FAVORITED: 未登录，跳转登录
-    CHECKING_AUTH --> CREATING_FAVORITE: 已登录
-    CREATING_FAVORITE --> FAVORITED: 收藏成功
-
-    FAVORITED --> REMOVING_FAVORITE: 取消收藏 [API: DELETE /api/favorites/{bookId}]
-    REMOVING_FAVORITE --> DELETING_RECORD: 删除收藏记录
-    DELETING_RECORD --> NOT_FAVORITED: 删除成功
-
-    NOT_FAVORITED --> VIEWING_FAVORITES: 查看收藏列表 [API: GET /api/favorites]
-    FAVORITED --> VIEWING_FAVORITES: 查看收藏列表
-    VIEWING_FAVORITES --> FAVORITE_LIST_LOADED: 加载完成
-    FAVORITE_LIST_LOADED --> FAVORITE_DETAIL: 点击书籍
-    FAVORITE_DETAIL --> VIEWING_FAVORITES: 返回列表
-
-    state FAVORITED {
-        [*] --> SYNCED
-        SYNCED --> SYNC_PENDING: 离线操作
-        SYNC_PENDING --> SYNCED: 同步成功
-    }
-
-    note right of FAVORITED: 已收藏状态
-    note right of NOT_FAVORITED: 未收藏状态
-```
-
-## 7. 用户信息管理状态机 (USER_MANAGEMENT_STATE_MACHINE)
-
-```mermaid
-stateDiagram-v2
-    [*] --> USER_IDLE: 用户登录后
-
-    USER_IDLE --> VIEWING_PROFILE: 访问个人中心 [API: GET /api/auth/me]
-    VIEWING_PROFILE --> LOADING_USER_INFO: 加载用户信息
-    LOADING_USER_INFO --> PROFILE_LOADED: 加载完成
-    PROFILE_LOADED --> USER_IDLE: 返回
-
-    PROFILE_LOADED --> EDITING_USERNAME: 点击编辑用户名
-    EDITING_USERNAME --> VALIDATING_USERNAME: 提交新用户名 [API: PUT /api/user/update-username]
-    VALIDATING_USERNAME --> EDITING_USERNAME: 格式错误
-    VALIDATING_USERNAME --> UPDATING_USERNAME: 格式正确
-    UPDATING_USERNAME --> PROFILE_UPDATED: 更新成功
-    PROFILE_UPDATED --> PROFILE_LOADED: 刷新信息
-
-    PROFILE_LOADED --> VIEWING_CONVERSATIONS: 查看对话历史
-    PROFILE_LOADED --> VIEWING_FAVORITES: 查看收藏列表
-
-    state PROFILE_LOADED {
-        [*] --> DISPLAY_INFO
-        DISPLAY_INFO --> SHOW_STATS: 显示统计数据
-        SHOW_STATS --> DISPLAY_INFO: 刷新
-    }
-
-    note right of USER_IDLE: 用户空闲状态
-    note right of PROFILE_LOADED: 个人信息已加载
-```
-
-## 8. AI配置管理状态机 (AI_CONFIG_STATE_MACHINE)
-
-```mermaid
-stateDiagram-v2
-    [*] --> CONFIG_IDLE: 系统启动
-
-    CONFIG_IDLE --> LOADING_CONFIG: 管理员访问配置页 [API: GET /api/admin/config/ai]
-    LOADING_CONFIG --> CONFIG_LOADED: 加载完成
-    CONFIG_LOADED --> CONFIG_DISPLAY: 显示当前配置
-
-    CONFIG_DISPLAY --> SELECTING_PROVIDER: 选择AI服务提供商
-    SELECTING_PROVIDER --> ALIYUN_MODE: 选择阿里云
-    SELECTING_PROVIDER --> OPENAI_MODE: 选择OpenAI兼容
-
-    ALIYUN_MODE --> EDITING_ALIYUN: 编辑阿里云配置
-    OPENAI_MODE --> EDITING_OPENAI: 编辑OpenAI配置
-
-    EDITING_ALIYUN --> TESTING_CONFIG: 测试连接 [API: POST /api/admin/config/ai/test]
-    EDITING_OPENAI --> TESTING_CONFIG: 测试连接
-
-    TESTING_CONFIG --> TEST_IN_PROGRESS: 发送测试请求
-    TEST_IN_PROGRESS --> TEST_FAILED: 连接失败
-    TEST_IN_PROGRESS --> TEST_SUCCESS: 连接成功
-
-    TEST_FAILED --> EDITING_ALIYUN: 修改配置（阿里云）
-    TEST_FAILED --> EDITING_OPENAI: 修改配置（OpenAI）
-    TEST_SUCCESS --> SAVING_CONFIG: 确认保存
-
-    EDITING_ALIYUN --> SAVING_CONFIG: 直接保存（跳过测试）
-    EDITING_OPENAI --> SAVING_CONFIG: 直接保存（跳过测试）
-
-    SAVING_CONFIG --> VALIDATING_CONFIG: 验证配置 [API: PUT /api/admin/config/ai]
-    VALIDATING_CONFIG --> CONFIG_DISPLAY: 验证失败
-    VALIDATING_CONFIG --> UPDATING_RUNTIME: 验证成功
-    UPDATING_RUNTIME --> PERSISTING_DB: 更新运行时缓存
-    PERSISTING_DB --> CONFIG_SAVED: 持久化到数据库
-    CONFIG_SAVED --> CONFIG_ACTIVE: 配置生效（无需重启）
-
-    CONFIG_ACTIVE --> CONFIG_IDLE: 完成
-
-    state ALIYUN_MODE {
-        [*] --> QWEN_CONFIG
-        QWEN_CONFIG --> QWEN_API_KEY: 输入API Key
-        QWEN_API_KEY --> QWEN_MODEL: 选择模型
-        QWEN_MODEL --> EMBEDDING_MODEL: 配置Embedding
-    }
-
-    state OPENAI_MODE {
-        [*] --> OPENAI_CONFIG
-        OPENAI_CONFIG --> BASE_URL: 输入Base URL
-        BASE_URL --> API_KEY: 输入API Key
-        API_KEY --> MODEL_SELECT: 选择模型
-    }
-
-    note right of CONFIG_ACTIVE: 配置立即生效，无需重启
-    note right of TEST_SUCCESS: 测试通过可选择保存
-    note right of ALIYUN_MODE: 阿里云通义千问配置
-    note right of OPENAI_MODE: OpenAI兼容配置
-```
-
-## 9. 对话历史状态机 (HISTORY_STATE_MACHINE)
+## 6. 对话历史状态机 (HISTORY_STATE_MACHINE)
 
 ```mermaid
 stateDiagram-v2
@@ -391,9 +268,6 @@ stateDiagram-v2
 | 书籍对话 | CONVERSATION_STATE_MACHINE | NO_CONVERSATION | CONVERSATION_ACTIVE | POST /api/conversations/create |
 | 角色对话 | CHARACTER_STATE_MACHINE | NO_CHARACTER | CHARACTER_CONVERSATION | POST /api/conversations/create?character_id= |
 | 文档向量化 | ADMIN_STATE_MACHINE | DOCUMENT_UPLOADING | VECTOR_COMPLETE | POST /api/admin/books/{id}/vectorize |
-| 收藏管理 | FAVORITE_STATE_MACHINE | NOT_FAVORITED | FAVORITED | POST /api/favorites |
-| 用户信息管理 | USER_MANAGEMENT_STATE_MACHINE | USER_IDLE | PROFILE_LOADED | GET /api/auth/me |
-| AI配置管理 | AI_CONFIG_STATE_MACHINE | CONFIG_IDLE | CONFIG_ACTIVE | PUT /api/admin/config/ai |
 | 查看历史 | HISTORY_STATE_MACHINE | NO_HISTORY | VIEWING_HISTORY | GET /api/conversations |
 
 ### 状态转换守恒验证
@@ -410,6 +284,3 @@ stateDiagram-v2
 - **路由状态**: ROUTING_DECISION (智能决策点)
 - **向量状态**: VECTORIZING (RAG核心处理)
 - **角色状态**: CHARACTER_CONVERSATION (沉浸体验)
-- **收藏状态**: NOT_FAVORITED ⟷ FAVORITED (用户偏好管理)
-- **配置状态**: CONFIG_IDLE → CONFIG_ACTIVE (系统配置管理)
-- **用户管理状态**: USER_IDLE → PROFILE_LOADED (用户信息管理)

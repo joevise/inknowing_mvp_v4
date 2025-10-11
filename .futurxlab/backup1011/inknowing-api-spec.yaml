@@ -604,15 +604,14 @@ paths:
                           type: number
                           description: 相似度分数
 
-  # ===== 用户相关 API (USER_MANAGEMENT_STATE_MACHINE) =====
-  /auth/me:
+  # ===== 用户相关 API (USER_ACTIVE) =====
+  /users/profile:
     get:
       tags: [Users]
-      summary: 获取当前用户信息
+      summary: 获取用户信息
       description: |
         获取当前登录用户的个人信息
-        状态转换: USER_IDLE → VIEWING_PROFILE → PROFILE_LOADED
-        引用: #REF-USER-PROFILE
+        状态: USER_ACTIVE
       security:
         - sessionAuth: []
       responses:
@@ -621,222 +620,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  user:
-                    $ref: '#/components/schemas/User'
-        '401':
-          description: 未登录
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /user/update-username:
-    put:
-      tags: [Users]
-      summary: 更新用户名
-      description: |
-        更新当前用户的用户名
-        状态转换: EDITING_USERNAME → VALIDATING_USERNAME → PROFILE_UPDATED
-        引用: #REF-USER-UPDATE
-      security:
-        - sessionAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [username]
-              properties:
-                username:
-                  type: string
-                  minLength: 2
-                  maxLength: 50
-                  description: 新用户名
-      responses:
-        '200':
-          description: 更新成功
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  user:
-                    $ref: '#/components/schemas/User'
-        '400':
-          description: 用户名格式不正确
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  # ===== 收藏相关 API (FAVORITE_STATE_MACHINE) =====
-  /favorites:
-    get:
-      tags: [Users, Books]
-      summary: 获取收藏列表
-      description: |
-        获取当前用户的所有收藏书籍
-        状态转换: VIEWING_FAVORITES → FAVORITE_LIST_LOADED
-        引用: #REF-FAVORITE-LIST
-      security:
-        - sessionAuth: []
-      responses:
-        '200':
-          description: 收藏列表
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  favorites:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        book_id:
-                          type: string
-                        created_at:
-                          type: string
-                          format: date-time
-                        book:
-                          $ref: '#/components/schemas/Book'
-        '401':
-          description: 未登录
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      tags: [Users, Books]
-      summary: 添加收藏
-      description: |
-        将书籍添加到收藏列表
-        状态转换: NOT_FAVORITED → ADDING_FAVORITE → FAVORITED
-        引用: #REF-FAVORITE-ADD
-      security:
-        - sessionAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [bookId]
-              properties:
-                bookId:
-                  type: string
-                  description: 书籍ID
-      responses:
-        '200':
-          description: 收藏成功（或已存在）
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  favorite:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      book_id:
-                        type: string
-                      created_at:
-                        type: string
-                        format: date-time
-        '400':
-          description: 参数错误
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: 未登录
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /favorites/{bookId}:
-    get:
-      tags: [Users, Books]
-      summary: 检查收藏状态
-      description: |
-        检查当前用户是否已收藏指定书籍
-        状态: 查询收藏状态
-      security:
-        - sessionAuth: []
-      parameters:
-        - name: bookId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: 书籍ID
-      responses:
-        '200':
-          description: 收藏状态
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  favorited:
-                    type: boolean
-                    description: 是否已收藏
-        '401':
-          description: 未登录
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      tags: [Users, Books]
-      summary: 取消收藏
-      description: |
-        从收藏列表移除书籍
-        状态转换: FAVORITED → REMOVING_FAVORITE → NOT_FAVORITED
-        引用: #REF-FAVORITE-REMOVE
-      security:
-        - sessionAuth: []
-      parameters:
-        - name: bookId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: 书籍ID
-      responses:
-        '200':
-          description: 取消收藏成功
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        '404':
-          description: 收藏不存在
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: 未登录
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/UserProfile'
 
   # ===== 管理后台 API (ADMIN_STATE_MACHINE) =====
   /admin/login:
@@ -1119,40 +903,13 @@ paths:
         '200':
           description: 更新成功
 
-  /admin/stats:
-    get:
-      tags: [Admin]
-      summary: 获取系统统计
-      description: |
-        获取系统整体统计数据
-        状态: ADMIN_DASHBOARD
-      security:
-        - adminAuth: []
-      responses:
-        '200':
-          description: 统计数据
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  totalBooks:
-                    type: integer
-                  totalUsers:
-                    type: integer
-                  totalConversations:
-                    type: integer
-                  totalFavorites:
-                    type: integer
-
   /admin/config/ai:
     get:
       tags: [Admin]
       summary: 获取AI配置
       description: |
-        获取当前AI服务配置（API Key脱敏显示）
-        状态转换: CONFIG_IDLE → LOADING_CONFIG → CONFIG_DISPLAY
-        引用: #REF-AI-CONFIG-MANAGE
+        获取当前AI服务配置
+        状态: AI_CONFIG
       security:
         - adminAuth: []
       responses:
@@ -1161,21 +918,14 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  config:
-                    $ref: '#/components/schemas/AIConfig'
+                $ref: '#/components/schemas/AIConfig'
 
     put:
       tags: [Admin]
       summary: 更新AI配置
       description: |
-        配置AI服务提供商（阿里云通义千问或OpenAI兼容）
-        状态转换: EDITING_ALIYUN/OPENAI → SAVING_CONFIG → CONFIG_ACTIVE
-        配置立即生效，无需重启服务
-        引用: #REF-AI-CONFIG-MANAGE
+        配置通义千问和其他AI服务
+        状态转换: CONFIG_EDITING → CONFIG_TESTING → CONFIG_SAVED
       security:
         - adminAuth: []
       requestBody:
@@ -1183,37 +933,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AIConfigUpdate'
+              $ref: '#/components/schemas/AIConfig'
       responses:
         '200':
-          description: 配置更新成功并立即生效
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  needRestart:
-                    type: boolean
-                    description: 是否需要重启（始终为false）
-        '400':
-          description: 配置验证失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: 配置更新成功
 
   /admin/config/ai/test:
     post:
       tags: [Admin]
       summary: 测试AI连接
       description: |
-        验证AI服务配置是否有效，不保存配置
-        状态转换: TESTING_CONFIG → TEST_IN_PROGRESS → TEST_SUCCESS/FAILED
-        引用: #REF-AI-CONFIG-TEST
+        验证AI服务配置是否有效
+        状态: CONFIG_TESTING
       security:
         - adminAuth: []
       requestBody:
@@ -1221,7 +952,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AIConfigUpdate'
+              $ref: '#/components/schemas/AIConfig'
       responses:
         '200':
           description: 测试结果
@@ -1232,13 +963,8 @@ paths:
                 properties:
                   success:
                     type: boolean
-                    description: 测试是否成功
-                  message:
-                    type: string
-                    description: 测试结果信息
                   error:
                     type: string
-                    description: 错误信息（失败时）
 
 components:
   schemas:
@@ -1250,12 +976,20 @@ components:
         email:
           type: string
           format: email
-        username:
-          type: string
-          description: 用户名（可选）
         created_at:
           type: string
           format: date-time
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            conversation_count:
+              type: integer
+            last_active:
+              type: string
+              format: date-time
 
     Book:
       type: object
@@ -1458,79 +1192,20 @@ components:
 
     AIConfig:
       type: object
-      description: AI配置（读取时API Key脱敏显示）
       properties:
-        provider:
-          type: string
-          enum: [aliyun, openai]
-          description: AI服务提供商
         qwen_api_key:
           type: string
-          description: 阿里云API Key（显示时脱敏）
         qwen_model:
           type: string
           default: qwen-max
-          description: 通义千问模型
-        qwen_base_url:
+        embedding_model:
           type: string
-          description: 通义千问Base URL
-        qwen_embedding_model:
-          type: string
-          description: 通义千问Embedding模型
-        chromadb_url:
-          type: string
-          description: ChromaDB服务地址
         openai_compatible:
           type: object
-          description: OpenAI兼容配置
           properties:
-            enabled:
-              type: boolean
             base_url:
               type: string
             api_key:
-              type: string
-              description: API Key（显示时脱敏）
-            model:
-              type: string
-            embedding_model:
-              type: string
-
-    AIConfigUpdate:
-      type: object
-      description: AI配置更新请求
-      required: [provider]
-      properties:
-        provider:
-          type: string
-          enum: [aliyun, openai]
-          description: AI服务提供商
-        qwen_api_key:
-          type: string
-          description: 阿里云API Key
-        qwen_model:
-          type: string
-          description: 通义千问模型
-        qwen_base_url:
-          type: string
-          description: 通义千问Base URL
-        qwen_embedding_model:
-          type: string
-          description: Embedding模型
-        chromadb_url:
-          type: string
-          description: ChromaDB地址
-        openai_compatible:
-          type: object
-          description: OpenAI兼容配置
-          properties:
-            api_key:
-              type: string
-            base_url:
-              type: string
-            model:
-              type: string
-            embedding_model:
               type: string
 
     Error:
