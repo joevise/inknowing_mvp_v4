@@ -107,6 +107,12 @@ export default function AdminBooksPage() {
               系统设置
             </Link>
             <Link
+              href="/admin/books/batch-create"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              批量创建
+            </Link>
+            <Link
               href="/admin/books/new"
               className="px-4 py-2 bg-[#2F5233] text-white rounded hover:bg-[#1a2e1c]"
             >
