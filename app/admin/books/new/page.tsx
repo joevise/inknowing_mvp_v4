@@ -18,6 +18,7 @@ interface BookInfo {
   publishDate?: string;
   category: string;
   tags: string[];
+  cover_url?: string;
 }
 
 interface IdentifyResult {
