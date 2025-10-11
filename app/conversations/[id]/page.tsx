@@ -11,6 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import ConversationHistorySidebar from '@/components/conversation/ConversationHistorySidebar';
 import BookCharacterSidebar from '@/components/conversation/BookCharacterSidebar';
+import MarkdownMessage from '@/components/conversation/MarkdownMessage';
 
 interface Message {
   id: string;
@@ -325,9 +326,13 @@ export default function ConversationPage() {
                         : 'bg-white text-gray-800 shadow-sm border border-gray-100'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap font-light leading-relaxed">
-                      {message.content}
-                    </p>
+                    {message.role === 'user' ? (
+                      <p className="whitespace-pre-wrap font-light leading-relaxed">
+                        {message.content}
+                      </p>
+                    ) : (
+                      <MarkdownMessage content={message.content} />
+                    )}
 
                     {/* AI策略标签和引用来源 */}
                     {message.role === 'assistant' && message.metadata && (
@@ -383,10 +388,8 @@ export default function ConversationPage() {
               {streamingMessage && (
                 <div className="mb-6 flex justify-start">
                   <div className="max-w-[75%] bg-white text-gray-800 shadow-sm border border-gray-100 rounded-lg px-5 py-3">
-                    <p className="whitespace-pre-wrap font-light leading-relaxed">
-                      {streamingMessage}
-                      <span className="inline-block w-1 h-4 ml-1 bg-[#2C5530] animate-pulse"></span>
-                    </p>
+                    <MarkdownMessage content={streamingMessage} />
+                    <span className="inline-block w-1 h-4 ml-1 bg-[#2C5530] animate-pulse"></span>
                   </div>
                 </div>
               )}
