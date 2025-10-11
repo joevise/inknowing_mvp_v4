@@ -12,6 +12,9 @@ import {
   userOwnsConversation,
 } from '@/lib/db/conversations';
 import { getMessagesByConversationId } from '@/lib/db/messages';
+import { getBookById } from '@/lib/db/books';
+import { getCharacterById } from '@/lib/db/characters';
+import { getUserById } from '@/lib/db/users';
 
 /**
  * GET /api/conversations/:id
@@ -52,10 +55,41 @@ export async function GET(
     // 4. 获取消息历史
     const messages = getMessagesByConversationId(params.id);
 
-    // 5. 返回结果
+    // 5. 获取额外信息（书籍/角色封面、用户信息）
+    let cover_url: string | undefined;
+    let book_title: string | undefined;
+    let character_name: string | undefined;
+
+    if (conversation.type === 'book') {
+      const book = getBookById(conversation.book_id);
+      if (book) {
+        cover_url = book.cover_url || undefined;
+        book_title = book.title;
+      }
+    } else if (conversation.type === 'character' && conversation.character_id) {
+      const character = getCharacterById(conversation.character_id);
+      if (character) {
+        cover_url = character.avatar_url || undefined;
+        character_name = character.name;
+      }
+    }
+
+    // 获取用户信息
+    const conversationUser = getUserById(conversation.user_id);
+
+    // 6. 返回结果（包含封面和用户信息）
     return NextResponse.json({
       success: true,
-      conversation,
+      conversation: {
+        ...conversation,
+        cover_url,
+        book_title,
+        character_name,
+        user: conversationUser ? {
+          id: conversationUser.id,
+          username: conversationUser.username,
+        } : undefined,
+      },
       messages,
     });
 

@@ -25,6 +25,9 @@ interface Message {
       content: string;
       score: number;
     }>;
+    cover_url?: string;
+    character_name?: string;
+    book_title?: string;
   };
 }
 
@@ -36,6 +39,11 @@ interface Conversation {
   title?: string;
   book_title?: string;
   character_name?: string;
+  cover_url?: string;
+  user?: {
+    id: string;
+    username: string;
+  };
 }
 
 export default function ConversationPage() {
@@ -240,19 +248,6 @@ export default function ConversationPage() {
     }
   };
 
-  const getStrategyLabel = (strategy?: string) => {
-    switch (strategy) {
-      case 'ai_native':
-        return { text: 'AI原生', color: 'text-blue-600 bg-blue-50' };
-      case 'rag_retrieval':
-        return { text: 'RAG检索', color: 'text-green-600 bg-green-50' };
-      case 'hybrid':
-        return { text: '混合模式', color: 'text-purple-600 bg-purple-50' };
-      default:
-        return { text: '标准', color: 'text-gray-600 bg-gray-50' };
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF9F7] flex items-center justify-center">
@@ -314,11 +309,34 @@ export default function ConversationPage() {
                 </div>
               )}
 
-              {messages.map((message) => (
+              {messages.map((message) => {
+                // 优先使用消息自己的 metadata 中的头像信息，否则使用当前 conversation 的
+                const messageCoverUrl = message.metadata?.cover_url || conversation?.cover_url;
+                const messageCharacterName = message.metadata?.character_name || conversation?.character_name;
+                const messageBookTitle = message.metadata?.book_title || conversation?.book_title;
+
+                return (
                 <div
                   key={message.id}
-                  className={`mb-6 flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`mb-6 flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
+                  {/* 助手消息 - 左侧显示书籍/角色头像 */}
+                  {message.role === 'assistant' && (
+                    <div className="flex-shrink-0">
+                      {messageCoverUrl ? (
+                        <img
+                          src={messageCoverUrl}
+                          alt={messageCharacterName || messageBookTitle || ''}
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
+                          {(messageCharacterName || messageBookTitle || '书')?.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div
                     className={`max-w-[75%] rounded-lg px-5 py-3 ${
                       message.role === 'user'
@@ -334,44 +352,6 @@ export default function ConversationPage() {
                       <MarkdownMessage content={message.content} />
                     )}
 
-                    {/* AI策略标签和引用来源 */}
-                    {message.role === 'assistant' && message.metadata && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                        {message.metadata.strategy && (
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-light px-2 py-1 rounded ${
-                              getStrategyLabel(message.metadata.strategy).color
-                            }`}>
-                              {getStrategyLabel(message.metadata.strategy).text}
-                            </span>
-                            {message.metadata.queryType && (
-                              <span className="text-xs font-light text-gray-500">
-                                {message.metadata.queryType}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {message.metadata.sources && message.metadata.sources.length > 0 && (
-                          <details className="text-xs font-light text-gray-600">
-                            <summary className="cursor-pointer hover:text-[#2C5530]">
-                              查看引用来源 ({message.metadata.sources.length})
-                            </summary>
-                            <div className="mt-2 space-y-1 pl-2">
-                              {message.metadata.sources.map((source, idx) => (
-                                <div key={idx} className="text-xs text-gray-500 border-l-2 border-gray-200 pl-2">
-                                  {source.content.substring(0, 100)}...
-                                  <span className="text-gray-400 ml-2">
-                                    (相似度: {(source.score * 100).toFixed(0)}%)
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        )}
-                      </div>
-                    )}
-
                     <p className={`text-xs mt-2 font-light ${
                       message.role === 'user' ? 'text-gray-300' : 'text-gray-400'
                     }`}>
@@ -381,12 +361,37 @@ export default function ConversationPage() {
                       })}
                     </p>
                   </div>
+
+                  {/* 用户消息 - 右侧显示用户头像 */}
+                  {message.role === 'user' && (
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm font-light">
+                        {conversation?.user?.username?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
 
               {/* 流式响应中的消息 */}
               {streamingMessage && (
-                <div className="mb-6 flex justify-start">
+                <div className="mb-6 flex gap-3 justify-start">
+                  {/* 助手头像 */}
+                  <div className="flex-shrink-0">
+                    {conversation?.cover_url ? (
+                      <img
+                        src={conversation.cover_url}
+                        alt={conversation.character_name || conversation.book_title || ''}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
+                        {(conversation?.character_name || conversation?.book_title || '书')?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="max-w-[75%] bg-white text-gray-800 shadow-sm border border-gray-100 rounded-lg px-5 py-3">
                     <MarkdownMessage content={streamingMessage} />
                     <span className="inline-block w-1 h-4 ml-1 bg-[#2C5530] animate-pulse"></span>
@@ -395,7 +400,22 @@ export default function ConversationPage() {
               )}
 
               {sending && !streamingMessage && (
-                <div className="mb-6 flex justify-start">
+                <div className="mb-6 flex gap-3 justify-start">
+                  {/* 助手头像 */}
+                  <div className="flex-shrink-0">
+                    {conversation?.cover_url ? (
+                      <img
+                        src={conversation.cover_url}
+                        alt={conversation.character_name || conversation.book_title || ''}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
+                        {(conversation?.character_name || conversation?.book_title || '书')?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="bg-white text-gray-800 shadow-sm border border-gray-100 rounded-lg px-5 py-3">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">

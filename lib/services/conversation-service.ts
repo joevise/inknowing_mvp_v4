@@ -530,13 +530,31 @@ export class ConversationService {
         }
       );
 
-      // 发送元数据
+      // 获取头像信息
+      let cover_url: string | undefined;
+      let character_name: string | undefined;
+      let book_title = book.title;
+
+      if (conversation.type === 'character' && conversation.character_id) {
+        const character = getCharacterById(conversation.character_id);
+        if (character) {
+          cover_url = character.avatar_url || undefined;
+          character_name = character.name;
+        }
+      } else {
+        cover_url = book.cover_url || undefined;
+      }
+
+      // 发送元数据（包含头像信息）
       yield {
         type: 'chunk',
         data: '',
         metadata: {
           strategy: routingDecision.strategy,
           queryType: routingDecision.queryType,
+          cover_url,
+          character_name,
+          book_title,
         },
       };
 
