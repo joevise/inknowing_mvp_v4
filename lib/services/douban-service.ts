@@ -3,9 +3,14 @@
  * 提供豆瓣图书封面抓取功能
  */
 
+import { writeFileSync } from 'fs';
+import { join } from 'path';
+import { generateId } from '@/lib/db/client';
+
 interface DoubanCoverResult {
   success: boolean;
   coverUrl?: string;
+  localPath?: string;
   error?: string;
 }
 
@@ -49,10 +54,47 @@ export async function fetchDoubanCover(bookTitle: string): Promise<DoubanCoverRe
 
       console.log('[Douban Service] Found:', coverUrl);
 
-      return {
-        success: true,
-        coverUrl,
-      };
+      // 下载图片到本地
+      try {
+        const imageResponse = await fetch(coverUrl, { headers });
+
+        if (imageResponse.ok) {
+          const arrayBuffer = await imageResponse.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+
+          // 生成唯一文件名
+          const fileId = generateId();
+          const ext = coverUrl.match(/\.(jpg|jpeg|png|webp)$/i)?.[1] || 'jpg';
+          const fileName = `${fileId}.${ext}`;
+          const filePath = join(process.cwd(), 'public', 'covers', fileName);
+
+          // 保存到本地
+          writeFileSync(filePath, buffer);
+
+          const localPath = `/covers/${fileName}`;
+          console.log('[Douban Service] Saved to local:', localPath);
+
+          return {
+            success: true,
+            coverUrl,
+            localPath,
+          };
+        } else {
+          console.warn('[Douban Service] Failed to download image:', imageResponse.status);
+          // 下载失败，仍返回原始URL
+          return {
+            success: true,
+            coverUrl,
+          };
+        }
+      } catch (downloadError) {
+        console.error('[Douban Service] Download error:', downloadError);
+        // 下载失败，仍返回原始URL
+        return {
+          success: true,
+          coverUrl,
+        };
+      }
     } else {
       console.log('[Douban Service] Not found for:', bookTitle);
       return {

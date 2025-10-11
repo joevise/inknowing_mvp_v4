@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         coverUrl: result.coverUrl,
+        localPath: result.localPath,
         bookTitle
       });
     } else {

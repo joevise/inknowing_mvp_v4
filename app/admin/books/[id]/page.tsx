@@ -369,10 +369,10 @@ export default function EditBookPage() {
                 封面URL
               </label>
               <input
-                type="url"
+                type="text"
                 value={formData.cover_url}
                 onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
-                placeholder="https://example.com/cover.jpg"
+                placeholder="https://example.com/cover.jpg 或 /covers/xxx.jpg"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F5233] focus:border-transparent"
               />
             </div>

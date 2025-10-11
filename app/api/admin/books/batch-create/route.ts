@@ -49,13 +49,14 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`[Batch Create] Processing: ${book.title}`);
 
-        // 1. 尝试从豆瓣获取封面
+        // 1. 尝试从豆瓣获取封面并下载到本地
         let coverUrl: string | undefined;
         try {
           const coverResult = await fetchDoubanCover(book.title);
-          if (coverResult.success && coverResult.coverUrl) {
-            coverUrl = coverResult.coverUrl;
-            console.log(`[Batch Create] Found Douban cover for ${book.title}`);
+          if (coverResult.success) {
+            // 优先使用本地路径，如果下载失败则使用原始URL
+            coverUrl = coverResult.localPath || coverResult.coverUrl;
+            console.log(`[Batch Create] Found Douban cover for ${book.title}:`, coverUrl);
           }
         } catch (coverError) {
           console.warn(`[Batch Create] Douban cover fetch failed for ${book.title}:`, coverError);
