@@ -14,6 +14,9 @@ interface RecommendedBook {
   author: string;
   brief_reason: string;
   selected: boolean;
+  alreadyExists?: boolean;
+  existingBookId?: string;
+  status?: 'published' | 'draft';
 }
 
 interface BatchResult {
@@ -100,17 +103,23 @@ export default function BatchCreatePage() {
   };
 
   const handleSelectAll = () => {
-    const allSelected = recommendedBooks.every(book => book.selected);
+    // 只考虑未存在的书籍
+    const selectableBooks = recommendedBooks.filter(book => !book.alreadyExists);
+    const allSelected = selectableBooks.every(book => book.selected);
     setRecommendedBooks(prev =>
-      prev.map(book => ({ ...book, selected: !allSelected }))
+      prev.map(book =>
+        book.alreadyExists
+          ? book
+          : { ...book, selected: !allSelected }
+      )
     );
   };
 
   const handleBatchCreate = async () => {
-    const selectedBooks = recommendedBooks.filter(book => book.selected);
+    const selectedBooks = recommendedBooks.filter(book => book.selected && !book.alreadyExists);
 
     if (selectedBooks.length === 0) {
-      setError('请至少选择一本书籍');
+      setError('请至少选择一本未创建的书籍');
       return;
     }
 
@@ -155,7 +164,8 @@ export default function BatchCreatePage() {
     }
   };
 
-  const selectedCount = recommendedBooks.filter(book => book.selected).length;
+  const selectedCount = recommendedBooks.filter(book => book.selected && !book.alreadyExists).length;
+  const existingCount = recommendedBooks.filter(book => book.alreadyExists).length;
 
   return (
     <AdminLayout title="批量创建书籍">
@@ -216,9 +226,16 @@ export default function BatchCreatePage() {
         {recommendedBooks.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-light text-gray-900">
-                推荐书籍 ({recommendedBooks.length}本)
-              </h2>
+              <div>
+                <h2 className="text-lg font-light text-gray-900">
+                  推荐书籍 ({recommendedBooks.length}本)
+                </h2>
+                {existingCount > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    其中 {existingCount} 本已存在于系统中
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleSelectAll}
@@ -242,7 +259,7 @@ export default function BatchCreatePage() {
                       ? 'border-[#2C5530] bg-green-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => handleToggleBook(index)}
+                  onClick={() => !book.alreadyExists && handleToggleBook(index)}
                 >
                   <div className="flex items-start gap-3">
                     <input
@@ -250,14 +267,34 @@ export default function BatchCreatePage() {
                       checked={book.selected}
                       onChange={() => handleToggleBook(index)}
                       className="mt-1"
-                      disabled={creating}
+                      disabled={creating || book.alreadyExists}
                     />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-light text-gray-900">{book.title}</span>
                         <span className="text-sm text-gray-500">- {book.author}</span>
+                        {book.alreadyExists && (
+                          <span
+                            className={`px-2 py-0.5 text-xs rounded ${
+                              book.status === 'published'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}
+                          >
+                            {book.status === 'published' ? '已上架' : '草稿'}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600">{book.brief_reason}</p>
+                      {book.alreadyExists && book.existingBookId && (
+                        <Link
+                          href={`/admin/books/${book.existingBookId}`}
+                          className="text-xs text-[#2C5530] hover:underline mt-1 inline-block"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          查看详情 →
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

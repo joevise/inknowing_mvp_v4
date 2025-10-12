@@ -413,6 +413,37 @@ export function getBookStats(): {
 }
 
 /**
+ * 根据书名和作者查找书籍
+ */
+export function findBookByTitleAndAuthor(title: string, author: string): Book | null {
+  const stmt = db().prepare(`
+    SELECT * FROM books
+    WHERE title = ? AND author = ?
+    LIMIT 1
+  `);
+
+  const row = stmt.get(title, author) as any;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    title: row.title,
+    author: row.author,
+    description: row.description,
+    cover_url: row.cover_url,
+    category: row.category,
+    tags: parseJson(row.tags) || [],
+    ai_knowledge_level: row.ai_knowledge_level,
+    requires_document: !!row.requires_document,
+    conversation_strategy: row.conversation_strategy,
+    status: row.status,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+/**
  * 批量创建书籍（用于测试）
  */
 export function bulkCreateBooks(books: CreateBookInput[]): Book[] {

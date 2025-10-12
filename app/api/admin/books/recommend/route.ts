@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/middleware/admin-auth';
 import OpenAI from 'openai';
 import { getConfig } from '@/lib/services/runtime-config';
+import { findBookByTitleAndAuthor } from '@/lib/db/books';
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,11 +89,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[Book Recommend] Success, count:', books.length);
+    // 检查每本书是否已存在于数据库中
+    const booksWithStatus = books.map((book: any) => {
+      const existingBook = findBookByTitleAndAuthor(book.title, book.author);
+      return {
+        ...book,
+        existingBookId: existingBook?.id,
+        status: existingBook?.status,
+        alreadyExists: !!existingBook,
+      };
+    });
+
+    console.log('[Book Recommend] Success, count:', booksWithStatus.length);
 
     return NextResponse.json({
       success: true,
-      books,
+      books: booksWithStatus,
       query
     });
 
