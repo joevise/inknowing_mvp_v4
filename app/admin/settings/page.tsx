@@ -1,59 +1,98 @@
 /**
  * 系统设置页面
- * 管理AI服务配置
+ * 管理AI服务配置 - 分成3个Tab: 对话模型、向量模型、解析模型
+ * 每个Tab独立测试和保存
  */
 
 'use client';
 
 import AdminLayout from '@/components/layout/AdminLayout';
-
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-interface AIConfig {
-  provider: 'aliyun' | 'openai';
+type ModelTab = 'conversation' | 'embedding' | 'parsing';
+type Provider = 'aliyun' | 'openai';
+
+interface LLMModelConfig {
+  provider: Provider;
   qwen_api_key: string;
   qwen_model: string;
   qwen_base_url: string;
-  qwen_embedding_model: string;
+  openai_api_key: string;
+  openai_base_url: string;
+  openai_model: string;
+  temperature: number;
+  max_tokens: number;
+}
+
+interface EmbeddingModelConfig {
+  provider: Provider;
+  qwen_api_key: string;
+  qwen_model: string;
+  qwen_base_url: string;
+  openai_api_key: string;
+  openai_base_url: string;
+  openai_model: string;
   chromadb_url: string;
-  openai_compatible: {
-    enabled: boolean;
-    base_url: string;
-    api_key: string;
-    model: string;
-    embedding_model: string;
-  };
+}
+
+interface AIConfig {
+  conversation: LLMModelConfig;
+  embedding: EmbeddingModelConfig;
+  parsing: LLMModelConfig;
 }
 
 export default function SettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState<AIConfig | null>(null);
+  const [testing, setTesting] = useState<Record<ModelTab, boolean>>({
+    conversation: false,
+    embedding: false,
+    parsing: false,
+  });
+  const [saving, setSaving] = useState<Record<ModelTab, boolean>>({
+    conversation: false,
+    embedding: false,
+    parsing: false,
+  });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [needRestart, setNeedRestart] = useState(false);
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    message?: string;
-    error?: string;
-    test_response?: string;
-  } | null>(null);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<ModelTab>('conversation');
 
-  const [formData, setFormData] = useState({
-    provider: 'aliyun' as 'aliyun' | 'openai',
-    qwen_api_key: '',
-    qwen_model: 'qwen-max',
-    qwen_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    qwen_embedding_model: 'text-embedding-v3',
-    chromadb_url: 'http://localhost:8000',
-    openai_base_url: '',
-    openai_api_key: '',
-    openai_model: 'gpt-4',
-    openai_embedding_model: 'text-embedding-3-small',
+  const [formData, setFormData] = useState<AIConfig>({
+    conversation: {
+      provider: 'aliyun',
+      qwen_api_key: '',
+      qwen_model: 'qwen-turbo',
+      qwen_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      openai_api_key: '',
+      openai_base_url: '',
+      openai_model: 'gpt-3.5-turbo',
+      temperature: 0.7,
+      max_tokens: 2000,
+    },
+    embedding: {
+      provider: 'aliyun',
+      qwen_api_key: '',
+      qwen_model: 'text-embedding-v3',
+      qwen_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      openai_api_key: '',
+      openai_base_url: '',
+      openai_model: 'text-embedding-3-small',
+      chromadb_url: 'http://localhost:8000',
+    },
+    parsing: {
+      provider: 'aliyun',
+      qwen_api_key: '',
+      qwen_model: 'qwen-max',
+      qwen_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      openai_api_key: '',
+      openai_base_url: '',
+      openai_model: 'gpt-4o',
+      temperature: 0.3,
+      max_tokens: 4000,
+    },
   });
 
   useEffect(() => {
@@ -80,19 +119,9 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error('获取配置失败');
       const data = await response.json();
 
-      setConfig(data.config);
-      setFormData({
-        provider: data.config.provider || 'aliyun',
-        qwen_api_key: data.config.qwen_api_key || '',
-        qwen_model: data.config.qwen_model || 'qwen-max',
-        qwen_base_url: data.config.qwen_base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        qwen_embedding_model: data.config.qwen_embedding_model || 'text-embedding-v3',
-        chromadb_url: data.config.chromadb_url || 'http://localhost:8000',
-        openai_base_url: data.config.openai_compatible?.base_url || '',
-        openai_api_key: data.config.openai_compatible?.api_key || '',
-        openai_model: data.config.openai_compatible?.model || 'gpt-4',
-        openai_embedding_model: data.config.openai_compatible?.embedding_model || 'text-embedding-3-small',
-      });
+      if (data.config) {
+        setFormData(data.config);
+      }
     } catch (error) {
       console.error('获取配置失败:', error);
       setError('获取配置失败');
@@ -101,62 +130,46 @@ export default function SettingsPage() {
     }
   };
 
-  const handleTest = async () => {
+  const handleTest = async (tab: ModelTab) => {
     setError('');
     setSuccess('');
     setTestResult(null);
-    setTesting(true);
+    setTesting({ ...testing, [tab]: true });
 
     try {
+      const config = formData[tab];
       const response = await fetch('/api/admin/config/ai/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          qwen_api_key: formData.qwen_api_key,
-          qwen_model: formData.qwen_model,
-          qwen_base_url: formData.qwen_base_url,
-        }),
+        body: JSON.stringify({ tab, config }),
       });
 
       const data = await response.json();
       setTestResult(data);
 
       if (data.success) {
-        setSuccess('AI服务连接测试成功！');
+        setSuccess(`${getTabName(tab)}测试成功！`);
       } else {
-        setError('连接测试失败: ' + (data.error || '未知错误'));
+        setError(`${getTabName(tab)}测试失败: ` + (data.error || '未知错误'));
       }
     } catch (err) {
       console.error('测试失败:', err);
       setError('测试失败，请重试');
     } finally {
-      setTesting(false);
+      setTesting({ ...testing, [tab]: false });
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (tab: ModelTab) => {
     setError('');
     setSuccess('');
-    setSaving(true);
+    setSaving({ ...saving, [tab]: true });
 
     try {
       const response = await fetch('/api/admin/config/ai', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: formData.provider,
-          qwen_api_key: formData.qwen_api_key,
-          qwen_model: formData.qwen_model,
-          qwen_base_url: formData.qwen_base_url,
-          qwen_embedding_model: formData.qwen_embedding_model,
-          chromadb_url: formData.chromadb_url,
-          openai_compatible: {
-            base_url: formData.openai_base_url,
-            api_key: formData.openai_api_key,
-            model: formData.openai_model,
-            embedding_model: formData.openai_embedding_model,
-          },
-        }),
+        body: JSON.stringify({ tab, config: formData[tab] }),
       });
 
       const data = await response.json();
@@ -165,21 +178,390 @@ export default function SettingsPage() {
         throw new Error(data.error || '保存失败');
       }
 
-      setSuccess(data.message || '配置保存成功');
-      setNeedRestart(data.needRestart || false);
+      setSuccess(`${getTabName(tab)}配置保存成功`);
 
-      // 如果有额外说明，显示提示
-      if (data.note) {
-        setTimeout(() => {
-          alert(data.note);
-        }, 500);
-      }
+      // 重新加载配置以确保显示最新数据
+      await fetchConfig();
     } catch (err) {
       console.error('保存失败:', err);
       setError(err instanceof Error ? err.message : '保存失败，请重试');
     } finally {
-      setSaving(false);
+      setSaving({ ...saving, [tab]: false });
     }
+  };
+
+  const getTabName = (tab: ModelTab): string => {
+    const names = {
+      conversation: '对话模型',
+      embedding: '向量模型',
+      parsing: '解析模型',
+    };
+    return names[tab];
+  };
+
+  const updateTabConfig = (tab: ModelTab, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [tab]: {
+        ...prev[tab],
+        [field]: value,
+      },
+    }));
+  };
+
+  const renderLLMModelConfig = (tab: 'conversation' | 'parsing', config: LLMModelConfig, title: string, description: string) => {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-light text-gray-800 mb-2">{title}</h3>
+          <p className="text-sm font-light text-gray-600">{description}</p>
+        </div>
+
+        {/* Provider选择 */}
+        <div>
+          <h4 className="text-base font-light text-gray-800 mb-3">服务提供商</h4>
+          <div className="flex gap-4">
+            <button
+              onClick={() => updateTabConfig(tab, 'provider', 'aliyun')}
+              className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
+                config.provider === 'aliyun'
+                  ? 'border-[#2C5530] bg-[#2C5530] text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+              }`}
+            >
+              <div className="font-light">阿里云（通义千问）</div>
+              <div className="text-xs mt-1 opacity-80">使用阿里云百炼服务</div>
+            </button>
+            <button
+              onClick={() => updateTabConfig(tab, 'provider', 'openai')}
+              className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
+                config.provider === 'openai'
+                  ? 'border-[#2C5530] bg-[#2C5530] text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+              }`}
+            >
+              <div className="font-light">OpenAI 兼容</div>
+              <div className="text-xs mt-1 opacity-80">DeepSeek, Moonshot, OpenAI等</div>
+            </button>
+          </div>
+        </div>
+
+        {/* 阿里云配置 */}
+        {config.provider === 'aliyun' && (
+          <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={config.qwen_api_key}
+                onChange={(e) => updateTabConfig(tab, 'qwen_api_key', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="sk-..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                模型名称
+              </label>
+              <select
+                value={config.qwen_model}
+                onChange={(e) => updateTabConfig(tab, 'qwen_model', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+              >
+                <option value="qwen-max">qwen-max (最强性能)</option>
+                <option value="qwen-plus">qwen-plus (平衡性能)</option>
+                <option value="qwen-turbo">qwen-turbo (快速响应)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Base URL
+              </label>
+              <input
+                type="text"
+                value={config.qwen_base_url}
+                onChange={(e) => updateTabConfig(tab, 'qwen_base_url', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* OpenAI兼容配置 */}
+        {config.provider === 'openai' && (
+          <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Base URL <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={config.openai_base_url}
+                onChange={(e) => updateTabConfig(tab, 'openai_base_url', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="https://api.deepseek.com/v1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={config.openai_api_key}
+                onChange={(e) => updateTabConfig(tab, 'openai_api_key', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="sk-..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                模型名称
+              </label>
+              <input
+                type="text"
+                value={config.openai_model}
+                onChange={(e) => updateTabConfig(tab, 'openai_model', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                placeholder="deepseek-chat 或 gpt-4"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 模型参数配置 */}
+        <div className="border-t border-gray-200 pt-6">
+          <h4 className="text-base font-light text-gray-800 mb-4">模型参数</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Temperature（温度）
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="2"
+                step="0.1"
+                value={config.temperature}
+                onChange={(e) => updateTabConfig(tab, 'temperature', parseFloat(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                控制输出随机性，0-2，默认0.7
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Max Tokens（最大输出）
+              </label>
+              <input
+                type="number"
+                min="100"
+                max="8000"
+                step="100"
+                value={config.max_tokens}
+                onChange={(e) => updateTabConfig(tab, 'max_tokens', parseInt(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                最大输出token数
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="flex gap-4 pt-6 border-t border-gray-200">
+          <button
+            onClick={() => handleTest(tab)}
+            disabled={testing[tab]}
+            className="flex-1 border-2 border-[#2C5530] text-[#2C5530] py-3 rounded-lg hover:bg-[#2C5530] hover:text-white transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testing[tab] ? '测试中...' : '测试连接'}
+          </button>
+          <button
+            onClick={() => handleSave(tab)}
+            disabled={saving[tab]}
+            className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving[tab] ? '保存中...' : '保存配置'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderEmbeddingModelConfig = () => {
+    const config = formData.embedding;
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-light text-gray-800 mb-2">向量模型配置</h3>
+          <p className="text-sm font-light text-gray-600">配置文档向量化和检索使用的Embedding模型</p>
+        </div>
+
+        {/* Provider选择 */}
+        <div>
+          <h4 className="text-base font-light text-gray-800 mb-3">服务提供商</h4>
+          <div className="flex gap-4">
+            <button
+              onClick={() => updateTabConfig('embedding', 'provider', 'aliyun')}
+              className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
+                config.provider === 'aliyun'
+                  ? 'border-[#2C5530] bg-[#2C5530] text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+              }`}
+            >
+              <div className="font-light">阿里云（通义千问）</div>
+              <div className="text-xs mt-1 opacity-80">使用阿里云百炼服务</div>
+            </button>
+            <button
+              onClick={() => updateTabConfig('embedding', 'provider', 'openai')}
+              className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
+                config.provider === 'openai'
+                  ? 'border-[#2C5530] bg-[#2C5530] text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+              }`}
+            >
+              <div className="font-light">OpenAI 兼容</div>
+              <div className="text-xs mt-1 opacity-80">DeepSeek, Moonshot, OpenAI等</div>
+            </button>
+          </div>
+        </div>
+
+        {/* 阿里云配置 */}
+        {config.provider === 'aliyun' && (
+          <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={config.qwen_api_key}
+                onChange={(e) => updateTabConfig('embedding', 'qwen_api_key', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="sk-..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                模型名称
+              </label>
+              <input
+                type="text"
+                value={config.qwen_model}
+                onChange={(e) => updateTabConfig('embedding', 'qwen_model', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                placeholder="text-embedding-v3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Base URL
+              </label>
+              <input
+                type="text"
+                value={config.qwen_base_url}
+                onChange={(e) => updateTabConfig('embedding', 'qwen_base_url', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* OpenAI兼容配置 */}
+        {config.provider === 'openai' && (
+          <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Base URL <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={config.openai_base_url}
+                onChange={(e) => updateTabConfig('embedding', 'openai_base_url', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="https://api.openai.com/v1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={config.openai_api_key}
+                onChange={(e) => updateTabConfig('embedding', 'openai_api_key', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="sk-..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                模型名称
+              </label>
+              <input
+                type="text"
+                value={config.openai_model}
+                onChange={(e) => updateTabConfig('embedding', 'openai_model', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                placeholder="text-embedding-3-small"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ChromaDB配置 */}
+        <div className="border-t border-gray-200 pt-6">
+          <div>
+            <label className="block text-sm font-light text-gray-700 mb-2">
+              ChromaDB URL
+            </label>
+            <input
+              type="text"
+              value={config.chromadb_url}
+              onChange={(e) => updateTabConfig('embedding', 'chromadb_url', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+              placeholder="http://localhost:8000"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              向量数据库服务地址
+            </p>
+          </div>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="flex gap-4 pt-6 border-t border-gray-200">
+          <button
+            onClick={() => handleTest('embedding')}
+            disabled={testing.embedding}
+            className="flex-1 border-2 border-[#2C5530] text-[#2C5530] py-3 rounded-lg hover:bg-[#2C5530] hover:text-white transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testing.embedding ? '测试中...' : '测试连接'}
+          </button>
+          <button
+            onClick={() => handleSave('embedding')}
+            disabled={saving.embedding}
+            className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving.embedding ? '保存中...' : '保存配置'}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -194,11 +576,11 @@ export default function SettingsPage() {
 
   return (
     <AdminLayout title="系统设置">
-      <main className="max-w-4xl mx-auto px-8 py-12">
+      <main className="max-w-5xl mx-auto px-8 py-12">
         <div className="mb-8">
           <h2 className="text-3xl font-light text-gray-800 mb-2">AI服务配置</h2>
           <p className="text-gray-600">
-            配置通义千问API和向量数据库服务
+            分别配置对话、向量化和解析服务的AI模型
           </p>
         </div>
 
@@ -233,250 +615,72 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm p-8 space-y-6">
-          {/* 模式选择器 */}
-          <div>
-            <h3 className="text-xl font-light text-gray-800 mb-4">AI服务提供商</h3>
-            <div className="flex gap-4">
+        {/* Tab导航 */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <div className="flex">
               <button
-                onClick={() => setFormData({ ...formData, provider: 'aliyun' })}
-                className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
-                  formData.provider === 'aliyun'
-                    ? 'border-[#2C5530] bg-[#2C5530] text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+                onClick={() => setActiveTab('conversation')}
+                className={`flex-1 px-6 py-4 text-sm font-light transition-colors border-b-2 ${
+                  activeTab === 'conversation'
+                    ? 'border-[#2C5530] text-[#2C5530] bg-[#FAF9F7]'
+                    : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <div className="font-light">阿里云（通义千问）</div>
-                <div className="text-xs mt-1 opacity-80">使用阿里云百炼服务</div>
+                <div className="font-light">对话模型</div>
+                <div className="text-xs mt-1 opacity-70">用于用户对话交互</div>
               </button>
               <button
-                onClick={() => setFormData({ ...formData, provider: 'openai' })}
-                className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
-                  formData.provider === 'openai'
-                    ? 'border-[#2C5530] bg-[#2C5530] text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+                onClick={() => setActiveTab('embedding')}
+                className={`flex-1 px-6 py-4 text-sm font-light transition-colors border-b-2 ${
+                  activeTab === 'embedding'
+                    ? 'border-[#2C5530] text-[#2C5530] bg-[#FAF9F7]'
+                    : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <div className="font-light">OpenAI 兼容</div>
-                <div className="text-xs mt-1 opacity-80">DeepSeek, Moonshot, OpenAI等</div>
+                <div className="font-light">向量模型</div>
+                <div className="text-xs mt-1 opacity-70">用于文档向量化</div>
+              </button>
+              <button
+                onClick={() => setActiveTab('parsing')}
+                className={`flex-1 px-6 py-4 text-sm font-light transition-colors border-b-2 ${
+                  activeTab === 'parsing'
+                    ? 'border-[#2C5530] text-[#2C5530] bg-[#FAF9F7]'
+                    : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <div className="font-light">解析模型</div>
+                <div className="text-xs mt-1 opacity-70">用于书籍解析和角色生成</div>
               </button>
             </div>
           </div>
+        </div>
 
-          {/* 阿里云配置 */}
-          {formData.provider === 'aliyun' && (
-            <>
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-xl font-light text-gray-800 mb-4">语言模型配置</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      API Key <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.qwen_api_key}
-                      onChange={(e) => setFormData({ ...formData, qwen_api_key: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
-                      placeholder="sk-..."
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      在阿里云百炼控制台获取API Key
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      模型名称
-                    </label>
-                    <select
-                      value={formData.qwen_model}
-                      onChange={(e) => setFormData({ ...formData, qwen_model: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
-                    >
-                      <option value="qwen-max">qwen-max (最强性能)</option>
-                      <option value="qwen-plus">qwen-plus (平衡性能)</option>
-                      <option value="qwen-turbo">qwen-turbo (快速响应)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      Base URL
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.qwen_base_url}
-                      onChange={(e) => setFormData({ ...formData, qwen_base_url: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
-                      placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-xl font-light text-gray-800 mb-4">向量模型配置</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      Embedding模型
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.qwen_embedding_model}
-                      onChange={(e) => setFormData({ ...formData, qwen_embedding_model: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
-                      placeholder="text-embedding-v3"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      ChromaDB URL
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.chromadb_url}
-                      onChange={(e) => setFormData({ ...formData, chromadb_url: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
-                      placeholder="http://localhost:8000"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      向量数据库服务地址
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
+        {/* Tab内容 */}
+        <div className="bg-white rounded-lg shadow-sm p-8">
+          {activeTab === 'conversation' && renderLLMModelConfig(
+            'conversation',
+            formData.conversation,
+            '对话模型配置',
+            '配置与用户对话交互使用的AI模型（建议使用性价比高的模型）'
           )}
-
-          {/* OpenAI兼容配置 */}
-          {formData.provider === 'openai' && (
-            <>
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-xl font-light text-gray-800 mb-4">语言模型配置</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      Base URL <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.openai_base_url}
-                      onChange={(e) => setFormData({ ...formData, openai_base_url: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
-                      placeholder="https://api.deepseek.com/v1"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      OpenAI兼容API地址（如DeepSeek, Moonshot等）
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      API Key <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.openai_api_key}
-                      onChange={(e) => setFormData({ ...formData, openai_api_key: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
-                      placeholder="sk-..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      模型名称
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.openai_model}
-                      onChange={(e) => setFormData({ ...formData, openai_model: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
-                      placeholder="deepseek-chat 或 gpt-4"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      填写对话模型名称
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-xl font-light text-gray-800 mb-4">向量模型配置</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      Embedding模型名称
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.openai_embedding_model}
-                      onChange={(e) => setFormData({ ...formData, openai_embedding_model: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
-                      placeholder="text-embedding-3-small"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      向量化模型名称
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-light text-gray-700 mb-2">
-                      ChromaDB URL
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.chromadb_url}
-                      onChange={(e) => setFormData({ ...formData, chromadb_url: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
-                      placeholder="http://localhost:8000"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      向量数据库服务地址
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
+          {activeTab === 'embedding' && renderEmbeddingModelConfig()}
+          {activeTab === 'parsing' && renderLLMModelConfig(
+            'parsing',
+            formData.parsing,
+            '解析模型配置',
+            '配置书籍信息解析和角色生成使用的AI模型（建议使用性能强大的模型）'
           )}
-
-          {/* 操作按钮 */}
-          <div className="flex gap-4 pt-6 border-t border-gray-200">
-            <button
-              onClick={handleTest}
-              disabled={
-                testing ||
-                (formData.provider === 'aliyun' && !formData.qwen_api_key) ||
-                (formData.provider === 'openai' && (!formData.openai_api_key || !formData.openai_base_url))
-              }
-              className="flex-1 border-2 border-[#2C5530] text-[#2C5530] py-3 rounded-lg hover:bg-[#2C5530] hover:text-white transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {testing ? '测试中...' : '测试连接'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={
-                saving ||
-                (formData.provider === 'aliyun' && !formData.qwen_api_key) ||
-                (formData.provider === 'openai' && (!formData.openai_api_key || !formData.openai_base_url))
-              }
-              className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? '保存中...' : '保存配置'}
-            </button>
-          </div>
 
           {/* 说明 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
             <h4 className="font-light text-blue-900 mb-2">配置说明</h4>
             <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
               <li>配置保存后立即生效，无需重启应用</li>
-              <li>建议先点击"测试连接"验证API Key有效性</li>
-              <li>通义千问API Key可在阿里云百炼控制台获取</li>
-              <li>ChromaDB默认运行在 localhost:8000</li>
+              <li>每个模型可独立配置和测试</li>
+              <li>对话模型建议用便宜的模型降低成本</li>
+              <li>解析模型建议用强大的模型保证解析质量</li>
+              <li>Temperature越低输出越确定，越高越随机</li>
             </ul>
           </div>
         </div>
