@@ -14,6 +14,11 @@ export default function AdminBooksPage() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'title' | 'created_at' | 'ai_knowledge_level'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     checkAuth();
@@ -72,6 +77,114 @@ export default function AdminBooksPage() {
     }
   };
 
+  // 批量操作
+  const handleBatchPublish = async () => {
+    if (selectedBooks.length === 0) return;
+    if (!confirm(`确定要上架选中的 ${selectedBooks.length} 本书籍吗？`)) return;
+
+    setError('');
+    try {
+      const response = await fetch('/api/admin/books/batch', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedBooks, action: 'publish' }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '批量上架失败');
+      }
+      setSelectedBooks([]);
+      await fetchBooks();
+    } catch (error) {
+      console.error('批量上架失败:', error);
+      setError(error instanceof Error ? error.message : '批量上架失败');
+    }
+  };
+
+  const handleBatchUnpublish = async () => {
+    if (selectedBooks.length === 0) return;
+    if (!confirm(`确定要下架选中的 ${selectedBooks.length} 本书籍吗？`)) return;
+
+    setError('');
+    try {
+      const response = await fetch('/api/admin/books/batch', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedBooks, action: 'unpublish' }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '批量下架失败');
+      }
+      setSelectedBooks([]);
+      await fetchBooks();
+    } catch (error) {
+      console.error('批量下架失败:', error);
+      setError(error instanceof Error ? error.message : '批量下架失败');
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedBooks.length === 0) return;
+    if (!confirm(`确定要删除选中的 ${selectedBooks.length} 本书籍吗？删除后无法恢复。`)) return;
+
+    setError('');
+    try {
+      const response = await fetch('/api/admin/books/batch', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedBooks }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '批量删除失败');
+      }
+      setSelectedBooks([]);
+      await fetchBooks();
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      setError(error instanceof Error ? error.message : '批量删除失败');
+    }
+  };
+
+  // 全选/取消全选
+  const handleToggleAll = () => {
+    if (selectedBooks.length === filteredAndSortedBooks.length) {
+      setSelectedBooks([]);
+    } else {
+      setSelectedBooks(filteredAndSortedBooks.map((book: any) => book.id));
+    }
+  };
+
+  // 单选
+  const handleToggleBook = (id: string) => {
+    setSelectedBooks(prev =>
+      prev.includes(id) ? prev.filter(bookId => bookId !== id) : [...prev, id]
+    );
+  };
+
+  // 筛选和排序
+  const filteredAndSortedBooks = books
+    .filter((book: any) => {
+      if (filterStatus !== 'all' && book.status !== filterStatus) return false;
+      if (filterCategory !== 'all' && book.category !== filterCategory) return false;
+      return true;
+    })
+    .sort((a: any, b: any) => {
+      let comparison = 0;
+      if (sortBy === 'title') {
+        comparison = a.title.localeCompare(b.title);
+      } else if (sortBy === 'created_at') {
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (sortBy === 'ai_knowledge_level') {
+        comparison = a.ai_knowledge_level - b.ai_knowledge_level;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+  // 获取所有分类
+  const categories = Array.from(new Set(books.map((book: any) => book.category).filter(Boolean)));
+
   if (loading) {
     return (
       <AdminLayout>
@@ -110,6 +223,103 @@ export default function AdminBooksPage() {
           </div>
         )}
 
+        {/* 筛选和排序栏 */}
+        {books.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* 状态筛选 */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-light text-gray-600">状态:</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="px-3 py-1.5 border border-gray-300 rounded font-light text-sm focus:outline-none focus:ring-2 focus:ring-[#2C5530]"
+                >
+                  <option value="all">全部</option>
+                  <option value="published">已上架</option>
+                  <option value="draft">草稿</option>
+                </select>
+              </div>
+
+              {/* 分类筛选 */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-light text-gray-600">分类:</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 rounded font-light text-sm focus:outline-none focus:ring-2 focus:ring-[#2C5530]"
+                >
+                  <option value="all">全部分类</option>
+                  {categories.map((cat: any) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 排序 */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-light text-gray-600">排序:</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-3 py-1.5 border border-gray-300 rounded font-light text-sm focus:outline-none focus:ring-2 focus:ring-[#2C5530]"
+                >
+                  <option value="created_at">创建时间</option>
+                  <option value="title">书名</option>
+                  <option value="ai_knowledge_level">AI了解度</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title={sortOrder === 'asc' ? '升序' : '降序'}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              </div>
+
+              {/* 显示数量 */}
+              <div className="ml-auto text-sm font-light text-gray-600">
+                显示 {filteredAndSortedBooks.length} / {books.length} 本书籍
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 批量操作栏 */}
+        {selectedBooks.length > 0 && (
+          <div className="bg-[#2C5530] text-white rounded-lg shadow-sm p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="font-light">已选择 {selectedBooks.length} 本书籍</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBatchPublish}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-light transition-colors"
+                >
+                  批量上架
+                </button>
+                <button
+                  onClick={handleBatchUnpublish}
+                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded font-light transition-colors"
+                >
+                  批量下架
+                </button>
+                <button
+                  onClick={handleBatchDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-light transition-colors"
+                >
+                  批量删除
+                </button>
+                <button
+                  onClick={() => setSelectedBooks([])}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded font-light transition-colors"
+                >
+                  取消选择
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 空状态 */}
         {!loading && books.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
@@ -130,11 +340,19 @@ export default function AdminBooksPage() {
         )}
 
         {/* 书籍列表 */}
-        {books.length > 0 && (
+        {filteredAndSortedBooks.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedBooks.length === filteredAndSortedBooks.length}
+                      onChange={handleToggleAll}
+                      className="w-4 h-4 text-[#2C5530] rounded focus:ring-[#2C5530]"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">书名</th>
                   <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">作者</th>
                   <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">分类</th>
@@ -144,8 +362,16 @@ export default function AdminBooksPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {books.map((book: any) => (
+                {filteredAndSortedBooks.map((book: any) => (
                 <tr key={book.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedBooks.includes(book.id)}
+                      onChange={() => handleToggleBook(book.id)}
+                      className="w-4 h-4 text-[#2C5530] rounded focus:ring-[#2C5530]"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-light text-gray-900">{book.title}</div>
                   </td>
@@ -187,6 +413,13 @@ export default function AdminBooksPage() {
               ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* 筛选后无结果 */}
+        {filteredAndSortedBooks.length === 0 && books.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <p className="text-gray-500">没有符合筛选条件的书籍</p>
           </div>
         )}
       </main>
