@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         let createdCount = 0;
         for (const char of extractionResult.characters) {
           try {
-            createCharacter({
+            await createCharacter({
               book_id: bookId,
               name: char.name,
               description: char.description,
