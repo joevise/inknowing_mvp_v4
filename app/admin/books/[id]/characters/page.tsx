@@ -88,7 +88,11 @@ export default function BookCharactersPage() {
   };
 
   const handleAIExtract = async () => {
-    if (!confirm('确定要让AI自动提取角色吗？这可能需要几秒钟时间。')) return;
+    const confirmMessage = characters.length > 0
+      ? `已有${characters.length}个角色。确定要提取更多角色吗？这可能需要几秒钟时间。`
+      : '确定要让AI自动提取角色吗？这可能需要几秒钟时间。';
+
+    if (!confirm(confirmMessage)) return;
 
     setError('');
     setSuccess('');
@@ -108,7 +112,8 @@ export default function BookCharactersPage() {
       }
 
       setSuccess(data.message || '角色提取成功！');
-      setCharacters(data.characters || []);
+      // 追加新角色到现有列表
+      setCharacters([...characters, ...(data.characters || [])]);
     } catch (error) {
       console.error('AI提取失败:', error);
       setError(error instanceof Error ? error.message : 'AI提取失败');
@@ -218,7 +223,12 @@ export default function BookCharactersPage() {
               disabled={extracting}
               className="flex-1 bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#1a2e1c] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {extracting ? 'AI提取中...' : '🤖 AI自动提取角色'}
+              {extracting
+                ? 'AI提取中...'
+                : characters.length > 0
+                  ? `🤖 提取更多角色 (已有${characters.length}个)`
+                  : '🤖 AI自动提取角色'
+              }
             </button>
             <button
               onClick={() => setShowManualForm(!showManualForm)}
@@ -280,7 +290,8 @@ export default function BookCharactersPage() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
             <h4 className="font-light text-blue-900 mb-2">💡 提示</h4>
             <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li><strong>AI自动提取</strong>：让AI根据书籍信息自动识别并创建主要角色</li>
+              <li><strong>AI自动提取</strong>：让AI根据书籍信息自动识别并创建主要角色，每次提取3-5个</li>
+              <li><strong>提取更多角色</strong>：如果角色较多，可以多次提取，AI会自动跳过已提取的角色</li>
               <li><strong>手动添加</strong>：自己创建角色，可以添加AI未识别的角色</li>
               <li>创建后可以在角色列表中编辑详细信息</li>
             </ul>

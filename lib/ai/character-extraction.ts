@@ -29,13 +29,15 @@ export async function extractCharacters(
   bookTitle: string,
   author: string,
   description?: string,
-  additionalContext?: string
+  additionalContext?: string,
+  excludeCharacters?: string[]
 ): Promise<CharacterExtractionResult> {
   console.log('[Character Extraction] 开始提取角色:', {
     bookTitle,
     author,
     hasDescription: !!description,
-    hasAdditionalContext: !!additionalContext
+    hasAdditionalContext: !!additionalContext,
+    excludeCount: excludeCharacters?.length || 0
   });
 
   if (!bookTitle || !author) {
@@ -52,11 +54,23 @@ export async function extractCharacters(
       context += `\n补充信息：${additionalContext}`;
     }
 
+    // 如果有已提取的角色，添加排除说明
+    if (excludeCharacters && excludeCharacters.length > 0) {
+      context += `\n\n已提取的角色（请跳过这些角色，提取其他角色）：\n${excludeCharacters.map((name, i) => `${i + 1}. ${name}`).join('\n')}`;
+    }
+
     // 构建提示词
+    const systemPrompt = excludeCharacters && excludeCharacters.length > 0
+      ? CHARACTER_EXTRACTION_PROMPT.replace(
+          '请根据提供的书籍信息，提取2-5个主要角色。',
+          '请根据提供的书籍信息，提取3-5个**新的**主要角色（不包括已提取的角色）。'
+        )
+      : CHARACTER_EXTRACTION_PROMPT;
+
     const messages = [
       {
         role: 'system' as const,
-        content: CHARACTER_EXTRACTION_PROMPT
+        content: systemPrompt
       },
       {
         role: 'user' as const,
@@ -64,10 +78,10 @@ export async function extractCharacters(
       }
     ];
 
-    // 调用AI
+    // 调用AI，增加max_tokens以支持更多角色
     const response = await chat(messages, {
       temperature: 0.5, // 适中的创造性
-      maxTokens: 2000
+      maxTokens: 3000 // 增加到3000以支持更多角色
     });
 
     // 解析响应

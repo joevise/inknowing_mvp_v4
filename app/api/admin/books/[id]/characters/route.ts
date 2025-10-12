@@ -89,13 +89,21 @@ export async function POST(
         bookTitle: book.title,
       });
 
+      // 获取已有角色列表（用于排除）
+      const existingCharacters = await getCharactersByBookId(params.id);
+      const excludeNames = existingCharacters.map(char => char.name);
+
+      console.log('[API] 已有角色:', excludeNames.length, '个');
+
       const extractionResult = await extractCharacters(
         book.title,
         book.author,
-        book.description
+        book.description,
+        undefined,
+        excludeNames.length > 0 ? excludeNames : undefined
       );
 
-      console.log('[API] AI提取完成，找到', extractionResult.characters.length, '个角色');
+      console.log('[API] AI提取完成，找到', extractionResult.characters.length, '个新角色');
 
       // 批量创建角色
       const createdCharacters: Character[] = [];
