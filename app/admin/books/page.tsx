@@ -40,7 +40,7 @@ export default function AdminBooksPage() {
 
   const fetchBooks = async () => {
     try {
-      const res = await fetch('/api/admin/books');
+      const res = await fetch('/api/admin/books?limit=1000');
       if (!res.ok) {
         throw new Error('获取书籍列表失败');
       }
