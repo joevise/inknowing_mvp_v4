@@ -16,12 +16,16 @@ const conversationService = new ConversationService();
  * 创建新对话
  */
 export async function POST(request: NextRequest) {
+  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`[API Conversations POST ${requestId}] 收到创建对话请求`);
+
   try {
     // 1. 验证用户身份
     const authResult = await requireAuth(request);
 
     // 如果返回的是NextResponse，说明未认证
     if (authResult instanceof NextResponse) {
+      console.log(`[API Conversations POST ${requestId}] 用户未登录`);
       return authResult;
     }
 
@@ -30,6 +34,7 @@ export async function POST(request: NextRequest) {
     // 2. 解析请求体
     const body = await request.json();
     const { bookId, characterId, type } = body;
+    console.log(`[API Conversations POST ${requestId}] 参数:`, { userId: user.id, bookId, characterId, type });
 
     if (!bookId || !type) {
       return NextResponse.json(
@@ -61,6 +66,8 @@ export async function POST(request: NextRequest) {
       title: body.title,
     });
 
+    console.log(`[API Conversations POST ${requestId}] 对话创建成功:`, conversation.id);
+
     // 4. 返回结果
     return NextResponse.json({
       success: true,
@@ -68,7 +75,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('[API] 创建对话失败:', error);
+    console.error(`[API Conversations POST ${requestId}] 创建对话失败:`, error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : '创建对话失败',

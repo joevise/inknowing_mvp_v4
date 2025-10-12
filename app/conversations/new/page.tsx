@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function NewConversationPage() {
@@ -13,12 +13,20 @@ export default function NewConversationPage() {
   const searchParams = useSearchParams();
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(true);
+  const hasCreated = useRef(false);
 
   const bookId = searchParams.get('bookId');
   const characterId = searchParams.get('characterId');
 
   useEffect(() => {
+    // 防止 React StrictMode 导致的重复执行
+    if (hasCreated.current) {
+      console.log('[NewConversation] 已经创建过对话，忽略重复执行');
+      return;
+    }
+
     if (bookId) {
+      hasCreated.current = true;
       createConversation();
     } else {
       setError('缺少书籍ID');
@@ -27,6 +35,8 @@ export default function NewConversationPage() {
   }, [bookId, characterId]);
 
   const createConversation = async () => {
+    console.log('[NewConversation] 开始创建对话:', { bookId, characterId });
+
     try {
       setCreating(true);
       setError('');
@@ -36,6 +46,7 @@ export default function NewConversationPage() {
         credentials: 'include',
       });
       if (!sessionCheck.ok) {
+        console.log('[NewConversation] 用户未登录，跳转到登录页');
         // 未登录，跳转到登录页并保存当前URL
         const currentUrl = `/conversations/new?bookId=${bookId}${characterId ? `&characterId=${characterId}` : ''}`;
         router.push(`/auth/login?redirect=${encodeURIComponent(currentUrl)}`);
@@ -74,6 +85,7 @@ export default function NewConversationPage() {
       console.error('[NewConversation] 创建失败:', err);
       setError(err instanceof Error ? err.message : '创建对话失败');
       setCreating(false);
+      hasCreated.current = false; // 重置状态以便重试
     }
   };
 

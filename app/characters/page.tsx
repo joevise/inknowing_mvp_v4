@@ -59,7 +59,18 @@ export default function CharactersPage() {
     }
   };
 
+  const [creatingConversation, setCreatingConversation] = useState<string | null>(null);
+
   const handleStartConversation = async (characterId: string, bookId: string) => {
+    // 防止重复点击
+    if (creatingConversation === characterId) {
+      console.log('[CharactersPage] 已经在创建对话，忽略重复点击');
+      return;
+    }
+
+    setCreatingConversation(characterId);
+    console.log('[CharactersPage] 开始创建角色对话:', characterId);
+
     try {
       const response = await fetch('/api/conversations', {
         method: 'POST',
@@ -73,6 +84,7 @@ export default function CharactersPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('[CharactersPage] 对话创建成功:', data.conversation.id);
         router.push(`/conversations/${data.conversation.id}`);
       } else {
         // 未登录，跳转到登录页
@@ -80,6 +92,7 @@ export default function CharactersPage() {
       }
     } catch (error) {
       console.error('Failed to start conversation:', error);
+      setCreatingConversation(null);
     }
   };
 
@@ -161,10 +174,12 @@ export default function CharactersPage() {
                       {/* 开始对话按钮 */}
                       <button
                         onClick={() => handleStartConversation(char.id, char.book_id)}
+                        disabled={creatingConversation === char.id}
                         className="w-full py-2 bg-[#2C5530] text-white rounded-lg
-                                 font-light text-sm hover:bg-[#234426] transition-colors"
+                                 font-light text-sm hover:bg-[#234426] transition-colors
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        开始对话
+                        {creatingConversation === char.id ? '创建中...' : '开始对话'}
                       </button>
                     </div>
                   ))}

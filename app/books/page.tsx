@@ -113,8 +113,20 @@ export default function BooksPage() {
     setPage(1); // 重置到第一页
   };
 
+  const [creatingConversation, setCreatingConversation] = useState<string | null>(null);
+
   const handleStartBookConversation = async (e: React.MouseEvent, bookId: string) => {
     e.stopPropagation(); // 阻止冒泡到卡片点击
+
+    // 防止重复点击
+    if (creatingConversation === bookId) {
+      console.log('[BooksPage] 已经在创建对话，忽略重复点击');
+      return;
+    }
+
+    setCreatingConversation(bookId);
+    console.log('[BooksPage] 开始创建书籍对话:', bookId);
+
     try {
       const response = await fetch('/api/conversations', {
         method: 'POST',
@@ -127,6 +139,7 @@ export default function BooksPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('[BooksPage] 对话创建成功:', data.conversation.id);
         router.push(`/conversations/${data.conversation.id}`);
       } else {
         // 未登录，跳转到登录页
@@ -134,6 +147,7 @@ export default function BooksPage() {
       }
     } catch (error) {
       console.error('Failed to start book conversation:', error);
+      setCreatingConversation(null);
     }
   };
 
@@ -268,11 +282,13 @@ export default function BooksPage() {
                                     opacity-0 group-hover:opacity-100">
                         <button
                           onClick={(e) => handleStartBookConversation(e, book.id)}
+                          disabled={creatingConversation === book.id}
                           className="px-4 py-2 bg-[#2C5530] text-white rounded-lg font-light text-sm
                                    hover:bg-[#234426] transition-colors shadow-lg transform
-                                   translate-y-2 group-hover:translate-y-0"
+                                   translate-y-2 group-hover:translate-y-0
+                                   disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          开始对话
+                          {creatingConversation === book.id ? '创建中...' : '开始对话'}
                         </button>
                       </div>
                     </div>
