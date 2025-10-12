@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
         openai_model: getConfig('CONVERSATION_OPENAI_MODEL') || 'gpt-3.5-turbo',
         temperature: parseFloat(getConfig('CONVERSATION_TEMPERATURE') || '0.7'),
         max_tokens: parseInt(getConfig('CONVERSATION_MAX_TOKENS') || '2000'),
+        book_prompt: getConfig('CONVERSATION_BOOK_PROMPT') || '',
+        character_prompt: getConfig('CONVERSATION_CHARACTER_PROMPT') || '',
       },
       embedding: {
         provider: getConfig('EMBEDDING_PROVIDER') || 'aliyun',
@@ -47,6 +49,8 @@ export async function GET(request: NextRequest) {
         openai_model: getConfig('PARSING_OPENAI_MODEL') || 'gpt-4o',
         temperature: parseFloat(getConfig('PARSING_TEMPERATURE') || '0.3'),
         max_tokens: parseInt(getConfig('PARSING_MAX_TOKENS') || '4000'),
+        book_recognition_prompt: getConfig('PARSING_BOOK_RECOGNITION_PROMPT') || '',
+        character_extraction_prompt: getConfig('PARSING_CHARACTER_EXTRACTION_PROMPT') || '',
       }
     };
 
@@ -136,6 +140,18 @@ export async function PUT(request: NextRequest) {
     if (tab === 'conversation' || tab === 'parsing') {
       if (config.temperature !== undefined) configUpdates[`${prefix}_TEMPERATURE`] = String(config.temperature);
       if (config.max_tokens !== undefined) configUpdates[`${prefix}_MAX_TOKENS`] = String(config.max_tokens);
+    }
+
+    // 对话模型提示词
+    if (tab === 'conversation') {
+      if (config.book_prompt) configUpdates.CONVERSATION_BOOK_PROMPT = config.book_prompt;
+      if (config.character_prompt) configUpdates.CONVERSATION_CHARACTER_PROMPT = config.character_prompt;
+    }
+
+    // 解析模型提示词
+    if (tab === 'parsing') {
+      if (config.book_recognition_prompt) configUpdates.PARSING_BOOK_RECOGNITION_PROMPT = config.book_recognition_prompt;
+      if (config.character_extraction_prompt) configUpdates.PARSING_CHARACTER_EXTRACTION_PROMPT = config.character_extraction_prompt;
     }
 
     // Embedding模型特有参数

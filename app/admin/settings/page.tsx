@@ -9,6 +9,12 @@
 import AdminLayout from '@/components/layout/AdminLayout';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  BOOK_CHAT_PROMPT,
+  CHARACTER_CHAT_PROMPT,
+  BOOK_RECOGNITION_PROMPT,
+  CHARACTER_EXTRACTION_PROMPT,
+} from '@/lib/ai/prompts';
 
 type ModelTab = 'conversation' | 'embedding' | 'parsing';
 type Provider = 'aliyun' | 'openai';
@@ -23,6 +29,10 @@ interface LLMModelConfig {
   openai_model: string;
   temperature: number;
   max_tokens: number;
+  book_prompt?: string;  // 对话模型：书籍对话提示词
+  character_prompt?: string;  // 对话模型：角色对话提示词
+  book_recognition_prompt?: string;  // 解析模型：书籍识别提示词
+  character_extraction_prompt?: string;  // 解析模型：角色提取提示词
 }
 
 interface EmbeddingModelConfig {
@@ -71,6 +81,8 @@ export default function SettingsPage() {
       openai_model: 'gpt-3.5-turbo',
       temperature: 0.7,
       max_tokens: 2000,
+      book_prompt: BOOK_CHAT_PROMPT,
+      character_prompt: CHARACTER_CHAT_PROMPT,
     },
     embedding: {
       provider: 'aliyun',
@@ -92,6 +104,8 @@ export default function SettingsPage() {
       openai_model: 'gpt-4o',
       temperature: 0.3,
       max_tokens: 4000,
+      book_recognition_prompt: BOOK_RECOGNITION_PROMPT,
+      character_extraction_prompt: CHARACTER_EXTRACTION_PROMPT,
     },
   });
 
@@ -377,6 +391,86 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* 提示词配置 - 对话模型 */}
+        {tab === 'conversation' && (
+          <div className="border-t border-gray-200 pt-6">
+            <h4 className="text-base font-light text-gray-800 mb-4">提示词配置</h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-light text-gray-700 mb-2">
+                  书籍对话提示词
+                </label>
+                <textarea
+                  value={config.book_prompt || ''}
+                  onChange={(e) => updateTabConfig(tab, 'book_prompt', e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-xs"
+                  placeholder="用户与书籍对话时使用的系统提示词..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  支持变量: {'{bookTitle}'}, {'{author}'}, {'{bookDescription}'}, {'{ragContext}'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-light text-gray-700 mb-2">
+                  角色对话提示词
+                </label>
+                <textarea
+                  value={config.character_prompt || ''}
+                  onChange={(e) => updateTabConfig(tab, 'character_prompt', e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-xs"
+                  placeholder="用户与角色对话时使用的系统提示词..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  支持变量: {'{bookTitle}'}, {'{characterName}'}, {'{description}'}, {'{personality}'}, {'{speakingStyle}'}, {'{backgroundStory}'}, {'{keyQuotes}'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 提示词配置 - 解析模型 */}
+        {tab === 'parsing' && (
+          <div className="border-t border-gray-200 pt-6">
+            <h4 className="text-base font-light text-gray-800 mb-4">提示词配置</h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-light text-gray-700 mb-2">
+                  书籍识别提示词
+                </label>
+                <textarea
+                  value={config.book_recognition_prompt || ''}
+                  onChange={(e) => updateTabConfig(tab, 'book_recognition_prompt', e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-xs"
+                  placeholder="用户输入书名时,AI识别并返回书籍信息的提示词..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  用于书籍信息识别和提取
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-light text-gray-700 mb-2">
+                  角色提取提示词
+                </label>
+                <textarea
+                  value={config.character_extraction_prompt || ''}
+                  onChange={(e) => updateTabConfig(tab, 'character_extraction_prompt', e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-xs"
+                  placeholder="根据书籍信息提取角色的提示词..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  用于从书籍中提取和生成角色信息
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 操作按钮 */}
         <div className="flex gap-4 pt-6 border-t border-gray-200">
