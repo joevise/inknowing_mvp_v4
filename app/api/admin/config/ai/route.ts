@@ -8,6 +8,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/middleware/admin-auth';
 import { getConfig, setManyConfig } from '@/lib/services/runtime-config';
+import {
+  BOOK_CHAT_PROMPT,
+  CHARACTER_CHAT_PROMPT,
+  BOOK_RECOGNITION_PROMPT,
+  CHARACTER_EXTRACTION_PROMPT,
+} from '@/lib/ai/prompts';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +32,8 @@ export async function GET(request: NextRequest) {
         openai_model: getConfig('CONVERSATION_OPENAI_MODEL') || 'gpt-3.5-turbo',
         temperature: parseFloat(getConfig('CONVERSATION_TEMPERATURE') || '0.7'),
         max_tokens: parseInt(getConfig('CONVERSATION_MAX_TOKENS') || '2000'),
-        book_prompt: getConfig('CONVERSATION_BOOK_PROMPT') || '',
-        character_prompt: getConfig('CONVERSATION_CHARACTER_PROMPT') || '',
+        book_prompt: getConfig('CONVERSATION_BOOK_PROMPT') || BOOK_CHAT_PROMPT,
+        character_prompt: getConfig('CONVERSATION_CHARACTER_PROMPT') || CHARACTER_CHAT_PROMPT,
       },
       embedding: {
         provider: getConfig('EMBEDDING_PROVIDER') || 'aliyun',
@@ -49,8 +55,8 @@ export async function GET(request: NextRequest) {
         openai_model: getConfig('PARSING_OPENAI_MODEL') || 'gpt-4o',
         temperature: parseFloat(getConfig('PARSING_TEMPERATURE') || '0.3'),
         max_tokens: parseInt(getConfig('PARSING_MAX_TOKENS') || '4000'),
-        book_recognition_prompt: getConfig('PARSING_BOOK_RECOGNITION_PROMPT') || '',
-        character_extraction_prompt: getConfig('PARSING_CHARACTER_EXTRACTION_PROMPT') || '',
+        book_recognition_prompt: getConfig('PARSING_BOOK_RECOGNITION_PROMPT') || BOOK_RECOGNITION_PROMPT,
+        character_extraction_prompt: getConfig('PARSING_CHARACTER_EXTRACTION_PROMPT') || CHARACTER_EXTRACTION_PROMPT,
       }
     };
 
