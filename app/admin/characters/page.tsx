@@ -64,7 +64,7 @@ export default function CharactersPage() {
     if (books.length > 0) {
       fetchCharacters();
     }
-  }, [page, pageSize, search, selectedBookId, sortBy, sortOrder]);
+  }, [books.length, page, pageSize, search, selectedBookId, sortBy, sortOrder]);
 
   const checkAuth = async () => {
     try {
