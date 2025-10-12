@@ -266,15 +266,16 @@ export default function SettingsPage() {
               <label className="block text-sm font-light text-gray-700 mb-2">
                 模型名称
               </label>
-              <select
+              <input
+                type="text"
                 value={config.qwen_model}
                 onChange={(e) => updateTabConfig(tab, 'qwen_model', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
-              >
-                <option value="qwen-max">qwen-max (最强性能)</option>
-                <option value="qwen-plus">qwen-plus (平衡性能)</option>
-                <option value="qwen-turbo">qwen-turbo (快速响应)</option>
-              </select>
+                placeholder="qwen-max"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                推荐: qwen-max (最强), qwen-plus (平衡), qwen-turbo (快速)
+              </p>
             </div>
 
             <div>
