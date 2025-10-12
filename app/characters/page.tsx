@@ -22,18 +22,24 @@ export default function CharactersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState('');
+
+  // 分页状态
+  const [page, setPage] = useState(1);
+  const pageSize = 24; // 每页显示24个角色
 
   useEffect(() => {
     fetchCharacters();
-  }, []);
+  }, [page]);
 
   const fetchCharacters = async () => {
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch('/api/characters/popular?limit=20');
+      const offset = (page - 1) * pageSize;
+      const response = await fetch(`/api/characters/popular?limit=${pageSize}&offset=${offset}`);
 
       if (!response.ok) {
         const data = await response.json();
@@ -42,6 +48,7 @@ export default function CharactersPage() {
 
       const data = await response.json();
       setCharacters(data.characters || []);
+      setTotal(data.total || 0);
 
       console.log('[Characters] 获取角色列表:', data);
     } catch (err) {
@@ -112,7 +119,7 @@ export default function CharactersPage() {
             {!loading && characters.length > 0 && (
               <>
                 <div className="mb-6 text-sm font-light text-gray-500">
-                  共 {characters.length} 个角色
+                  共 {total} 个角色 · 第 {page} 页 / 共 {Math.ceil(total / pageSize)} 页
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -162,6 +169,62 @@ export default function CharactersPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* 分页控件 */}
+                {Math.ceil(total / pageSize) > 1 && (
+                  <div className="mt-12 flex items-center justify-center gap-2">
+                    {/* 上一页按钮 */}
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-lg font-light text-sm transition-colors
+                               disabled:opacity-30 disabled:cursor-not-allowed
+                               bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    >
+                      上一页
+                    </button>
+
+                    {/* 页码 */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, Math.ceil(total / pageSize)) }, (_, i) => {
+                        const totalPages = Math.ceil(total / pageSize);
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`w-10 h-10 rounded-lg font-light text-sm transition-colors
+                                     ${page === pageNum
+                                       ? 'bg-[#2C5530] text-white'
+                                       : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* 下一页按钮 */}
+                    <button
+                      onClick={() => setPage(p => Math.min(Math.ceil(total / pageSize), p + 1))}
+                      disabled={page >= Math.ceil(total / pageSize)}
+                      className="px-4 py-2 rounded-lg font-light text-sm transition-colors
+                               disabled:opacity-30 disabled:cursor-not-allowed
+                               bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

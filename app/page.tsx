@@ -204,20 +204,32 @@ export default function HomePage() {
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-light text-gray-800">精选书籍</h2>
 
-              {/* 分类筛选 */}
-              <div className="flex gap-2">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-lg text-sm font-light transition-colors
-                              ${selectedCategory === cat
-                                ? 'bg-[#2C5530] text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                  >
-                    {cat === 'all' ? '全部' : cat}
-                  </button>
-                ))}
+              <div className="flex items-center gap-4">
+                {/* 分类筛选 */}
+                <div className="flex gap-2">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-4 py-2 rounded-lg text-sm font-light transition-colors
+                                ${selectedCategory === cat
+                                  ? 'bg-[#2C5530] text-white'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      {cat === 'all' ? '全部' : cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 查看更多按钮 */}
+                <Link
+                  href="/books"
+                  className="px-4 py-2 text-sm font-light text-[#2C5530] hover:text-[#234426]
+                           border border-[#2C5530] rounded-lg hover:bg-[#2C5530] hover:text-white
+                           transition-all whitespace-nowrap"
+                >
+                  查看更多 →
+                </Link>
               </div>
             </div>
 
@@ -306,11 +318,23 @@ export default function HomePage() {
         {/* 角色展示区域 */}
         <section className="py-16 px-6 bg-[#FAF9F7]">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-2xl font-light text-gray-800">热门角色</h2>
-              <p className="text-sm font-light text-gray-500 mt-2">
-                直接与经典角色开始对话
-              </p>
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-light text-gray-800">热门角色</h2>
+                <p className="text-sm font-light text-gray-500 mt-2">
+                  直接与经典角色开始对话
+                </p>
+              </div>
+
+              {/* 查看更多按钮 */}
+              <Link
+                href="/characters"
+                className="px-4 py-2 text-sm font-light text-[#2C5530] hover:text-[#234426]
+                         border border-[#2C5530] rounded-lg hover:bg-[#2C5530] hover:text-white
+                         transition-all whitespace-nowrap"
+              >
+                查看更多 →
+              </Link>
             </div>
 
             {/* 角色卡片网格 */}

@@ -227,9 +227,25 @@ export function searchCharacters(query: string): Array<Character & { book_title:
 }
 
 /**
- * 获取热门角色（基于对话数量）
+ * 获取热门角色（基于对话数量）- 支持分页
  */
-export function getPopularCharacters(limit: number = 10): Array<Character & { conversation_count: number; book_title: string }> {
+export function getPopularCharacters(
+  limit: number = 10,
+  offset: number = 0
+): {
+  characters: Array<Character & { conversation_count: number; book_title: string }>;
+  total: number;
+} {
+  // 获取总数
+  const countStmt = db().prepare(`
+    SELECT COUNT(DISTINCT c.id) as total
+    FROM characters c
+    JOIN books b ON c.book_id = b.id
+    WHERE b.status = 'published'
+  `);
+  const { total } = countStmt.get() as { total: number };
+
+  // 获取分页数据
   const stmt = db().prepare(`
     SELECT c.*, b.title as book_title, COUNT(conv.id) as conversation_count
     FROM characters c
@@ -238,12 +254,12 @@ export function getPopularCharacters(limit: number = 10): Array<Character & { co
     WHERE b.status = 'published'
     GROUP BY c.id
     ORDER BY conversation_count DESC
-    LIMIT ?
+    LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(limit) as any[];
+  const rows = stmt.all(limit, offset) as any[];
 
-  return rows.map(row => ({
+  const characters = rows.map(row => ({
     id: row.id,
     book_id: row.book_id,
     name: row.name,
@@ -257,6 +273,8 @@ export function getPopularCharacters(limit: number = 10): Array<Character & { co
     book_title: row.book_title,
     conversation_count: row.conversation_count,
   }));
+
+  return { characters, total };
 }
 
 /**
