@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -120,11 +120,20 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
           <h3 className="text-xl font-light text-gray-800 mb-4">快捷操作</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ActionButton
+            <DropdownActionButton
               title="添加新书籍"
               description="通过AI识别或手动添加"
               icon="➕"
-              link="/admin/books/new"
+              options={[
+                {
+                  label: 'AI识别（单本）',
+                  link: '/admin/books/new',
+                },
+                {
+                  label: '批量识别',
+                  link: '/admin/books/batch-create',
+                },
+              ]}
             />
             <ActionButton
               title="管理文档"
@@ -224,6 +233,86 @@ function ActivityItem({ text, time }: { text: string; time: string }) {
     <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
       <span className="font-light text-gray-700">{text}</span>
       <span className="text-sm font-light text-gray-500">{time}</span>
+    </div>
+  );
+}
+
+// 带下拉菜单的快捷操作按钮组件
+function DropdownActionButton({
+  title,
+  description,
+  icon,
+  options,
+}: {
+  title: string;
+  description: string;
+  icon: string;
+  options: Array<{ label: string; link: string }>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full border-2 border-gray-200 rounded-lg p-4 hover:border-[#2C5530] hover:bg-gray-50 transition-colors text-left"
+      >
+        <div className="flex items-start gap-3">
+          <span className="text-3xl">{icon}</span>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h4 className="font-light text-gray-800 mb-1">{title}</h4>
+              <svg
+                className={`w-5 h-5 text-gray-600 transition-transform ${
+                  isOpen ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+            <p className="text-sm font-light text-gray-600">{description}</p>
+          </div>
+        </div>
+      </button>
+
+      {/* 下拉菜单 */}
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {options.map((option, index) => (
+            <Link
+              key={index}
+              href={option.link}
+              className="block px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="font-light text-gray-800">{option.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

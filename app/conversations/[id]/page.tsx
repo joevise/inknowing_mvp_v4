@@ -58,6 +58,7 @@ export default function ConversationPage() {
   const [sending, setSending] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [streamingMetadata, setStreamingMetadata] = useState<any>({});
   const [error, setError] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -135,6 +136,7 @@ export default function ConversationPage() {
     setSending(true);
     setStreaming(true);
     setStreamingMessage('');
+    setStreamingMetadata({});
     setError('');
 
     // 立即显示用户消息
@@ -185,6 +187,7 @@ export default function ConversationPage() {
                 // 处理元数据(第一个chunk可能包含metadata)
                 if (data.metadata) {
                   metadata = data.metadata;
+                  setStreamingMetadata(data.metadata);
                 }
                 // 处理文本内容
                 if (data.data) {
@@ -218,6 +221,7 @@ export default function ConversationPage() {
                 });
 
                 setStreamingMessage('');
+                setStreamingMetadata({});
                 setStreaming(false);
                 setSending(false);
               } else if (data.type === 'error') {
@@ -235,6 +239,7 @@ export default function ConversationPage() {
       setError(err instanceof Error ? err.message : '发送消息失败');
       setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
       setStreamingMessage('');
+      setStreamingMetadata({});
     } finally {
       setStreaming(false);
       setSending(false);
@@ -310,10 +315,11 @@ export default function ConversationPage() {
               )}
 
               {messages.map((message) => {
-                // 优先使用消息自己的 metadata 中的头像信息，否则使用当前 conversation 的
-                const messageCoverUrl = message.metadata?.cover_url || conversation?.cover_url;
-                const messageCharacterName = message.metadata?.character_name || conversation?.character_name;
-                const messageBookTitle = message.metadata?.book_title || conversation?.book_title;
+                // 只使用消息自己的 metadata 中的头像信息，不要fallback到当前conversation
+                // 这样可以确保历史消息的头像不会因conversation变化而改变
+                const messageCoverUrl = message.metadata?.cover_url;
+                const messageCharacterName = message.metadata?.character_name;
+                const messageBookTitle = message.metadata?.book_title;
 
                 return (
                 <div
@@ -331,7 +337,7 @@ export default function ConversationPage() {
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
-                          {(messageCharacterName || messageBookTitle || '书')?.charAt(0)}
+                          {messageCharacterName?.charAt(0) || messageBookTitle?.charAt(0) || '?'}
                         </div>
                       )}
                     </div>
@@ -379,15 +385,15 @@ export default function ConversationPage() {
                 <div className="mb-6 flex gap-3 justify-start">
                   {/* 助手头像 */}
                   <div className="flex-shrink-0">
-                    {conversation?.cover_url ? (
+                    {streamingMetadata.cover_url ? (
                       <img
-                        src={conversation.cover_url}
-                        alt={conversation.character_name || conversation.book_title || ''}
+                        src={streamingMetadata.cover_url}
+                        alt={streamingMetadata.character_name || streamingMetadata.book_title || ''}
                         className="w-10 h-10 rounded-lg object-cover"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
-                        {(conversation?.character_name || conversation?.book_title || '书')?.charAt(0)}
+                        {streamingMetadata.character_name?.charAt(0) || streamingMetadata.book_title?.charAt(0) || '书'}
                       </div>
                     )}
                   </div>

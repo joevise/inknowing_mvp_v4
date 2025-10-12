@@ -213,7 +213,7 @@ export default function BookCharacterSidebar({
                 conversation.type === 'book'
                   ? 'bg-[#2C5530] text-white shadow-sm'
                   : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-              }`}
+              } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${

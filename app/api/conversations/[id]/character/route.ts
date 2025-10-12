@@ -51,6 +51,14 @@ export async function PUT(
     const body = await request.json();
     const { characterId } = body;
 
+    // 检查是否提供了characterId参数（包括null）
+    if (characterId === undefined) {
+      return NextResponse.json(
+        { error: '缺少 characterId 参数' },
+        { status: 400 }
+      );
+    }
+
     // 如果characterId为null，表示切换回书籍对话
     if (characterId === null) {
       updateConversation(params.id, {
@@ -71,13 +79,6 @@ export async function PUT(
     }
 
     // 5. 验证角色是否存在且属于同一本书
-    if (!characterId) {
-      return NextResponse.json(
-        { error: '缺少 characterId 参数' },
-        { status: 400 }
-      );
-    }
-
     const character = getCharacterById(characterId);
     if (!character) {
       return NextResponse.json(
@@ -97,7 +98,6 @@ export async function PUT(
     updateConversation(params.id, {
       character_id: characterId,
       type: 'character',
-      updated_at: new Date(),
     });
 
     console.log('[API] 角色切换成功:', {
