@@ -1,6 +1,38 @@
 version: '3.8'
 
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inknowing_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - QWEN_API_KEY=${QWEN_API_KEY}
+      - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - QWEN_CHAT_MODEL=${QWEN_CHAT_MODEL:-qwen-max}
+      - QWEN_EMBEDDING_MODEL=${QWEN_EMBEDDING_MODEL:-text-embedding-v3}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123456}
+      - ADMIN_SESSION_SECRET=${ADMIN_SESSION_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - SESSION_MAX_AGE=86400
+      - CHROMA_DB_PATH=/app/data/vectors
+      - CHROMA_COLLECTION_NAME=inknowing_docs
+      - DATABASE_PATH=/app/data/db/inknowing.db
+      - DOCUMENTS_PATH=/app/data/documents
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - inknowing_network
+
   chromadb:
     image: chromadb/chroma:latest
     container_name: inknowing_chromadb
@@ -20,8 +52,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - inknowing_network
 
-# 网络配置（可选，用于未来扩展）
 networks:
   default:
     name: inknowing_network
