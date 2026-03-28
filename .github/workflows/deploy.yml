@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy InKnowing
 
 on:
   push:
@@ -8,8 +8,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
@@ -19,5 +17,5 @@ jobs:
           script: |
             cd /opt/inknowing
             git pull origin main
-            docker compose build
-            docker compose up -d
+            docker compose up -d --build
+            echo "Deployment complete"
