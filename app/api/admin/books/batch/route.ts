@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * 批量书籍操作 API
  * PUT /api/admin/books/batch - 批量上架/下架

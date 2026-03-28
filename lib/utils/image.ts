@@ -5,7 +5,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/db/client';
 
 // 支持的图片格式
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];

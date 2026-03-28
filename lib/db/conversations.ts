@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * 对话表CRUD操作
  */

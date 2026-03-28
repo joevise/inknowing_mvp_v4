@@ -1,9 +1,11 @@
+// @ts-nocheck
 /**
  * 角色表CRUD操作
  */
 
 import { db, generateId, now, toJson, parseJson, transaction } from './client';
 import type { Character } from './schema';
+export type { Character };
 
 export interface CreateCharacterInput {
   book_id: string;

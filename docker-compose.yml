@@ -1,31 +1,18 @@
-version: '3.8'
-
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: inknowing_app
+    container_name: inknowing-app
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - QWEN_API_KEY=${QWEN_API_KEY}
-      - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
-      - QWEN_CHAT_MODEL=${QWEN_CHAT_MODEL:-qwen-max}
-      - QWEN_EMBEDDING_MODEL=${QWEN_EMBEDDING_MODEL:-text-embedding-v3}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123456}
-      - ADMIN_SESSION_SECRET=${ADMIN_SESSION_SECRET}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - SESSION_MAX_AGE=86400
-      - CHROMA_DB_PATH=/app/data/vectors
-      - CHROMA_COLLECTION_NAME=inknowing_docs
-      - DATABASE_PATH=/app/data/db/inknowing.db
-      - DOCUMENTS_PATH=/app/data/documents
+      - CHROMA_URL=http://inknowing-chromadb:8000
     depends_on:
       chromadb:
         condition: service_healthy
@@ -35,9 +22,9 @@ services:
 
   chromadb:
     image: chromadb/chroma:latest
-    container_name: inknowing_chromadb
+    container_name: inknowing-chromadb
     ports:
-      - "8000:8000"
+      - "8002:8000"
     volumes:
       - ./data/vectors:/chroma/chroma
     environment:
@@ -47,7 +34,7 @@ services:
       - ALLOW_RESET=TRUE
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/heartbeat')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -56,6 +43,5 @@ services:
       - inknowing_network
 
 networks:
-  default:
-    name: inknowing_network
+  inknowing_network:
     driver: bridge

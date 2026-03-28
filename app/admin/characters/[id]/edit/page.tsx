@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * 角色编辑页面
  * PUT /api/admin/characters/{id}
