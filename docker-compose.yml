@@ -14,8 +14,7 @@ services:
     environment:
       - CHROMA_URL=http://inknowing-chromadb:8000
     depends_on:
-      chromadb:
-        condition: service_healthy
+      - chromadb
     restart: unless-stopped
     networks:
       - inknowing_network
@@ -33,12 +32,6 @@ services:
       - ANONYMIZED_TELEMETRY=FALSE
       - ALLOW_RESET=TRUE
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/heartbeat')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
       - inknowing_network
 
