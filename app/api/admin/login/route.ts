@@ -61,15 +61,12 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json(responseData, { status: 200 });
 
-    // 手动设置cookie到response header
-    response.cookies.set('admin_session', sessionInfo.session, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24小时
-      path: '/',
-      expires: sessionInfo.expiresAt,
-    });
+    // Use raw Set-Cookie header to bypass Next.js Secure flag
+    const expires = sessionInfo.expiresAt.toUTCString();
+    response.headers.set(
+      "Set-Cookie",
+      `admin_session=${sessionInfo.session}; Path=/; Expires=${expires}; HttpOnly; SameSite=Lax`
+    );
 
     return response;
 

@@ -13,7 +13,7 @@ export const ADMIN_SESSION_COOKIE_NAME = 'admin_session';
 // Cookie配置
 const COOKIE_OPTIONS = {
   httpOnly: true,        // 防止JavaScript访问，增加安全性
-  secure: process.env.NODE_ENV === 'production', // 生产环境使用HTTPS
+  secure: false, // 生产环境使用HTTPS
   sameSite: 'lax' as const,      // CSRF保护
   maxAge: 60 * 60 * 24,  // 24小时
   path: '/',             // 全站可用
