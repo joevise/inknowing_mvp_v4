@@ -83,8 +83,8 @@ export const RAG_CONFIG = {
     // 进度报告间隔（毫秒）
     progressInterval: 1000,
 
-    // embedding模型名称（通义千问）
-    embeddingModel: 'text-embedding-v2',
+    // embedding模型名称（通义千问）— 可通过 EMBEDDING_MODEL 环境变量覆盖
+    embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-v4',
 
     // API延迟（避免限流）
     apiDelay: 200 // 毫秒
