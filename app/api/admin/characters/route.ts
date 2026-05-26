@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/middleware/admin-auth';
 import { db } from '@/lib/db/client';
+import { createCharacter } from '@/lib/db/characters';
+import { getBookById } from '@/lib/services/book-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -107,6 +109,60 @@ export async function GET(request: NextRequest) {
     console.error('[API] 获取角色列表失败:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '获取角色列表失败' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const authError = await requireAdminAuth(request);
+    if (authError) return authError;
+
+    const body = await request.json();
+    const { book_id, name, description, personality_traits, speaking_style, background_story } = body;
+
+    if (!book_id || !name) {
+      return NextResponse.json(
+        { error: 'book_id 和 name 是必填字段' },
+        { status: 400 }
+      );
+    }
+
+    const book = await getBookById(book_id);
+    if (!book) {
+      return NextResponse.json(
+        { error: '指定的书籍不存在' },
+        { status: 404 }
+      );
+    }
+
+    let traits = {};
+    if (personality_traits) {
+      if (Array.isArray(personality_traits)) {
+        traits = personality_traits.reduce((acc, t, i) => {
+          acc[`trait_${i + 1}`] = t;
+          return acc;
+        }, {});
+      } else if (typeof personality_traits === 'object') {
+        traits = personality_traits;
+      }
+    }
+
+    const character = createCharacter({
+      book_id,
+      name,
+      description,
+      personality_traits: traits,
+      speaking_style,
+      background_story,
+    });
+
+    return NextResponse.json({ success: true, character }, { status: 201 });
+  } catch (error) {
+    console.error('[API] 创建角色失败:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '创建角色失败' },
       { status: 500 }
     );
   }

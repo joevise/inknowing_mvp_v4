@@ -56,6 +56,15 @@ export default function CharactersPage() {
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   const [operating, setOperating] = useState(false);
 
+  // 新建角色状态
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ book_id: '', name: '', description: '', personality_traits: '', speaking_style: '', background_story: '' });
+  const [addSubmitting, setAddSubmitting] = useState(false);
+
+  // 零角色书籍
+  const [zeroCharBooks, setZeroCharBooks] = useState<Book[]>([]);
+  const [zeroLoading, setZeroLoading] = useState(false);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -63,6 +72,7 @@ export default function CharactersPage() {
   useEffect(() => {
     if (books.length > 0) {
       fetchCharacters();
+      fetchZeroCharBooks();
     }
   }, [books.length, page, pageSize, search, selectedBookId, sortBy, sortOrder]);
 
@@ -117,6 +127,73 @@ export default function CharactersPage() {
       setError(error instanceof Error ? error.message : '获取角色列表失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchZeroCharBooks = async () => {
+    try {
+      setZeroLoading(true);
+      const res = await fetch('/api/admin/characters?pageSize=1');
+      const data = await res.json();
+      const allBooksWithChars = new Set(data.characters?.map((c: Character) => c.book_id) || []);
+      const zeroBooks = books.filter((b: Book) => !allBooksWithChars.has(b.id));
+      setZeroCharBooks(zeroBooks);
+    } catch (error) {
+      console.error('获取零角色书籍失败:', error);
+    } finally {
+      setZeroLoading(false);
+    }
+  };
+
+  const handleAddCharacter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addForm.book_id || !addForm.name.trim()) return;
+    setAddSubmitting(true);
+    try {
+      const traits = addForm.personality_traits ? addForm.personality_traits.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const res = await fetch('/api/admin/characters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: addForm.book_id,
+          name: addForm.name,
+          description: addForm.description,
+          personality_traits: traits,
+          speaking_style: addForm.speaking_style,
+          background_story: addForm.background_story,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '创建失败');
+      setShowAddModal(false);
+      setAddForm({ book_id: '', name: '', description: '', personality_traits: '', speaking_style: '', background_story: '' });
+      await fetchCharacters();
+      await fetchZeroCharBooks();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '创建失败');
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
+  const handleQuickExtract = async (bookId: string, bookTitle: string) => {
+    if (!confirm(`确定要为《${bookTitle}》提取角色吗？`)) return;
+    setOperating(true);
+    try {
+      const res = await fetch('/api/admin/characters/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookIds: [bookId] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '提取失败');
+      setSuccess(`已为《${bookTitle}》提取 ${data.totalNewCharacters || 0} 个新角色`);
+      await fetchCharacters();
+      await fetchZeroCharBooks();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '提取失败');
+    } finally {
+      setOperating(false);
     }
   };
 
@@ -375,6 +452,12 @@ export default function CharactersPage() {
             </div>
             <div className="flex gap-2">
               <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-light text-sm"
+              >
+                新建角色
+              </button>
+              <button
                 onClick={handleBatchExtract}
                 disabled={selectedCharacters.length === 0 || operating}
                 className="px-4 py-2 bg-[#2C5530] text-white rounded-lg hover:bg-[#1a2e1c] font-light disabled:opacity-50 disabled:cursor-not-allowed text-sm"
@@ -391,6 +474,28 @@ export default function CharactersPage() {
             </div>
           </div>
         </div>
+
+        {/* 零角色书籍快速入口 */}
+        {zeroCharBooks.length > 0 && (
+          <div className="bg-red-50 rounded-lg shadow-sm p-4 mb-6">
+            <h3 className="text-sm font-light text-red-800 mb-3">⚠️ 零角色书籍（点击快速提取）</h3>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {zeroCharBooks.map((book: Book) => (
+                <div key={book.id} className="flex items-center gap-2 bg-white rounded px-3 py-2 shrink-0">
+                  <span className="text-sm text-gray-700">{book.title}</span>
+                  <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded">0 角色</span>
+                  <button
+                    onClick={() => handleQuickExtract(book.id, book.title)}
+                    disabled={operating}
+                    className="text-xs text-[#2C5530] hover:underline disabled:opacity-50"
+                  >
+                    AI 提取
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 角色表格 */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -563,6 +668,98 @@ export default function CharactersPage() {
             </div>
           )}
         </div>
+
+        {/* 新建角色弹窗 */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-light text-gray-800 mb-4">新建角色</h3>
+              <form onSubmit={handleAddCharacter} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">
+                    所属书籍 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={addForm.book_id}
+                    onChange={(e) => setAddForm({ ...addForm, book_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  >
+                    <option value="">请选择书籍</option>
+                    {books.map((book: Book) => (
+                      <option key={book.id} value={book.id}>{book.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">
+                    角色名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addForm.name}
+                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">简介</label>
+                  <textarea
+                    rows={2}
+                    value={addForm.description}
+                    onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">性格特征（逗号分隔）</label>
+                  <input
+                    type="text"
+                    value={addForm.personality_traits}
+                    onChange={(e) => setAddForm({ ...addForm, personality_traits: e.target.value })}
+                    placeholder="勇敢,聪明,善良"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">说话风格</label>
+                  <input
+                    type="text"
+                    value={addForm.speaking_style}
+                    onChange={(e) => setAddForm({ ...addForm, speaking_style: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">背景故事</label>
+                  <textarea
+                    rows={2}
+                    value={addForm.background_story}
+                    onChange={(e) => setAddForm({ ...addForm, background_story: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-light"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addSubmitting}
+                    className="flex-1 bg-[#2C5530] text-white py-2 rounded-lg hover:bg-[#1a2e1c] font-light disabled:opacity-50"
+                  >
+                    {addSubmitting ? '创建中...' : '创建'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </AdminLayout>
   );

@@ -351,9 +351,10 @@ export async function getAllBooks(options?: {
   const offset = options?.offset || 0;
 
   const books = database.prepare(
-    `SELECT b.*, COUNT(f.id) as favorite_count
+    `SELECT b.*, COUNT(f.id) as favorite_count, COUNT(DISTINCT c.id) as character_count
      FROM books b
      LEFT JOIN favorites f ON b.id = f.book_id
+     LEFT JOIN characters c ON b.id = c.book_id
      ${whereClause ? whereClause.replace(/\bbooks\b/g, 'b') : ''}
      GROUP BY b.id
      ORDER BY b.created_at DESC
@@ -361,13 +362,14 @@ export async function getAllBooks(options?: {
   ).all(...params, limit, offset);
 
   // 格式化数据
-  const formattedBooks = books.map(book => ({
+  const formattedBooks = books.map((book: any) => ({
     ...book,
     tags: book.tags ? JSON.parse(book.tags) : [],
     requires_document: book.requires_document === 1,
     created_at: new Date(book.created_at),
     updated_at: new Date(book.updated_at),
     favorite_count: book.favorite_count || 0,
+    character_count: book.character_count || 0,
   })) as Book[];
 
   return { books: formattedBooks, total };

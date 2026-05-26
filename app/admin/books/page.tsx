@@ -358,6 +358,7 @@ export default function AdminBooksPage() {
                   <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">分类</th>
                   <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">状态</th>
                   <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">AI了解度</th>
+                  <th className="px-6 py-3 text-left text-xs font-light text-gray-500 uppercase">角色数</th>
                   <th className="px-6 py-3 text-right text-xs font-light text-gray-500 uppercase">操作</th>
                 </tr>
               </thead>
@@ -394,6 +395,18 @@ export default function AdminBooksPage() {
                     <div className="flex items-center">
                       <span className="text-sm text-gray-700">{book.ai_knowledge_level}/10</span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(book as any).character_count === 0 ? (
+                      <span className="text-red-600 text-sm">0</span>
+                    ) : (
+                      <Link
+                        href={`/admin/books/${book.id}`}
+                        className="text-[#2C5530] hover:underline text-sm"
+                      >
+                        {(book as any).character_count}
+                      </Link>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-light">
                     <Link

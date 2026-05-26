@@ -9,6 +9,17 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/layout/AdminLayout';
 
+interface Character {
+  id: string;
+  name: string;
+  description: string;
+  personality_traits: any;
+  speaking_style?: string;
+  background_story?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface BookData {
   id: string;
   title: string;
@@ -46,10 +57,23 @@ export default function EditBookPage() {
   });
 
   const [tagInput, setTagInput] = useState('');
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [charsLoading, setCharsLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', description: '', personality_traits: '', speaking_style: '', background_story: '' });
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (bookId) {
+      fetchBookData();
+      fetchCharacters();
+    }
+  }, [bookId]);
 
   const checkAuth = async () => {
     try {
@@ -90,6 +114,81 @@ export default function EditBookPage() {
       setError(error instanceof Error ? error.message : '获取书籍失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCharacters = async () => {
+    try {
+      setCharsLoading(true);
+      const res = await fetch(`/api/admin/characters?bookId=${bookId}&pageSize=100`);
+      if (!res.ok) throw new Error('获取角色失败');
+      const data = await res.json();
+      setCharacters(data.characters || []);
+    } catch (error) {
+      console.error('获取角色失败:', error);
+    } finally {
+      setCharsLoading(false);
+    }
+  };
+
+  const handleExtractMore = async () => {
+    if (!confirm('确定要为本书提取更多角色吗？')) return;
+    setExtracting(true);
+    try {
+      const res = await fetch('/api/admin/characters/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookIds: [bookId] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '提取失败');
+      setSuccess(`已提取 ${data.totalNewCharacters || 0} 个新角色`);
+      await fetchCharacters();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '提取失败');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleAddCharacter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addForm.name.trim()) return;
+    setAddSubmitting(true);
+    try {
+      const traits = addForm.personality_traits ? addForm.personality_traits.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const res = await fetch('/api/admin/characters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: bookId,
+          name: addForm.name,
+          description: addForm.description,
+          personality_traits: traits,
+          speaking_style: addForm.speaking_style,
+          background_story: addForm.background_story,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '创建失败');
+      setShowAddModal(false);
+      setAddForm({ name: '', description: '', personality_traits: '', speaking_style: '', background_story: '' });
+      await fetchCharacters();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '创建失败');
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
+  const handleDeleteCharacter = async (id: string, name: string) => {
+    if (!confirm(`确定要删除角色"${name}"吗？`)) return;
+    try {
+      const res = await fetch(`/api/admin/characters/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('删除失败');
+      await fetchCharacters();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '删除失败');
     }
   };
 
@@ -378,6 +477,147 @@ export default function EditBookPage() {
             </button>
           </div>
         </form>
+
+        {/* 角色管理 Section */}
+        <div className="mt-10 bg-white rounded-lg shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-light text-gray-800">角色管理</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExtractMore}
+                disabled={extracting}
+                className="px-4 py-2 bg-[#2C5530] text-white rounded-lg hover:bg-[#1a2e1c] font-light text-sm disabled:opacity-50"
+              >
+                {extracting ? '提取中...' : '🤖 AI 提取更多角色'}
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 border border-[#2C5530] text-[#2C5530] rounded-lg hover:bg-[#f5f9f6] font-light text-sm"
+              >
+                ➕ 手动添加角色
+              </button>
+              <Link
+                href={`/admin/characters?bookId=${bookId}`}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-light text-sm"
+              >
+                打开全局管理
+              </Link>
+            </div>
+          </div>
+
+          {charsLoading ? (
+            <div className="text-center py-8 text-gray-500">加载中...</div>
+          ) : characters.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              当前共 0 个角色
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {characters.map((char) => (
+                <div key={char.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-light text-gray-900">{char.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                        {char.description || '暂无简介'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                    <Link
+                      href={`/admin/characters/${char.id}/edit`}
+                      className="text-xs text-[#2C5530] hover:underline"
+                    >
+                      编辑
+                    </Link>
+                    <button
+                      onClick={() => handleDeleteCharacter(char.id, char.name)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 添加角色弹窗 */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-light text-gray-800 mb-4">手动添加角色</h3>
+              <form onSubmit={handleAddCharacter} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">
+                    角色名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addForm.name}
+                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">简介</label>
+                  <textarea
+                    rows={3}
+                    value={addForm.description}
+                    onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">性格特征（逗号分隔）</label>
+                  <input
+                    type="text"
+                    value={addForm.personality_traits}
+                    onChange={(e) => setAddForm({ ...addForm, personality_traits: e.target.value })}
+                    placeholder="勇敢,聪明,善良"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">说话风格</label>
+                  <input
+                    type="text"
+                    value={addForm.speaking_style}
+                    onChange={(e) => setAddForm({ ...addForm, speaking_style: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-light text-gray-700 mb-1">背景故事</label>
+                  <textarea
+                    rows={2}
+                    value={addForm.background_story}
+                    onChange={(e) => setAddForm({ ...addForm, background_story: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-light"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addSubmitting}
+                    className="flex-1 bg-[#2C5530] text-white py-2 rounded-lg hover:bg-[#1a2e1c] font-light disabled:opacity-50"
+                  >
+                    {addSubmitting ? '创建中...' : '创建'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </AdminLayout>
   );
