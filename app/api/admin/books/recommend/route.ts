@@ -5,8 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/middleware/admin-auth';
-import OpenAI from 'openai';
-import { getConfig } from '@/lib/services/runtime-config';
+import { resolveConversationModel } from '@/lib/ai/model-resolver';
 import { findBookByTitleAndAuthor } from '@/lib/db/books';
 
 export async function POST(request: NextRequest) {
@@ -24,25 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 获取AI配置
-    const provider = getConfig('AI_PROVIDER') || 'aliyun';
-
-    let client: OpenAI;
-    let model: string;
-
-    if (provider === 'openai') {
-      client = new OpenAI({
-        apiKey: getConfig('OPENAI_API_KEY') || '',
-        baseURL: getConfig('OPENAI_BASE_URL') || '',
-      });
-      model = getConfig('OPENAI_MODEL') || 'gpt-4';
-    } else {
-      client = new OpenAI({
-        apiKey: getConfig('QWEN_API_KEY') || '',
-        baseURL: getConfig('QWEN_BASE_URL') || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      });
-      model = getConfig('QWEN_MODEL') || 'qwen-max';
-    }
+    const { client, model, temperature } = resolveConversationModel();
 
     const prompt = `
 根据用户的查询条件："${query}"，请推荐${count}本相关书籍。
@@ -71,12 +52,11 @@ export async function POST(request: NextRequest) {
         { role: 'system', content: '你是一个专业的图书推荐专家，熟悉各类经典书籍。' },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
+      temperature,
     });
 
     const responseText = completion.choices[0]?.message?.content || '[]';
 
-    // 解析JSON响应
     let books;
     try {
       const jsonStr = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
@@ -89,7 +69,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 检查每本书是否已存在于数据库中
     const booksWithStatus = books.map((book: any) => {
       const existingBook = findBookByTitleAndAuthor(book.title, book.author);
       return {

@@ -17,7 +17,7 @@ import {
 } from '@/lib/ai/prompts';
 
 type ModelTab = 'conversation' | 'embedding' | 'parsing';
-type Provider = 'aliyun' | 'openai';
+type Provider = 'aliyun' | 'openai' | 'openrouter';
 
 interface LLMModelConfig {
   provider: Provider;
@@ -27,12 +27,15 @@ interface LLMModelConfig {
   openai_api_key: string;
   openai_base_url: string;
   openai_model: string;
+  openrouter_api_key: string;
+  openrouter_base_url: string;
+  openrouter_model: string;
   temperature: number;
   max_tokens: number;
-  book_prompt?: string;  // 对话模型：书籍对话提示词
-  character_prompt?: string;  // 对话模型：角色对话提示词
-  book_recognition_prompt?: string;  // 解析模型：书籍识别提示词
-  character_extraction_prompt?: string;  // 解析模型：角色提取提示词
+  book_prompt?: string;
+  character_prompt?: string;
+  book_recognition_prompt?: string;
+  character_extraction_prompt?: string;
 }
 
 interface EmbeddingModelConfig {
@@ -79,6 +82,9 @@ export default function SettingsPage() {
       openai_api_key: '',
       openai_base_url: '',
       openai_model: 'gpt-3.5-turbo',
+      openrouter_api_key: '',
+      openrouter_base_url: 'https://openrouter.ai/api/v1',
+      openrouter_model: 'deepseek/deepseek-v4-flash',
       temperature: 0.7,
       max_tokens: 2000,
       book_prompt: BOOK_CHAT_PROMPT,
@@ -102,6 +108,9 @@ export default function SettingsPage() {
       openai_api_key: '',
       openai_base_url: '',
       openai_model: 'gpt-4o',
+      openrouter_api_key: '',
+      openrouter_base_url: 'https://openrouter.ai/api/v1',
+      openrouter_model: 'deepseek/deepseek-v4-flash',
       temperature: 0.3,
       max_tokens: 4000,
       book_recognition_prompt: BOOK_RECOGNITION_PROMPT,
@@ -257,6 +266,17 @@ export default function SettingsPage() {
               <div className="font-light">OpenAI 兼容</div>
               <div className="text-xs mt-1 opacity-80">DeepSeek, Moonshot, OpenAI等</div>
             </button>
+            <button
+              onClick={() => updateTabConfig(tab, 'provider', 'openrouter')}
+              className={`flex-1 py-3 px-6 rounded-lg border-2 transition-all ${
+                config.provider === 'openrouter'
+                  ? 'border-[#2C5530] bg-[#2C5530] text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#2C5530]'
+              }`}
+            >
+              <div className="font-light">OpenRouter</div>
+              <div className="text-xs mt-1 opacity-80">聚合多个AI模型</div>
+            </button>
           </div>
         </div>
 
@@ -346,6 +366,50 @@ export default function SettingsPage() {
                 onChange={(e) => updateTabConfig(tab, 'openai_model', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
                 placeholder="deepseek-chat 或 gpt-4"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* OpenRouter配置 */}
+        {config.provider === 'openrouter' && (
+          <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                Base URL <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={config.openrouter_base_url}
+                onChange={(e) => updateTabConfig(tab, 'openrouter_base_url', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="https://openrouter.ai/api/v1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={config.openrouter_api_key}
+                onChange={(e) => updateTabConfig(tab, 'openrouter_api_key', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent font-mono text-sm"
+                placeholder="sk-..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-light text-gray-700 mb-2">
+                模型名称
+              </label>
+              <input
+                type="text"
+                value={config.openrouter_model}
+                onChange={(e) => updateTabConfig(tab, 'openrouter_model', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
+                placeholder="deepseek/deepseek-v4-flash"
               />
             </div>
           </div>

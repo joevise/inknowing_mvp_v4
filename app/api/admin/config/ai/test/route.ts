@@ -25,7 +25,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 根据provider选择API配置
+    if (tab === 'embedding' && config.provider === 'openrouter') {
+      return NextResponse.json({
+        success: false,
+        error: 'OpenRouter 不支持 embedding'
+      });
+    }
+
     const provider = config.provider || 'aliyun';
     let apiKey: string;
     let baseURL: string;
@@ -35,10 +41,14 @@ export async function POST(request: NextRequest) {
       apiKey = config.qwen_api_key;
       baseURL = config.qwen_base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
       model = config.qwen_model;
-    } else {
+    } else if (provider === 'openai') {
       apiKey = config.openai_api_key;
       baseURL = config.openai_base_url;
       model = config.openai_model;
+    } else {
+      apiKey = config.openrouter_api_key;
+      baseURL = config.openrouter_base_url || 'https://openrouter.ai/api/v1';
+      model = config.openrouter_model;
     }
 
     // 验证必填字段
@@ -49,10 +59,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (provider === 'openai' && !baseURL) {
+    if ((provider === 'openai' || provider === 'openrouter') && !baseURL) {
       return NextResponse.json({
         success: false,
-        error: 'OpenAI Base URL为必填项'
+        error: 'Base URL为必填项'
       });
     }
 

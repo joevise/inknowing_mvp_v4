@@ -5,7 +5,7 @@
 
 import { ChromaClient, Collection, OpenAIEmbeddingFunction } from 'chromadb';
 import { RAG_CONFIG, getCollectionName } from './config';
-import { getConfig } from '@/lib/services/runtime-config';
+import { resolveEmbeddingConfig } from '@/lib/ai/model-resolver';
 
 // ChromaDB客户端单例
 let chromaClient: ChromaClient | null = null;
@@ -43,34 +43,28 @@ export async function getOrCreateCollection(bookId: string): Promise<Collection>
   const client = getChromaClient();
 
   try {
-    // 从运行时配置读取API Key和Base URL
-    const apiKey = getConfig('QWEN_API_KEY') || process.env.QWEN_API_KEY || '';
-    const baseUrl = getConfig('QWEN_BASE_URL') || process.env.QWEN_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    const { apiKey, baseUrl, model } = resolveEmbeddingConfig();
 
-    // 尝试获取现有collection
     let collection = await client.getCollection({
       name: collectionName,
       embeddingFunction: new OpenAIEmbeddingFunction({
         openai_api_key: apiKey,
         openai_api_base: baseUrl,
-        openai_model: RAG_CONFIG.vectorization.embeddingModel
+        openai_model: model
       })
     });
 
     collectionCache.set(collectionName, collection);
     return collection;
   } catch (error) {
-    // 从运行时配置读取API Key和Base URL
-    const apiKey = getConfig('QWEN_API_KEY') || process.env.QWEN_API_KEY || '';
-    const baseUrl = getConfig('QWEN_BASE_URL') || process.env.QWEN_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    const { apiKey, baseUrl, model } = resolveEmbeddingConfig();
 
-    // Collection不存在，创建新的
     const collection = await client.createCollection({
       name: collectionName,
       embeddingFunction: new OpenAIEmbeddingFunction({
         openai_api_key: apiKey,
         openai_api_base: baseUrl,
-        openai_model: RAG_CONFIG.vectorization.embeddingModel
+        openai_model: model
       }),
       metadata: {
         bookId,

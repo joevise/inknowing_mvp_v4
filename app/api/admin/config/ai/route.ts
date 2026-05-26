@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
         openai_api_key: maskApiKey(getConfig('CONVERSATION_OPENAI_API_KEY') || ''),
         openai_base_url: getConfig('CONVERSATION_OPENAI_BASE_URL') || '',
         openai_model: getConfig('CONVERSATION_OPENAI_MODEL') || 'gpt-3.5-turbo',
+        openrouter_api_key: maskApiKey(getConfig('CONVERSATION_OPENROUTER_API_KEY') || ''),
+        openrouter_base_url: getConfig('CONVERSATION_OPENROUTER_BASE_URL') || 'https://openrouter.ai/api/v1',
+        openrouter_model: getConfig('CONVERSATION_OPENROUTER_MODEL') || 'deepseek/deepseek-v4-flash',
         temperature: parseFloat(getConfig('CONVERSATION_TEMPERATURE') || '0.7'),
         max_tokens: parseInt(getConfig('CONVERSATION_MAX_TOKENS') || '2000'),
         book_prompt: getConfig('CONVERSATION_BOOK_PROMPT') || BOOK_CHAT_PROMPT,
@@ -53,6 +56,9 @@ export async function GET(request: NextRequest) {
         openai_api_key: maskApiKey(getConfig('PARSING_OPENAI_API_KEY') || ''),
         openai_base_url: getConfig('PARSING_OPENAI_BASE_URL') || '',
         openai_model: getConfig('PARSING_OPENAI_MODEL') || 'gpt-4o',
+        openrouter_api_key: maskApiKey(getConfig('PARSING_OPENROUTER_API_KEY') || ''),
+        openrouter_base_url: getConfig('PARSING_OPENROUTER_BASE_URL') || 'https://openrouter.ai/api/v1',
+        openrouter_model: getConfig('PARSING_OPENROUTER_MODEL') || 'deepseek/deepseek-v4-flash',
         temperature: parseFloat(getConfig('PARSING_TEMPERATURE') || '0.3'),
         max_tokens: parseInt(getConfig('PARSING_MAX_TOKENS') || '4000'),
         book_recognition_prompt: getConfig('PARSING_BOOK_RECOGNITION_PROMPT') || BOOK_RECOGNITION_PROMPT,
@@ -97,6 +103,7 @@ export async function PUT(request: NextRequest) {
     const prefix = tab.toUpperCase();
     const hasExistingAliyunKey = getConfig(`${prefix}_QWEN_API_KEY`);
     const hasExistingOpenAIKey = getConfig(`${prefix}_OPENAI_API_KEY`);
+    const hasExistingOpenRouterKey = getConfig(`${prefix}_OPENROUTER_API_KEY`);
 
     // 根据provider验证必填字段
     // 如果key是masked的，说明用户没改，只要有历史配置就可以
@@ -122,6 +129,23 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    if (config.provider === 'openrouter') {
+      if (tab === 'embedding') {
+        return NextResponse.json(
+          { error: 'OpenRouter 不支持 embedding' },
+          { status: 400 }
+        );
+      }
+      const keyIsValid = config.openrouter_api_key && !isApiKeyMasked(config.openrouter_api_key);
+      const hasHistoryKey = hasExistingOpenRouterKey;
+      if ((!keyIsValid && !hasHistoryKey) || !config.openrouter_base_url) {
+        return NextResponse.json(
+          { error: 'OpenRouter API Key和Base URL为必填项' },
+          { status: 400 }
+        );
+      }
+    }
+
     // 准备要更新的配置
     const configUpdates: Record<string, string> = {};
 
@@ -141,6 +165,13 @@ export async function PUT(request: NextRequest) {
     }
     if (config.openai_base_url) configUpdates[`${prefix}_OPENAI_BASE_URL`] = config.openai_base_url;
     if (config.openai_model) configUpdates[`${prefix}_OPENAI_MODEL`] = config.openai_model;
+
+    // OpenRouter配置
+    if (config.openrouter_api_key && !isApiKeyMasked(config.openrouter_api_key)) {
+      configUpdates[`${prefix}_OPENROUTER_API_KEY`] = config.openrouter_api_key;
+    }
+    if (config.openrouter_base_url) configUpdates[`${prefix}_OPENROUTER_BASE_URL`] = config.openrouter_base_url;
+    if (config.openrouter_model) configUpdates[`${prefix}_OPENROUTER_MODEL`] = config.openrouter_model;
 
     // LLM模型特有参数 (conversation和parsing)
     if (tab === 'conversation' || tab === 'parsing') {

@@ -12,13 +12,7 @@ import {
   getAIKnowledgeLevel
 } from '@/lib/constants/categories';
 import OpenAI from 'openai';
-
-// Chat 客户端（可独立于 embedding provider 配置）
-// 优先读 CHAT_* 系列变量，fallback 到旧的 QWEN_* 变量以保持向后兼容
-const qwenClient = new OpenAI({
-  apiKey: process.env.CHAT_API_KEY || process.env.QWEN_API_KEY || '',
-  baseURL: process.env.CHAT_API_BASE || process.env.QWEN_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-});
+import { resolveParsingModel } from '@/lib/ai/model-resolver';
 
 /**
  * AI识别书籍信息
@@ -38,7 +32,8 @@ export async function recognizeBook(bookTitle: string): Promise<{
   requiresDocument: boolean;
 }> {
   try {
-    // 调用通义千问识别书籍
+    const { client, model, temperature } = resolveParsingModel();
+
     const prompt = `
 请根据书名"${bookTitle}"，提供以下信息（以JSON格式返回）：
 1. 完整的书籍信息：title（准确书名）、author（作者）、description（200字内简介）、publisher（出版社）、publishDate（出版年份）
@@ -50,13 +45,13 @@ export async function recognizeBook(bookTitle: string): Promise<{
 只返回JSON，不要其他内容。
 `;
 
-    const completion = await qwenClient.chat.completions.create({
-      model: process.env.CHAT_MODEL || process.env.QWEN_MODEL || 'qwen-max',
+    const completion = await client.chat.completions.create({
+      model,
       messages: [
         { role: 'system', content: '你是一个专业的图书管理专家，熟悉各类书籍。' },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.3,
+      temperature,
     });
 
     const responseText = completion.choices[0]?.message?.content || '{}';
@@ -515,22 +510,7 @@ export async function recognizeCharacters(bookTitle: string, bookAuthor: string)
 ]
 `;
 
-    const { getConfig } = await import('@/lib/services/runtime-config');
-    const provider = getConfig('AI_PROVIDER') || 'aliyun';
-
-    let client: OpenAI;
-    let model: string;
-
-    if (provider === 'openai') {
-      client = new OpenAI({
-        apiKey: getConfig('OPENAI_API_KEY') || '',
-        baseURL: getConfig('OPENAI_BASE_URL') || '',
-      });
-      model = getConfig('OPENAI_MODEL') || 'gpt-4';
-    } else {
-      client = qwenClient;
-      model = getConfig('CHAT_MODEL') || process.env.CHAT_MODEL || getConfig('QWEN_MODEL') || 'qwen-max';
-    }
+    const { client, model, temperature } = resolveParsingModel();
 
     const completion = await client.chat.completions.create({
       model,
@@ -538,7 +518,7 @@ export async function recognizeCharacters(bookTitle: string, bookAuthor: string)
         { role: 'system', content: '你是一个专业的文学评论家，熟悉各类书籍中的角色。' },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
+      temperature,
     });
 
     const responseText = completion.choices[0]?.message?.content || '[]';
