@@ -374,7 +374,9 @@ export default function AdminBooksPage() {
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-light text-gray-900">{book.title}</div>
+                    <Link href={`/admin/books/${book.id}`} className="font-light text-gray-900 hover:text-[#2C5530] hover:underline">
+                      {book.title}
+                    </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-700">{book.author}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -397,16 +399,12 @@ export default function AdminBooksPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {(book as any).character_count === 0 ? (
-                      <span className="text-red-600 text-sm">0</span>
-                    ) : (
-                      <Link
-                        href={`/admin/books/${book.id}`}
-                        className="text-[#2C5530] hover:underline text-sm"
-                      >
-                        {(book as any).character_count}
-                      </Link>
-                    )}
+                    <Link
+                      href={`/admin/books/${book.id}`}
+                      className={`text-sm hover:underline ${(book as any).character_count === 0 ? 'text-red-600' : 'text-[#2C5530]'}`}
+                    >
+                      {(book as any).character_count ?? 0}
+                    </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-light">
                     <Link

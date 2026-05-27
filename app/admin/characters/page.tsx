@@ -133,11 +133,12 @@ export default function CharactersPage() {
   const fetchZeroCharBooks = async () => {
     try {
       setZeroLoading(true);
-      const res = await fetch('/api/admin/characters?pageSize=1');
+      // 直接用 books API 的 character_count 字段，准确判断零角色书籍
+      const res = await fetch('/api/admin/books?limit=500');
       const data = await res.json();
-      const allBooksWithChars = new Set(data.characters?.map((c: Character) => c.book_id) || []);
-      const zeroBooks = books.filter((b: Book) => !allBooksWithChars.has(b.id));
-      setZeroCharBooks(zeroBooks);
+      const allBooks = (data.books || []) as any[];
+      const zeroBooks = allBooks.filter((b) => (b.character_count ?? 0) === 0);
+      setZeroCharBooks(zeroBooks as Book[]);
     } catch (error) {
       console.error('获取零角色书籍失败:', error);
     } finally {
