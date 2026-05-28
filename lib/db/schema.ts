@@ -95,6 +95,19 @@ export interface Favorite {
   created_at: Date;
 }
 
+export interface UserBookRequest {
+  id: string;
+  user_id: string;
+  title: string;
+  author?: string;
+  status: 'pending' | 'processing' | 'created' | 'wishlist' | 'rejected' | 'failed';
+  book_id?: string;
+  ai_confidence?: number;
+  error_message?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // 创建表的SQL语句
 export const createTablesSQL = `
   -- 用户表
@@ -238,6 +251,27 @@ export const createTablesSQL = `
   -- 创建索引
   CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
   CREATE INDEX IF NOT EXISTS idx_favorites_book_id ON favorites(book_id);
+
+  -- 用户书籍申请表
+  CREATE TABLE IF NOT EXISTS user_book_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    author TEXT,
+    status TEXT CHECK (status IN ('pending', 'processing', 'created', 'wishlist', 'rejected', 'failed')) DEFAULT 'pending',
+    book_id TEXT,
+    ai_confidence REAL,
+    error_message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL
+  );
+
+  -- 创建索引
+  CREATE INDEX IF NOT EXISTS idx_user_book_requests_user_id ON user_book_requests(user_id);
+  CREATE INDEX IF NOT EXISTS idx_user_book_requests_status ON user_book_requests(status);
+  CREATE INDEX IF NOT EXISTS idx_user_book_requests_book_id ON user_book_requests(book_id);
 `;
 
 // 添加触发器更新updated_at字段
@@ -289,6 +323,14 @@ export const createTriggersSQL = `
   BEGIN
     UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
   END;
+
+  -- 用户书籍申请表更新触发器
+  CREATE TRIGGER IF NOT EXISTS update_user_book_requests_timestamp
+  AFTER UPDATE ON user_book_requests
+  FOR EACH ROW
+  BEGIN
+    UPDATE user_book_requests SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
 `;
 
 // 删除所有表的SQL（用于重置数据库）
@@ -302,4 +344,5 @@ export const dropTablesSQL = `
   DROP TABLE IF EXISTS books;
   DROP TABLE IF EXISTS users;
   DROP TABLE IF EXISTS config;
+  DROP TABLE IF EXISTS user_book_requests;
 `;

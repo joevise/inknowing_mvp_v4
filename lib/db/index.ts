@@ -24,6 +24,7 @@ export type {
   Conversation,
   Message,
   Session,
+  UserBookRequest,
 } from './schema';
 
 // 导出用户操作
@@ -157,3 +158,17 @@ export {
 
 // 导出种子数据函数
 export { seed, clearSeedData } from './seed';
+
+// 导出用户书籍申请操作
+export {
+  createUserBookRequest,
+  getUserBookRequestById,
+  updateUserBookRequest,
+  deleteUserBookRequest,
+  getUserBookRequests,
+  listUserBookRequests,
+  getUserRequestCountToday,
+  checkDuplicateRequest,
+  type CreateUserBookRequestInput,
+  type UpdateUserBookRequestInput,
+} from './book-requests';

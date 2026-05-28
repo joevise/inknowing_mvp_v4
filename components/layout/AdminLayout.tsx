@@ -83,6 +83,16 @@ export default function AdminLayout({ children, title, actions }: AdminLayoutPro
                 角色管理
               </Link>
               <Link
+                href="/admin/book-requests"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin/book-requests')
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                书籍申请
+              </Link>
+              <Link
                 href="/admin/documents"
                 className={`font-light text-sm transition-opacity ${
                   isActive('/admin/documents')

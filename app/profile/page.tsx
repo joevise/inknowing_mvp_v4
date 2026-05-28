@@ -18,12 +18,26 @@ interface UserProfile {
   last_active: string;
 }
 
+interface BookRequest {
+  id: string;
+  title: string;
+  author?: string;
+  status: 'pending' | 'processing' | 'created' | 'wishlist' | 'rejected' | 'failed';
+  book_id?: string;
+  ai_confidence?: number;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [requests, setRequests] = useState<BookRequest[]>([]);
+  const [activeTab, setActiveTab] = useState<'profile' | 'requests'>('profile');
 
   useEffect(() => {
     fetchProfile();
@@ -37,7 +51,6 @@ export default function ProfilePage() {
       const response = await fetch('/api/auth/me');
 
       if (!response.ok) {
-        // 未登录，跳转到登录页
         router.push('/auth/login');
         return;
       }
@@ -45,11 +58,26 @@ export default function ProfilePage() {
       const data = await response.json();
       setUser(data.user);
 
+      fetchRequests();
     } catch (err) {
       console.error('[Profile] 获取失败:', err);
       setError(err instanceof Error ? err.message : '获取用户信息失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRequests = async () => {
+    try {
+      const response = await fetch('/api/user/my-requests', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.log('[Profile] 获取申请列表失败:', err);
     }
   };
 
@@ -98,6 +126,34 @@ export default function ProfilePage() {
             <p className="text-base font-light text-gray-600">
               管理您的账户信息
             </p>
+          </div>
+        </section>
+
+        {/* Tab切换 */}
+        <section className="px-6 bg-white border-b border-gray-200">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex gap-8">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`py-3 text-sm font-light border-b-2 transition-colors ${
+                  activeTab === 'profile'
+                    ? 'border-[#2C5530] text-[#2C5530]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                基本信息
+              </button>
+              <button
+                onClick={() => setActiveTab('requests')}
+                className={`py-3 text-sm font-light border-b-2 transition-colors ${
+                  activeTab === 'requests'
+                    ? 'border-[#2C5530] text-[#2C5530]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                我的申请 ({requests.length})
+              </button>
+            </div>
           </div>
         </section>
 
@@ -244,6 +300,90 @@ export default function ProfilePage() {
                       修改密码
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 我的申请 Tab */}
+            {!loading && activeTab === 'requests' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg p-8">
+                  <h2 className="text-xl font-light text-gray-800 mb-6 pb-4 border-b border-gray-200">
+                    我申请上架的书籍
+                  </h2>
+
+                  {requests.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400 font-light mb-4">您还没有申请过任何书籍</p>
+                      <a
+                        href="/request-book"
+                        className="text-[#2C5530] hover:underline font-light text-sm"
+                      >
+                        去申请一本书 →
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {requests.map((req) => (
+                        <div
+                          key={req.id}
+                          className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="font-light text-gray-800">{req.title}</h3>
+                              <span className={`px-2 py-0.5 rounded text-xs font-light ${
+                                req.status === 'created' ? 'bg-green-100 text-green-700' :
+                                req.status === 'wishlist' ? 'bg-yellow-100 text-yellow-700' :
+                                req.status === 'pending' || req.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                                req.status === 'rejected' || req.status === 'failed' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {req.status === 'created' ? '已上架' :
+                                 req.status === 'wishlist' ? '待处理' :
+                                 req.status === 'pending' ? '等待中' :
+                                 req.status === 'processing' ? '处理中' :
+                                 req.status === 'rejected' ? '已拒绝' :
+                                 req.status === 'failed' ? '失败' : req.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs font-light text-gray-400">
+                              {req.author && <span>作者: {req.author}</span>}
+                              <span>申请时间: {new Date(req.created_at).toLocaleDateString('zh-CN')}</span>
+                              {req.ai_confidence && (
+                                <span>识别置信度: {Math.round(req.ai_confidence * 100)}%</span>
+                              )}
+                            </div>
+                            {req.error_message && (
+                              <p className="text-xs font-light text-red-500 mt-1">{req.error_message}</p>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            {req.status === 'created' && req.book_id && (
+                              <a
+                                href={`/books/${req.book_id}`}
+                                className="px-4 py-2 bg-[#2C5530] text-white rounded-lg font-light text-xs hover:bg-[#234426] transition-colors"
+                              >
+                                查看书籍
+                              </a>
+                            )}
+                            {req.status === 'wishlist' && (
+                              <span className="text-xs font-light text-gray-400">等待管理员处理</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-center">
+                  <a
+                    href="/request-book"
+                    className="text-[#2C5530] hover:underline font-light text-sm"
+                  >
+                    申请上架新书 →
+                  </a>
                 </div>
               </div>
             )}

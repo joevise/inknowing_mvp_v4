@@ -223,6 +223,9 @@ export default function HomePage() {
             <p className="mt-4 text-xs font-light text-gray-400">
               试试: "我想了解心理学" 或 "和苏格拉底聊天"
             </p>
+            <p className="mt-3 text-sm font-light text-gray-500">
+              找不到想看的书？<Link href="/request-book" className="text-[#2C5530] hover:underline">📝 申请上架</Link>
+            </p>
           </div>
         </section>
 
