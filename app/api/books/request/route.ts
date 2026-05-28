@@ -16,6 +16,7 @@ import {
 import { searchBooks } from '@/lib/services/book-service';
 import { recognizeAndCreateBook } from '@/lib/services/book-service';
 import { fetchDoubanCover } from '@/lib/services/douban-service';
+import { updateBook } from '@/lib/db/books';
 
 const DAILY_REQUEST_LIMIT = 5;
 
@@ -104,6 +105,14 @@ export async function POST(request: NextRequest) {
             ai_confidence: recognitionResult.aiScore / 10,
           });
           return;
+        }
+
+        // 识别成功 + 信息完整 → 直接发布上架让用户能看到
+        try {
+          updateBook(book.id, { status: 'published' });
+          console.log(`[BookRequest] 书籍 ${book.id} 已发布上架`);
+        } catch (e) {
+          console.error(`[BookRequest] 发布书籍失败，仍标记为created:`, e);
         }
 
         updateUserBookRequest(bookRequest.id, {

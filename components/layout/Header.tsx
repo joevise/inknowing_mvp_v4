@@ -136,6 +136,12 @@ export default function Header() {
                       我的收藏
                     </Link>
                     <Link
+                      href="/my-requests"
+                      className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      我的申请
+                    </Link>
+                    <Link
                       href="/profile"
                       className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
                     >
