@@ -63,6 +63,8 @@ export default function EditBookPage() {
   const [addForm, setAddForm] = useState({ name: '', description: '', personality_traits: '', speaking_style: '', background_story: '' });
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [coverWorking, setCoverWorking] = useState(false);
+  const [coverMsg, setCoverMsg] = useState('');
 
   useEffect(() => {
     checkAuth();
@@ -441,6 +443,110 @@ export default function EditBookPage() {
                 placeholder="https://example.com/cover.jpg 或 /covers/xxx.jpg"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C5530] focus:border-transparent"
               />
+
+              {/* 封面预览 + 操作区 */}
+              <div className="mt-4 flex gap-4 items-start">
+                {formData.cover_url ? (
+                  <img
+                    src={formData.cover_url}
+                    alt="封面预览"
+                    className="w-24 h-32 object-cover rounded border border-gray-200"
+                    onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+                  />
+                ) : (
+                  <div className="w-24 h-32 bg-gray-50 border border-dashed border-gray-300 rounded flex items-center justify-center text-xs font-light text-gray-400">
+                    无封面
+                  </div>
+                )}
+
+                <div className="flex-1 space-y-2">
+                  <button
+                    type="button"
+                    disabled={coverWorking}
+                    onClick={async () => {
+                      setCoverWorking(true);
+                      setCoverMsg('');
+                      try {
+                        const res = await fetch('/api/admin/books/douban-cover', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ bookTitle: formData.title }),
+                        });
+                        const data = await res.json();
+                        if (data.success && (data.localPath || data.coverUrl)) {
+                          const newUrl = data.localPath || data.coverUrl;
+                          setFormData({ ...formData, cover_url: newUrl });
+                          // 同时保存到 books
+                          await fetch(`/api/admin/books/${bookId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...formData, cover_url: newUrl }),
+                          });
+                          setCoverMsg('✓ 重新识别成功');
+                        } else {
+                          setCoverMsg('✗ ' + (data.error || '未找到封面'));
+                        }
+                      } catch (err: any) {
+                        setCoverMsg('✗ ' + (err.message || '请求失败'));
+                      } finally {
+                        setCoverWorking(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-[#2C5530] text-white text-sm rounded-md
+                               font-light hover:bg-[#234426] transition-colors
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {coverWorking ? '识别中…' : '🔄 从豆瓣重新识别封面'}
+                  </button>
+
+                  <label
+                    className={`block px-4 py-2 bg-white border border-gray-300 text-gray-700
+                                  text-sm rounded-md font-light text-center cursor-pointer
+                                  hover:bg-gray-50 transition-colors
+                                  ${coverWorking ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    📁 手动上传封面图片
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setCoverWorking(true);
+                        setCoverMsg('');
+                        try {
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          const res = await fetch(`/api/admin/books/${bookId}/cover`, {
+                            method: 'POST',
+                            body: fd,
+                          });
+                          const data = await res.json();
+                          if (res.ok && (data.cover_url || data.coverUrl)) {
+                            const u = data.cover_url || data.coverUrl;
+                            setFormData({ ...formData, cover_url: u });
+                            setCoverMsg('✓ 上传成功');
+                          } else {
+                            setCoverMsg('✗ ' + (data.error || '上传失败'));
+                          }
+                        } catch (err: any) {
+                          setCoverMsg('✗ ' + (err.message || '上传失败'));
+                        } finally {
+                          setCoverWorking(false);
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }}
+                    />
+                  </label>
+
+                  {coverMsg && (
+                    <p className={`text-xs font-light ${coverMsg.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>
+                      {coverMsg}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* 状态 */}
