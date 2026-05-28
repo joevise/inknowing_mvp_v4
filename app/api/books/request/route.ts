@@ -15,6 +15,7 @@ import {
 } from '@/lib/db/book-requests';
 import { searchBooks } from '@/lib/services/book-service';
 import { recognizeAndCreateBook } from '@/lib/services/book-service';
+import { fetchDoubanCover } from '@/lib/services/douban-service';
 
 const DAILY_REQUEST_LIMIT = 5;
 
@@ -80,8 +81,16 @@ export async function POST(request: NextRequest) {
         console.log(`[BookRequest] 异步处理申请 ${bookRequest.id}`);
         updateUserBookRequest(bookRequest.id, { status: 'processing' });
 
+        // 先尝试拉豆瓣封面（失败不影响主流程）
+        let coverUrl: string | undefined;
+        try {
+          const c = await fetchDoubanCover(trimmedTitle);
+          if (c.success) coverUrl = c.localPath || c.coverUrl;
+        } catch {}
+
         const { book, recognitionResult } = await recognizeAndCreateBook(trimmedTitle, {
-          coverUrl: recognitionResult?.coverOptions?.[0],
+          coverUrl,
+          conversationStrategy: 'hybrid',
         });
 
         const hasAuthor = book.author && book.author !== '未知' && book.author.trim().length > 0;
