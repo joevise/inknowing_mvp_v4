@@ -4,8 +4,8 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -18,8 +18,18 @@ interface SubmitResult {
 }
 
 export default function RequestBookPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#faf9f7]" />}>
+      <RequestBookPageInner />
+    </Suspense>
+  );
+}
+
+function RequestBookPageInner() {
   const router = useRouter();
-  const [title, setTitle] = useState('');
+  const params = useSearchParams();
+  const presetTitle = params.get('title') || '';
+  const [title, setTitle] = useState(presetTitle);
   const [author, setAuthor] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
