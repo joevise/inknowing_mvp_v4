@@ -447,12 +447,12 @@ export async function getVectorizationStatus(
       limit: 1
     });
 
-    const chunkCount = await collection.count({ where: { doc_id: docId } });
+    const chunkCount = await (collection.count as any)({ where: { doc_id: docId } });
 
     return {
       exists: chunkCount > 0,
       chunkCount,
-      lastUpdated: results.metadatas?.[0]?.created_at
+      lastUpdated: results.metadatas?.[0]?.created_at as string | undefined
     };
   } catch (error) {
     console.error('[Vectorizer] 获取向量化状态失败:', error);

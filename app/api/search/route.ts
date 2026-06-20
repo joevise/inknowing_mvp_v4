@@ -67,10 +67,10 @@ type说明：
 /**
  * 搜索角色
  */
-function searchCharacters(query: string): any[] {
+async function searchCharacters(query: string): Promise<any[]> {
   const searchPattern = `%${query}%`;
 
-  const characters = db().prepare(`
+  const characters = await db().prepare(`
     SELECT c.*, b.title as book_title, b.author as book_author
     FROM characters c
     INNER JOIN books b ON c.book_id = b.id
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     const books = await searchBooks(trimmedQuery);
 
     // 搜索角色
-    const characters = searchCharacters(trimmedQuery);
+    const characters = await searchCharacters(trimmedQuery);
 
     // 格式化书籍结果
     const formattedBooks = books.map(book => ({

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 对话表CRUD操作
  */
@@ -23,7 +22,7 @@ export interface UpdateConversationInput {
 /**
  * 创建新对话
  */
-export function createConversation(input: CreateConversationInput): Conversation {
+export async function createConversation(input: CreateConversationInput): Promise<Conversation> {
   const id = generateId();
   const timestamp = now().toISOString();
 
@@ -44,7 +43,7 @@ export function createConversation(input: CreateConversationInput): Conversation
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  await stmt.run(
     id,
     input.user_id,
     input.book_id,
@@ -55,18 +54,18 @@ export function createConversation(input: CreateConversationInput): Conversation
     timestamp
   );
 
-  return getConversationById(id)!;
+  return (await getConversationById(id))!;
 }
 
 /**
  * 通过ID获取对话
  */
-export function getConversationById(id: string): Conversation | null {
+export async function getConversationById(id: string): Promise<Conversation | null> {
   const stmt = db().prepare(`
     SELECT * FROM conversations WHERE id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
@@ -85,7 +84,7 @@ export function getConversationById(id: string): Conversation | null {
 /**
  * 获取用户的所有对话
  */
-export function getConversationsByUserId(
+export async function getConversationsByUserId(
   userId: string,
   options?: {
     book_id?: string;
@@ -93,7 +92,7 @@ export function getConversationsByUserId(
     limit?: number;
     offset?: number;
   }
-): { conversations: Conversation[]; total: number } {
+): Promise<{ conversations: Conversation[]; total: number }> {
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
@@ -118,7 +117,7 @@ export function getConversationsByUserId(
     SELECT COUNT(*) as total FROM conversations
     WHERE ${whereClause}
   `);
-  const countRow = countStmt.get(...values) as any;
+  const countRow = await countStmt.get(...values) as any;
   const total = countRow.total;
 
   // 获取对话列表 (JOIN books和characters表获取额外信息)
@@ -136,7 +135,7 @@ export function getConversationsByUserId(
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(...values) as any[];
+  const rows = await stmt.all(...values) as any[];
 
   const conversations = rows.map(row => ({
     id: row.id,
@@ -157,12 +156,12 @@ export function getConversationsByUserId(
 /**
  * 获取对话详情（包含额外信息）
  */
-export function getConversationDetail(id: string): {
+export async function getConversationDetail(id: string): Promise<{
   conversation: Conversation;
   book_title: string;
   character_name?: string;
   message_count: number;
-} | null {
+} | null> {
   const stmt = db().prepare(`
     SELECT
       c.*,
@@ -175,7 +174,7 @@ export function getConversationDetail(id: string): {
     WHERE c.id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
@@ -199,14 +198,14 @@ export function getConversationDetail(id: string): {
 /**
  * 获取对话摘要列表
  */
-export function getConversationSummaries(
+export async function getConversationSummaries(
   userId: string,
   options?: {
     book_id?: string;
     limit?: number;
     offset?: number;
   }
-): Array<{
+): Promise<Array<{
   id: string;
   book_id: string;
   book_title: string;
@@ -216,7 +215,7 @@ export function getConversationSummaries(
   updated_at: Date;
   message_count: number;
   title?: string;
-}> {
+}>> {
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
@@ -251,7 +250,7 @@ export function getConversationSummaries(
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(...values) as any[];
+  const rows = await stmt.all(...values) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -269,11 +268,11 @@ export function getConversationSummaries(
 /**
  * 更新对话
  */
-export function updateConversation(
+export async function updateConversation(
   id: string,
   input: UpdateConversationInput
-): Conversation | null {
-  const conversation = getConversationById(id);
+): Promise<Conversation | null> {
+  const conversation = await getConversationById(id);
   if (!conversation) {
     throw new Error('Conversation not found');
   }
@@ -316,49 +315,49 @@ export function updateConversation(
     WHERE id = ?
   `);
 
-  stmt.run(...values);
+  await stmt.run(...values);
 
-  return getConversationById(id);
+  return await getConversationById(id);
 }
 
 /**
  * 更新对话的最后活动时间
  */
-export function touchConversation(id: string): boolean {
+export async function touchConversation(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     UPDATE conversations
     SET updated_at = ?
     WHERE id = ?
   `);
 
-  const result = stmt.run(now().toISOString(), id);
+  const result = await stmt.run(now().toISOString(), id);
   return result.changes > 0;
 }
 
 /**
  * 删除对话（会级联删除消息）
  */
-export function deleteConversation(id: string): boolean {
+export async function deleteConversation(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM conversations WHERE id = ?
   `);
 
-  const result = stmt.run(id);
+  const result = await stmt.run(id);
   return result.changes > 0;
 }
 
 /**
  * 搜索用户的对话历史
  */
-export function searchConversations(
+export async function searchConversations(
   userId: string,
   query: string
-): Array<{
+): Promise<Array<{
   conversation: Conversation;
   matched_content?: string;
   book_title: string;
   character_name?: string;
-}> {
+}>> {
   // 搜索对话标题和消息内容
   const stmt = db().prepare(`
     SELECT DISTINCT
@@ -377,7 +376,7 @@ export function searchConversations(
   `);
 
   const searchPattern = `%${query}%`;
-  const rows = stmt.all(userId, searchPattern, searchPattern) as any[];
+  const rows = await stmt.all(userId, searchPattern, searchPattern) as any[];
 
   // 去重（因为可能有多个消息匹配）
   const seen = new Set<string>();
@@ -410,10 +409,10 @@ export function searchConversations(
 /**
  * 获取用户最近的对话
  */
-export function getRecentConversations(
+export async function getRecentConversations(
   userId: string,
   limit: number = 5
-): Conversation[] {
+): Promise<Conversation[]> {
   const stmt = db().prepare(`
     SELECT * FROM conversations
     WHERE user_id = ?
@@ -421,7 +420,7 @@ export function getRecentConversations(
     LIMIT ?
   `);
 
-  const rows = stmt.all(userId, limit) as any[];
+  const rows = await stmt.all(userId, limit) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -438,31 +437,31 @@ export function getRecentConversations(
 /**
  * 获取对话统计信息
  */
-export function getConversationStats(): {
+export async function getConversationStats(): Promise<{
   totalConversations: number;
   bookConversations: number;
   characterConversations: number;
   activeToday: number;
   averageMessages: number;
-} {
+}> {
   const totalStmt = db().prepare('SELECT COUNT(*) as count FROM conversations');
-  const totalRow = totalStmt.get() as any;
+  const totalRow = await totalStmt.get() as any;
 
   const bookStmt = db().prepare(
     "SELECT COUNT(*) as count FROM conversations WHERE type = 'book'"
   );
-  const bookRow = bookStmt.get() as any;
+  const bookRow = await bookStmt.get() as any;
 
   const characterStmt = db().prepare(
     "SELECT COUNT(*) as count FROM conversations WHERE type = 'character'"
   );
-  const characterRow = characterStmt.get() as any;
+  const characterRow = await characterStmt.get() as any;
 
   const todayStmt = db().prepare(`
     SELECT COUNT(*) as count FROM conversations
     WHERE DATE(updated_at) = DATE('now')
   `);
-  const todayRow = todayStmt.get() as any;
+  const todayRow = await todayStmt.get() as any;
 
   const avgStmt = db().prepare(`
     SELECT AVG(msg_count) as average
@@ -472,7 +471,7 @@ export function getConversationStats(): {
       GROUP BY conversation_id
     )
   `);
-  const avgRow = avgStmt.get() as any;
+  const avgRow = await avgStmt.get() as any;
 
   return {
     totalConversations: totalRow.count,
@@ -486,12 +485,43 @@ export function getConversationStats(): {
 /**
  * 检查用户是否有权限访问对话
  */
-export function userOwnsConversation(userId: string, conversationId: string): boolean {
+export async function userOwnsConversation(userId: string, conversationId: string): Promise<boolean> {
   const stmt = db().prepare(`
     SELECT COUNT(*) as count FROM conversations
     WHERE id = ? AND user_id = ?
   `);
 
-  const row = stmt.get(conversationId, userId) as any;
+  const row = await stmt.get(conversationId, userId) as any;
   return row.count > 0;
+}
+
+/**
+ * 更新对话标题（history service 使用）
+ */
+export async function updateConversationTitle(
+  id: string,
+  newTitle: string
+): Promise<Conversation | null> {
+  return updateConversation(id, { title: newTitle });
+}
+
+/**
+ * 获取用户对话列表（history service 使用）
+ */
+export async function getUserConversations(
+  userId: string,
+  options?: {
+    limit?: number;
+    offset?: number;
+    bookId?: string;
+    type?: 'book' | 'character';
+  }
+): Promise<Conversation[]> {
+  const result = await getConversationsByUserId(userId, {
+    book_id: options?.bookId,
+    type: options?.type,
+    limit: options?.limit,
+    offset: options?.offset,
+  });
+  return result.conversations;
 }

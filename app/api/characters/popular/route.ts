@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const result = getPopularCharacters(limit, offset);
+    const result = await getPopularCharacters(limit, offset);
 
     return NextResponse.json({
       success: true,

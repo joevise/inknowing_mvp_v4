@@ -87,7 +87,7 @@ export async function validateSession(token: string): Promise<{
     }
 
     // Fetch complete user object from database
-    const fullUser = await getUserById(result.userId);
+    const fullUser = await getUserById(result.userId!);
 
     if (!fullUser) {
       console.log('[Session] User not found:', result.userId);

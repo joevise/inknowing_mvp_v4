@@ -17,12 +17,12 @@ class RuntimeConfigService {
   /**
    * Initialize cache from database and environment variables
    */
-  private initialize() {
+  private async initialize(): Promise<void> {
     if (this.initialized) return;
 
     try {
       const database = db();
-      const configs = database.prepare('SELECT key, value FROM config').all() as Array<{ key: string; value: string }>;
+      const configs = (await database.prepare('SELECT key, value FROM config').all()) as Array<{ key: string; value: string }>;
 
       for (const config of configs) {
         this.cache[config.key] = config.value;
@@ -66,9 +66,9 @@ class RuntimeConfigService {
   /**
    * Get configuration value
    */
-  get(key: string): string | undefined {
+  async get(key: string): Promise<string | undefined> {
     if (!this.initialized) {
-      this.initialize();
+      await this.initialize();
     }
     return this.cache[key];
   }
@@ -76,9 +76,9 @@ class RuntimeConfigService {
   /**
    * Get all configuration
    */
-  getAll(): ConfigCache {
+  async getAll(): Promise<ConfigCache> {
     if (!this.initialized) {
-      this.initialize();
+      await this.initialize();
     }
     return { ...this.cache };
   }
@@ -86,14 +86,14 @@ class RuntimeConfigService {
   /**
    * Set configuration value (updates both cache and database)
    */
-  set(key: string, value: string): boolean {
+  async set(key: string, value: string): Promise<boolean> {
     if (!this.initialized) {
-      this.initialize();
+      await this.initialize();
     }
 
     try {
       const database = db();
-      database.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run(key, value);
+      await database.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run(key, value);
 
       // Update cache immediately
       this.cache[key] = value;
@@ -109,9 +109,9 @@ class RuntimeConfigService {
   /**
    * Set multiple configuration values
    */
-  setMany(configs: Record<string, string>): boolean {
+  async setMany(configs: Record<string, string>): Promise<boolean> {
     if (!this.initialized) {
-      this.initialize();
+      await this.initialize();
     }
 
     try {
@@ -119,7 +119,7 @@ class RuntimeConfigService {
       const stmt = database.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)');
 
       for (const [key, value] of Object.entries(configs)) {
-        stmt.run(key, value);
+        await stmt.run(key, value);
         // Update cache immediately
         this.cache[key] = value;
       }
@@ -135,9 +135,9 @@ class RuntimeConfigService {
   /**
    * Reload configuration from database
    */
-  reload(): void {
+  async reload(): Promise<void> {
     this.initialized = false;
-    this.initialize();
+    await this.initialize();
     console.log('[RuntimeConfig] Configuration reloaded from database');
   }
 
@@ -156,22 +156,22 @@ const runtimeConfig = new RuntimeConfigService();
 export default runtimeConfig;
 
 // Convenience methods
-export function getConfig(key: string): string | undefined {
-  return runtimeConfig.get(key);
+export async function getConfig(key: string): Promise<string | undefined> {
+  return await runtimeConfig.get(key);
 }
 
-export function getAllConfig(): ConfigCache {
-  return runtimeConfig.getAll();
+export async function getAllConfig(): Promise<ConfigCache> {
+  return await runtimeConfig.getAll();
 }
 
-export function setConfig(key: string, value: string): boolean {
-  return runtimeConfig.set(key, value);
+export async function setConfig(key: string, value: string): Promise<boolean> {
+  return await runtimeConfig.set(key, value);
 }
 
-export function setManyConfig(configs: Record<string, string>): boolean {
-  return runtimeConfig.setMany(configs);
+export async function setManyConfig(configs: Record<string, string>): Promise<boolean> {
+  return await runtimeConfig.setMany(configs);
 }
 
-export function reloadConfig(): void {
-  runtimeConfig.reload();
+export async function reloadConfig(): Promise<void> {
+  await runtimeConfig.reload();
 }

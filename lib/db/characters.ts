@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 角色表CRUD操作
  */
@@ -29,7 +28,7 @@ export interface UpdateCharacterInput {
 /**
  * 创建新角色
  */
-export function createCharacter(input: CreateCharacterInput): Character {
+export async function createCharacter(input: CreateCharacterInput): Promise<Character> {
   const id = generateId();
   const timestamp = now().toISOString();
 
@@ -41,7 +40,7 @@ export function createCharacter(input: CreateCharacterInput): Character {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  await stmt.run(
     id,
     input.book_id,
     input.name,
@@ -54,18 +53,18 @@ export function createCharacter(input: CreateCharacterInput): Character {
     timestamp
   );
 
-  return getCharacterById(id)!;
+  return (await getCharacterById(id))!;
 }
 
 /**
  * 通过ID获取角色
  */
-export function getCharacterById(id: string): Character | null {
+export async function getCharacterById(id: string): Promise<Character | null> {
   const stmt = db().prepare(`
     SELECT * FROM characters WHERE id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
@@ -86,14 +85,14 @@ export function getCharacterById(id: string): Character | null {
 /**
  * 获取书籍的所有角色
  */
-export function getCharactersByBookId(bookId: string): Character[] {
+export async function getCharactersByBookId(bookId: string): Promise<Character[]> {
   const stmt = db().prepare(`
     SELECT * FROM characters
     WHERE book_id = ?
     ORDER BY created_at ASC
   `);
 
-  const rows = stmt.all(bookId) as any[];
+  const rows = await stmt.all(bookId) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -112,11 +111,11 @@ export function getCharactersByBookId(bookId: string): Character[] {
 /**
  * 更新角色
  */
-export function updateCharacter(
+export async function updateCharacter(
   id: string,
   input: UpdateCharacterInput
-): Character | null {
-  const character = getCharacterById(id);
+): Promise<Character | null> {
+  const character = await getCharacterById(id);
   if (!character) {
     throw new Error('Character not found');
   }
@@ -168,39 +167,39 @@ export function updateCharacter(
     WHERE id = ?
   `);
 
-  stmt.run(...values);
+  await stmt.run(...values);
 
-  return getCharacterById(id);
+  return await getCharacterById(id);
 }
 
 /**
  * 删除角色
  */
-export function deleteCharacter(id: string): boolean {
+export async function deleteCharacter(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM characters WHERE id = ?
   `);
 
-  const result = stmt.run(id);
+  const result = await stmt.run(id);
   return result.changes > 0;
 }
 
 /**
  * 删除书籍的所有角色
  */
-export function deleteCharactersByBookId(bookId: string): number {
+export async function deleteCharactersByBookId(bookId: string): Promise<number> {
   const stmt = db().prepare(`
     DELETE FROM characters WHERE book_id = ?
   `);
 
-  const result = stmt.run(bookId);
+  const result = await stmt.run(bookId);
   return result.changes;
 }
 
 /**
  * 搜索角色
  */
-export function searchCharacters(query: string): Array<Character & { book_title: string }> {
+export async function searchCharacters(query: string): Promise<Array<Character & { book_title: string }>> {
   const stmt = db().prepare(`
     SELECT c.*, b.title as book_title
     FROM characters c
@@ -211,7 +210,7 @@ export function searchCharacters(query: string): Array<Character & { book_title:
   `);
 
   const searchPattern = `%${query}%`;
-  const rows = stmt.all(searchPattern, searchPattern) as any[];
+  const rows = await stmt.all(searchPattern, searchPattern) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -231,13 +230,13 @@ export function searchCharacters(query: string): Array<Character & { book_title:
 /**
  * 获取热门角色（基于对话数量）- 支持分页
  */
-export function getPopularCharacters(
+export async function getPopularCharacters(
   limit: number = 10,
   offset: number = 0
-): {
+): Promise<{
   characters: Array<Character & { conversation_count: number; book_title: string }>;
   total: number;
-} {
+}> {
   // 获取总数
   const countStmt = db().prepare(`
     SELECT COUNT(DISTINCT c.id) as total
@@ -245,7 +244,7 @@ export function getPopularCharacters(
     JOIN books b ON c.book_id = b.id
     WHERE b.status = 'published'
   `);
-  const { total } = countStmt.get() as { total: number };
+  const { total } = await countStmt.get() as { total: number };
 
   // 获取分页数据
   const stmt = db().prepare(`
@@ -259,7 +258,7 @@ export function getPopularCharacters(
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(limit, offset) as any[];
+  const rows = await stmt.all(limit, offset) as any[];
 
   const characters = rows.map(row => ({
     id: row.id,
@@ -282,12 +281,12 @@ export function getPopularCharacters(
 /**
  * 批量创建角色（用于测试）
  */
-export function bulkCreateCharacters(characters: CreateCharacterInput[]): Character[] {
-  return transaction(() => {
+export async function bulkCreateCharacters(characters: CreateCharacterInput[]): Promise<Character[]> {
+  return transaction(async () => {
     const created: Character[] = [];
 
     for (const characterInput of characters) {
-      const character = createCharacter(characterInput);
+      const character = await createCharacter(characterInput);
       created.push(character);
     }
 
@@ -298,16 +297,16 @@ export function bulkCreateCharacters(characters: CreateCharacterInput[]): Charac
 /**
  * 复制角色到另一本书
  */
-export function copyCharacterToBook(
+export async function copyCharacterToBook(
   characterId: string,
   targetBookId: string
-): Character | null {
-  const original = getCharacterById(characterId);
+): Promise<Character | null> {
+  const original = await getCharacterById(characterId);
   if (!original) {
     throw new Error('Character not found');
   }
 
-  return createCharacter({
+  return await createCharacter({
     book_id: targetBookId,
     name: original.name,
     description: original.description,
@@ -321,13 +320,13 @@ export function copyCharacterToBook(
 /**
  * 获取角色统计信息
  */
-export function getCharacterStats(): {
+export async function getCharacterStats(): Promise<{
   totalCharacters: number;
   averagePerBook: number;
   mostPopular: Array<{ name: string; book_title: string; conversations: number }>;
-} {
+}> {
   const totalStmt = db().prepare('SELECT COUNT(*) as count FROM characters');
-  const totalRow = totalStmt.get() as any;
+  const totalRow = await totalStmt.get() as any;
 
   const avgStmt = db().prepare(`
     SELECT AVG(char_count) as average
@@ -337,7 +336,7 @@ export function getCharacterStats(): {
       GROUP BY book_id
     )
   `);
-  const avgRow = avgStmt.get() as any;
+  const avgRow = await avgStmt.get() as any;
 
   const popularStmt = db().prepare(`
     SELECT c.name, b.title as book_title, COUNT(conv.id) as conversations
@@ -348,7 +347,7 @@ export function getCharacterStats(): {
     ORDER BY conversations DESC
     LIMIT 5
   `);
-  const popularRows = popularStmt.all() as any[];
+  const popularRows = await popularStmt.all() as any[];
 
   return {
     totalCharacters: totalRow.count,

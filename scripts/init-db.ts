@@ -28,20 +28,20 @@ const showStats = args.includes('--stats');
 /**
  * 显示数据库统计信息
  */
-function displayStats() {
+async function displayStats() {
   console.log('\n📊 Database Statistics:');
   console.log('=' . repeat(50));
 
   try {
     // 用户统计
-    const userStats = getUserStats();
+    const userStats = await getUserStats();
     console.log('\n👤 Users:');
     console.log(`  Total users: ${userStats.totalUsers}`);
     console.log(`  Today's registrations: ${userStats.todayRegistrations}`);
     console.log(`  Active users: ${userStats.activeUsers}`);
 
     // 书籍统计
-    const bookStats = getBookStats();
+    const bookStats = await getBookStats();
     console.log('\n📚 Books:');
     console.log(`  Total books: ${bookStats.totalBooks}`);
     console.log(`  Published: ${bookStats.publishedBooks}`);
@@ -54,7 +54,7 @@ function displayStats() {
     }
 
     // 角色统计
-    const charStats = getCharacterStats();
+    const charStats = await getCharacterStats();
     console.log('\n🎭 Characters:');
     console.log(`  Total characters: ${charStats.totalCharacters}`);
     console.log(`  Average per book: ${charStats.averagePerBook}`);
@@ -66,7 +66,7 @@ function displayStats() {
     }
 
     // 文档统计
-    const docStats = getDocumentStats();
+    const docStats = await getDocumentStats();
     console.log('\n📄 Documents:');
     console.log(`  Total documents: ${docStats.totalDocuments}`);
     console.log(`  Main documents: ${docStats.mainDocuments}`);
@@ -75,7 +75,7 @@ function displayStats() {
     console.log(`  Total size: ${(docStats.totalSize / 1024 / 1024).toFixed(2)} MB`);
 
     // 对话统计
-    const convStats = getConversationStats();
+    const convStats = await getConversationStats();
     console.log('\n💬 Conversations:');
     console.log(`  Total conversations: ${convStats.totalConversations}`);
     console.log(`  Book conversations: ${convStats.bookConversations}`);
@@ -84,7 +84,7 @@ function displayStats() {
     console.log(`  Average messages: ${convStats.averageMessages}`);
 
     // 消息统计
-    const msgStats = getMessageStats();
+    const msgStats = await getMessageStats();
     console.log('\n✉️  Messages:');
     console.log(`  Total messages: ${msgStats.totalMessages}`);
     console.log(`  User messages: ${msgStats.userMessages}`);
@@ -93,7 +93,7 @@ function displayStats() {
     console.log(`  RAG-enhanced: ${msgStats.ragMessages}`);
 
     // 会话统计
-    const sessionStats = getSessionStats();
+    const sessionStats = await getSessionStats();
     console.log('\n🔐 Sessions:');
     console.log(`  Total sessions: ${sessionStats.totalSessions}`);
     console.log(`  Active sessions: ${sessionStats.activeSessions}`);
@@ -109,12 +109,12 @@ function displayStats() {
 /**
  * 测试数据库连接
  */
-function testConnection() {
+async function testConnection() {
   console.log('🔍 Testing database connection...');
 
   try {
     const database = db();
-    const result = database.prepare('SELECT 1 as test').get() as any;
+    const result = await database.prepare('SELECT 1 as test').get() as any;
 
     if (result && result.test === 1) {
       console.log('✅ Database connection successful!');
@@ -132,7 +132,7 @@ function testConnection() {
 /**
  * 验证表结构
  */
-function verifyTables() {
+async function verifyTables() {
   console.log('\n🔍 Verifying table structure...');
 
   const expectedTables = [
@@ -149,7 +149,7 @@ function verifyTables() {
     const database = db();
 
     for (const tableName of expectedTables) {
-      const result = database.prepare(`
+      const result = await database.prepare(`
         SELECT name FROM sqlite_master
         WHERE type='table' AND name=?
       `).get(tableName) as any;
@@ -186,18 +186,18 @@ async function main() {
     }
 
     // 测试连接
-    if (!testConnection()) {
+    if (!await testConnection()) {
       process.exit(1);
     }
 
     // 验证表结构
-    if (!verifyTables()) {
+    if (!await verifyTables()) {
       console.log('\n🔨 Creating database tables...');
       // 表会在第一次访问时自动创建
       db();
 
       // 再次验证
-      if (!verifyTables()) {
+      if (!await verifyTables()) {
         console.error('❌ Failed to create tables');
         process.exit(1);
       }
@@ -211,7 +211,7 @@ async function main() {
 
     // 显示统计信息
     if (showStats || shouldSeed) {
-      displayStats();
+      await displayStats();
     }
 
     console.log('\n✅ Database initialization completed successfully!');
@@ -226,7 +226,7 @@ async function main() {
     process.exit(1);
   } finally {
     // 关闭数据库连接
-    closeDb();
+    await closeDb();
   }
 }
 

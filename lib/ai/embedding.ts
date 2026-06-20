@@ -32,8 +32,8 @@ export async function generateEmbedding(
     throw new Error('文本不能为空');
   }
 
-  const client = getAIClient();
-  const config = getCurrentConfig();
+  const client = await getAIClient();
+  const config = await getCurrentConfig();
   const embeddingModel = model || config.embeddingModel;
 
   try {
@@ -87,8 +87,8 @@ export async function generateBatchEmbeddings(
     throw new Error('没有有效的文本');
   }
 
-  const client = getAIClient();
-  const config = getCurrentConfig();
+  const client = await getAIClient();
+  const config = await getCurrentConfig();
   const embeddingModel = model || config.embeddingModel;
 
   const results: EmbeddingResult[] = [];

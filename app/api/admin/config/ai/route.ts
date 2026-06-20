@@ -23,46 +23,46 @@ export async function GET(request: NextRequest) {
     // 从运行时配置读取当前配置
     const config = {
       conversation: {
-        provider: getConfig('CONVERSATION_PROVIDER') || 'aliyun',
-        qwen_api_key: maskApiKey(getConfig('CONVERSATION_QWEN_API_KEY') || ''),
-        qwen_model: getConfig('CONVERSATION_QWEN_MODEL') || 'qwen-turbo',
-        qwen_base_url: getConfig('CONVERSATION_QWEN_BASE_URL') || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        openai_api_key: maskApiKey(getConfig('CONVERSATION_OPENAI_API_KEY') || ''),
-        openai_base_url: getConfig('CONVERSATION_OPENAI_BASE_URL') || '',
-        openai_model: getConfig('CONVERSATION_OPENAI_MODEL') || 'gpt-3.5-turbo',
-        openrouter_api_key: maskApiKey(getConfig('CONVERSATION_OPENROUTER_API_KEY') || ''),
-        openrouter_base_url: getConfig('CONVERSATION_OPENROUTER_BASE_URL') || 'https://openrouter.ai/api/v1',
-        openrouter_model: getConfig('CONVERSATION_OPENROUTER_MODEL') || 'deepseek/deepseek-v4-flash',
-        temperature: parseFloat(getConfig('CONVERSATION_TEMPERATURE') || '0.7'),
-        max_tokens: parseInt(getConfig('CONVERSATION_MAX_TOKENS') || '2000'),
-        book_prompt: getConfig('CONVERSATION_BOOK_PROMPT') || BOOK_CHAT_PROMPT,
-        character_prompt: getConfig('CONVERSATION_CHARACTER_PROMPT') || CHARACTER_CHAT_PROMPT,
+        provider: (await getConfig('CONVERSATION_PROVIDER')) || 'aliyun',
+        qwen_api_key: maskApiKey((await getConfig('CONVERSATION_QWEN_API_KEY')) || ''),
+        qwen_model: (await getConfig('CONVERSATION_QWEN_MODEL')) || 'qwen-turbo',
+        qwen_base_url: (await getConfig('CONVERSATION_QWEN_BASE_URL')) || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        openai_api_key: maskApiKey((await getConfig('CONVERSATION_OPENAI_API_KEY')) || ''),
+        openai_base_url: (await getConfig('CONVERSATION_OPENAI_BASE_URL')) || '',
+        openai_model: (await getConfig('CONVERSATION_OPENAI_MODEL')) || 'gpt-3.5-turbo',
+        openrouter_api_key: maskApiKey((await getConfig('CONVERSATION_OPENROUTER_API_KEY')) || ''),
+        openrouter_base_url: (await getConfig('CONVERSATION_OPENROUTER_BASE_URL')) || 'https://openrouter.ai/api/v1',
+        openrouter_model: (await getConfig('CONVERSATION_OPENROUTER_MODEL')) || 'deepseek/deepseek-v4-flash',
+        temperature: parseFloat((await getConfig('CONVERSATION_TEMPERATURE')) || '0.7'),
+        max_tokens: parseInt((await getConfig('CONVERSATION_MAX_TOKENS')) || '2000'),
+        book_prompt: (await getConfig('CONVERSATION_BOOK_PROMPT')) || BOOK_CHAT_PROMPT,
+        character_prompt: (await getConfig('CONVERSATION_CHARACTER_PROMPT')) || CHARACTER_CHAT_PROMPT,
       },
       embedding: {
-        provider: getConfig('EMBEDDING_PROVIDER') || 'aliyun',
-        qwen_api_key: maskApiKey(getConfig('EMBEDDING_QWEN_API_KEY') || ''),
-        qwen_model: getConfig('EMBEDDING_QWEN_MODEL') || 'text-embedding-v3',
-        qwen_base_url: getConfig('EMBEDDING_QWEN_BASE_URL') || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        openai_api_key: maskApiKey(getConfig('EMBEDDING_OPENAI_API_KEY') || ''),
-        openai_base_url: getConfig('EMBEDDING_OPENAI_BASE_URL') || '',
-        openai_model: getConfig('EMBEDDING_OPENAI_MODEL') || 'text-embedding-3-small',
-        chromadb_url: getConfig('CHROMADB_URL') || 'http://localhost:8000',
+        provider: (await getConfig('EMBEDDING_PROVIDER')) || 'aliyun',
+        qwen_api_key: maskApiKey((await getConfig('EMBEDDING_QWEN_API_KEY')) || ''),
+        qwen_model: (await getConfig('EMBEDDING_QWEN_MODEL')) || 'text-embedding-v3',
+        qwen_base_url: (await getConfig('EMBEDDING_QWEN_BASE_URL')) || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        openai_api_key: maskApiKey((await getConfig('EMBEDDING_OPENAI_API_KEY')) || ''),
+        openai_base_url: (await getConfig('EMBEDDING_OPENAI_BASE_URL')) || '',
+        openai_model: (await getConfig('EMBEDDING_OPENAI_MODEL')) || 'text-embedding-3-small',
+        chromadb_url: (await getConfig('CHROMADB_URL')) || 'http://localhost:8000',
       },
       parsing: {
-        provider: getConfig('PARSING_PROVIDER') || 'aliyun',
-        qwen_api_key: maskApiKey(getConfig('PARSING_QWEN_API_KEY') || ''),
-        qwen_model: getConfig('PARSING_QWEN_MODEL') || 'qwen-max',
-        qwen_base_url: getConfig('PARSING_QWEN_BASE_URL') || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        openai_api_key: maskApiKey(getConfig('PARSING_OPENAI_API_KEY') || ''),
-        openai_base_url: getConfig('PARSING_OPENAI_BASE_URL') || '',
-        openai_model: getConfig('PARSING_OPENAI_MODEL') || 'gpt-4o',
-        openrouter_api_key: maskApiKey(getConfig('PARSING_OPENROUTER_API_KEY') || ''),
-        openrouter_base_url: getConfig('PARSING_OPENROUTER_BASE_URL') || 'https://openrouter.ai/api/v1',
-        openrouter_model: getConfig('PARSING_OPENROUTER_MODEL') || 'deepseek/deepseek-v4-flash',
-        temperature: parseFloat(getConfig('PARSING_TEMPERATURE') || '0.3'),
-        max_tokens: parseInt(getConfig('PARSING_MAX_TOKENS') || '4000'),
-        book_recognition_prompt: getConfig('PARSING_BOOK_RECOGNITION_PROMPT') || BOOK_RECOGNITION_PROMPT,
-        character_extraction_prompt: getConfig('PARSING_CHARACTER_EXTRACTION_PROMPT') || CHARACTER_EXTRACTION_PROMPT,
+        provider: (await getConfig('PARSING_PROVIDER')) || 'aliyun',
+        qwen_api_key: maskApiKey((await getConfig('PARSING_QWEN_API_KEY')) || ''),
+        qwen_model: (await getConfig('PARSING_QWEN_MODEL')) || 'qwen-max',
+        qwen_base_url: (await getConfig('PARSING_QWEN_BASE_URL')) || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        openai_api_key: maskApiKey((await getConfig('PARSING_OPENAI_API_KEY')) || ''),
+        openai_base_url: (await getConfig('PARSING_OPENAI_BASE_URL')) || '',
+        openai_model: (await getConfig('PARSING_OPENAI_MODEL')) || 'gpt-4o',
+        openrouter_api_key: maskApiKey((await getConfig('PARSING_OPENROUTER_API_KEY')) || ''),
+        openrouter_base_url: (await getConfig('PARSING_OPENROUTER_BASE_URL')) || 'https://openrouter.ai/api/v1',
+        openrouter_model: (await getConfig('PARSING_OPENROUTER_MODEL')) || 'deepseek/deepseek-v4-flash',
+        temperature: parseFloat((await getConfig('PARSING_TEMPERATURE')) || '0.3'),
+        max_tokens: parseInt((await getConfig('PARSING_MAX_TOKENS')) || '4000'),
+        book_recognition_prompt: (await getConfig('PARSING_BOOK_RECOGNITION_PROMPT')) || BOOK_RECOGNITION_PROMPT,
+        character_extraction_prompt: (await getConfig('PARSING_CHARACTER_EXTRACTION_PROMPT')) || CHARACTER_EXTRACTION_PROMPT,
       }
     };
 
@@ -101,9 +101,9 @@ export async function PUT(request: NextRequest) {
 
     // 检查是否有现有配置
     const prefix = tab.toUpperCase();
-    const hasExistingAliyunKey = getConfig(`${prefix}_QWEN_API_KEY`);
-    const hasExistingOpenAIKey = getConfig(`${prefix}_OPENAI_API_KEY`);
-    const hasExistingOpenRouterKey = getConfig(`${prefix}_OPENROUTER_API_KEY`);
+    const hasExistingAliyunKey = await getConfig(`${prefix}_QWEN_API_KEY`);
+    const hasExistingOpenAIKey = await getConfig(`${prefix}_OPENAI_API_KEY`);
+    const hasExistingOpenRouterKey = await getConfig(`${prefix}_OPENROUTER_API_KEY`);
 
     // 根据provider验证必填字段
     // 如果key是masked的，说明用户没改，只要有历史配置就可以
@@ -197,7 +197,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // 更新运行时配置（立即生效）
-    const success = setManyConfig(configUpdates);
+    const success = await setManyConfig(configUpdates);
 
     if (!success) {
       return NextResponse.json(

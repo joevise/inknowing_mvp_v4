@@ -22,7 +22,7 @@ export async function POST(
     if (authError) return authError;
 
     // 验证书籍存在
-    const book = getBookById(params.id);
+    const book = await getBookById(params.id);
     if (!book) {
       return NextResponse.json(
         { error: '书籍不存在' },
@@ -106,7 +106,7 @@ export async function POST(
     });
 
     // 创建数据库记录
-    const document = createDocument({
+    const document = await createDocument({
       book_id: params.id,
       type: type as 'main' | 'supplement',
       title,
@@ -146,7 +146,7 @@ export async function GET(
     if (authError) return authError;
 
     // 获取文档列表
-    const documents = getDocumentsByBookId(params.id);
+    const documents = await getDocumentsByBookId(params.id);
 
     return NextResponse.json({
       success: true,

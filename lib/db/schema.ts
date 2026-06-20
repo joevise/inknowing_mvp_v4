@@ -108,6 +108,28 @@ export interface UserBookRequest {
   updated_at: Date;
 }
 
+/**
+ * 用户跨会话全局记忆
+ * 跨书籍/角色共享:仅以 user_id 隔离,不绑定 conversation。
+ * memory_type 区分事实/偏好/画像等,便于分层注入与管理。
+ */
+export interface UserMemory {
+  id: string;
+  user_id: string;
+  memory_type: 'fact' | 'preference' | 'profile' | 'interest' | 'event';
+  content: string;
+  // 来源:哪次对话/哪本书沉淀出来的(可空,用于审计与回溯)
+  source_conversation_id: string | null;
+  source_book_id: string | null;
+  // 重要度 0-1,用于检索排序与容量淘汰
+  importance: number;
+  // 命中/复用次数,辅助淘汰策略
+  access_count: number;
+  last_accessed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // 创建表的SQL语句
 export const createTablesSQL = `
   -- 用户表
@@ -331,6 +353,195 @@ export const createTriggersSQL = `
   BEGIN
     UPDATE user_book_requests SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
   END;
+`;
+
+/**
+ * ============================================================
+ * PostgreSQL 方言 Schema(迁移目标)
+ * ------------------------------------------------------------
+ * - TEXT 主键(应用层 UUID)保持不变
+ * - SQLite BOOLEAN 0/1 -> PG BOOLEAN false/true
+ * - DATETIME -> TIMESTAMPTZ DEFAULT NOW()
+ * - CHECK 约束保留
+ * - updated_at 自动更新:统一 trigger function + 每表 trigger
+ * - 面向 10万级:关键外键/查询列建索引
+ * - 幂等:全部 IF NOT EXISTS
+ * ============================================================
+ */
+export const PG_SCHEMA_SQL = `
+  -- 用户表
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+  -- 书籍表
+  CREATE TABLE IF NOT EXISTS books (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    description TEXT,
+    cover_url TEXT,
+    category TEXT,
+    tags TEXT,
+    ai_knowledge_level INTEGER CHECK (ai_knowledge_level >= 1 AND ai_knowledge_level <= 10),
+    requires_document BOOLEAN DEFAULT FALSE,
+    conversation_strategy TEXT CHECK (conversation_strategy IN ('ai_native', 'rag_only', 'hybrid')),
+    status TEXT CHECK (status IN ('published', 'draft')) DEFAULT 'draft',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
+  CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
+
+  -- 角色表
+  CREATE TABLE IF NOT EXISTS characters (
+    id TEXT PRIMARY KEY,
+    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    personality_traits TEXT,
+    speaking_style TEXT,
+    background_story TEXT,
+    prompt_template TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_characters_book_id ON characters(book_id);
+
+  -- 文档表
+  CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    type TEXT CHECK (type IN ('main', 'supplement')) NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER,
+    vectorized BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_documents_book_id ON documents(book_id);
+  CREATE INDEX IF NOT EXISTS idx_documents_type ON documents(type);
+
+  -- 对话表
+  CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    character_id TEXT REFERENCES characters(id) ON DELETE SET NULL,
+    type TEXT CHECK (type IN ('book', 'character')) NOT NULL,
+    title TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
+  CREATE INDEX IF NOT EXISTS idx_conversations_book_id ON conversations(book_id);
+  CREATE INDEX IF NOT EXISTS idx_conversations_character_id ON conversations(character_id);
+
+  -- 消息表
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role TEXT CHECK (role IN ('user', 'assistant')) NOT NULL,
+    content TEXT NOT NULL,
+    metadata TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
+
+  -- Session 表
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_token TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(session_token);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+
+  -- 配置表
+  CREATE TABLE IF NOT EXISTS config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  -- 收藏表
+  CREATE TABLE IF NOT EXISTS favorites (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, book_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+  CREATE INDEX IF NOT EXISTS idx_favorites_book_id ON favorites(book_id);
+
+  -- 用户书籍申请表
+  CREATE TABLE IF NOT EXISTS user_book_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    author TEXT,
+    status TEXT CHECK (status IN ('pending', 'processing', 'created', 'wishlist', 'rejected', 'failed')) DEFAULT 'pending',
+    book_id TEXT REFERENCES books(id) ON DELETE SET NULL,
+    ai_confidence REAL,
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_book_requests_user_id ON user_book_requests(user_id);
+  CREATE INDEX IF NOT EXISTS idx_user_book_requests_status ON user_book_requests(status);
+  CREATE INDEX IF NOT EXISTS idx_user_book_requests_book_id ON user_book_requests(book_id);
+
+  -- 用户跨会话全局记忆表(新增核心特性)
+  CREATE TABLE IF NOT EXISTS user_memories (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    memory_type TEXT NOT NULL CHECK (memory_type IN ('fact', 'preference', 'profile', 'interest', 'event')),
+    content TEXT NOT NULL,
+    source_conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+    source_book_id TEXT REFERENCES books(id) ON DELETE SET NULL,
+    importance REAL DEFAULT 0.5 CHECK (importance >= 0 AND importance <= 1),
+    access_count INTEGER DEFAULT 0,
+    last_accessed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  -- 检索主路径:按用户取记忆,按重要度/时间排序
+  CREATE INDEX IF NOT EXISTS idx_user_memories_user_id ON user_memories(user_id);
+  CREATE INDEX IF NOT EXISTS idx_user_memories_user_importance ON user_memories(user_id, importance DESC, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_user_memories_type ON user_memories(user_id, memory_type);
+
+  -- 统一的 updated_at 自动更新触发器函数
+  CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+  BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+`;
+
+// 为各表挂 updated_at 触发器(单独执行,避免 CREATE TRIGGER IF NOT EXISTS 兼容性问题)
+export const PG_TRIGGERS_SQL = `
+  DO $$
+  DECLARE t TEXT;
+  BEGIN
+    FOREACH t IN ARRAY ARRAY['users','books','characters','documents','conversations','config','user_book_requests','user_memories']
+    LOOP
+      EXECUTE format('DROP TRIGGER IF EXISTS trg_set_updated_at ON %I', t);
+      EXECUTE format('CREATE TRIGGER trg_set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()', t);
+    END LOOP;
+  END $$;
 `;
 
 // 删除所有表的SQL（用于重置数据库）

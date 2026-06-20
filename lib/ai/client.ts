@@ -7,13 +7,13 @@ import OpenAI from 'openai';
 import { getAIConfig, validateConfig } from './config';
 
 let client: OpenAI | null = null;
-let currentConfig: ReturnType<typeof getAIConfig> | null = null;
+let currentConfig: Awaited<ReturnType<typeof getAIConfig>> | null = null;
 
 /**
  * 获取或创建AI客户端
  */
-export function getAIClient(): OpenAI {
-  const config = getAIConfig();
+export async function getAIClient(): Promise<OpenAI> {
+  const config = await getAIConfig();
 
   // 如果配置改变了，重新创建客户端
   if (!client || !currentConfig ||
@@ -60,8 +60,8 @@ export function resetClient(): void {
 /**
  * 获取当前配置
  */
-export function getCurrentConfig() {
-  return currentConfig || getAIConfig();
+export async function getCurrentConfig() {
+  return currentConfig || await getAIConfig();
 }
 
 /**
@@ -101,8 +101,8 @@ export async function testConnection(): Promise<{ success: boolean; message: str
   console.log('[AI Client] 测试连接...');
 
   try {
-    const client = getAIClient();
-    const config = getCurrentConfig();
+    const client = await getAIClient();
+    const config = await getCurrentConfig();
 
     // 发送一个简单的测试请求
     const response = await executeWithRetry(async () => {

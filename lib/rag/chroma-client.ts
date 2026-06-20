@@ -3,7 +3,8 @@
  * 负责与ChromaDB向量数据库的所有交互
  */
 
-import { ChromaClient, Collection, OpenAIEmbeddingFunction } from 'chromadb';
+import { ChromaClient, Collection } from 'chromadb';
+declare const OpenAIEmbeddingFunction: new (config: any) => any;
 import { RAG_CONFIG, getCollectionName } from './config';
 import { resolveEmbeddingConfig } from '@/lib/ai/model-resolver';
 
@@ -43,7 +44,7 @@ export async function getOrCreateCollection(bookId: string): Promise<Collection>
   const client = getChromaClient();
 
   try {
-    const { apiKey, baseUrl, model } = resolveEmbeddingConfig();
+    const { apiKey, baseUrl, model } = await resolveEmbeddingConfig();
 
     let collection = await client.getCollection({
       name: collectionName,
@@ -57,7 +58,7 @@ export async function getOrCreateCollection(bookId: string): Promise<Collection>
     collectionCache.set(collectionName, collection);
     return collection;
   } catch (error) {
-    const { apiKey, baseUrl, model } = resolveEmbeddingConfig();
+    const { apiKey, baseUrl, model } = await resolveEmbeddingConfig();
 
     const collection = await client.createCollection({
       name: collectionName,
@@ -238,7 +239,7 @@ export async function queryDocuments(
     nResults,
     where,
     include: ['metadatas', 'documents', 'distances']
-  });
+  }) as any;
 }
 
 /**
@@ -266,7 +267,7 @@ export async function queryByText(
     nResults,
     where,
     include: ['metadatas', 'documents', 'distances']
-  });
+  }) as any;
 }
 
 /**
@@ -291,7 +292,7 @@ export async function getDocuments(
     where,
     limit,
     include: ['metadatas', 'documents']
-  });
+  }) as any;
 }
 
 /**

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
     const { user } = authResult;
 
-    const favorites = getUserFavorites(user.id);
+    const favorites = await getUserFavorites(user.id);
 
     return NextResponse.json({
       favorites: favorites.map(f => ({
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const favorite = addFavorite(user.id, bookId);
+    const favorite = await addFavorite(user.id, bookId);
 
     return NextResponse.json({
       favorite: {

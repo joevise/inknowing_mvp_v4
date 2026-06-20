@@ -25,6 +25,10 @@ import {
   buildCharacterChatPrompt,
 } from '@/lib/ai/prompts';
 import type { Conversation, Message, Book, Character } from '@/lib/db/schema';
+import {
+  buildMemoryContextBlock,
+  extractAndStoreMemories,
+} from './user-memory-service';
 
 // 对话创建参数
 export interface CreateConversationParams {
@@ -74,14 +78,14 @@ export class ConversationService {
    */
   async createConversation(params: CreateConversationParams): Promise<Conversation> {
     // 验证书籍存在
-    const book = getBookById(params.bookId);
+    const book = await getBookById(params.bookId);
     if (!book) {
       throw new Error('Book not found');
     }
 
     // 如果是角色对话，验证角色存在
     if (params.type === 'character' && params.characterId) {
-      const character = getCharacterById(params.characterId);
+      const character = await getCharacterById(params.characterId);
       if (!character) {
         throw new Error('Character not found');
       }
@@ -91,7 +95,7 @@ export class ConversationService {
     let title = params.title;
     if (!title) {
       if (params.type === 'character' && params.characterId) {
-        const character = getCharacterById(params.characterId);
+        const character = await getCharacterById(params.characterId);
         title = `与${character?.name}的对话`;
       } else {
         title = `关于《${book.title}》的讨论`;
@@ -99,7 +103,7 @@ export class ConversationService {
     }
 
     // 创建对话
-    const conversation = createConversation({
+    const conversation = await createConversation({
       user_id: params.userId,
       book_id: params.bookId,
       character_id: params.characterId || null,
@@ -117,21 +121,21 @@ export class ConversationService {
     const startTime = Date.now();
 
     // 验证权限
-    if (!userOwnsConversation(params.userId, params.conversationId)) {
+    if (!(await userOwnsConversation(params.userId, params.conversationId))) {
       throw new Error('Unauthorized: User does not own this conversation');
     }
 
     // 获取对话信息
-    const conversation = getConversationById(params.conversationId);
+    const conversation = await getConversationById(params.conversationId);
     if (!conversation) {
       throw new Error('Conversation not found');
     }
 
     // 保存用户消息
-    const userMessage = saveUserMessage(params.conversationId, params.content);
+    const userMessage = await saveUserMessage(params.conversationId, params.content);
 
     // 获取书籍信息
-    const book = getBookById(conversation.book_id);
+    const book = await getBookById(conversation.book_id);
     if (!book) {
       throw new Error('Book not found');
     }
@@ -148,7 +152,7 @@ export class ConversationService {
         hasDocuments,
       },
       {
-        previousMessages: getConversationContext(params.conversationId, 10),
+        previousMessages: await getConversationContext(params.conversationId, 10),
       }
     );
 
@@ -198,9 +202,9 @@ export class ConversationService {
     let book_title = book.title;
 
     if (conversation.type === 'character' && conversation.character_id) {
-      const character = getCharacterById(conversation.character_id);
+      const character = await getCharacterById(conversation.character_id);
       if (character) {
-        cover_url = character.avatar_url || undefined;
+        cover_url = (character as any).avatar_url || undefined;
         character_name = character.name;
       }
     } else {
@@ -221,10 +225,19 @@ export class ConversationService {
       metadata.sources = sources;
     }
 
-    const aiMessage = saveAIResponse(params.conversationId, response, metadata);
+    const aiMessage = await saveAIResponse(params.conversationId, response, metadata);
 
     // 更新对话活动时间
-    touchConversation(params.conversationId);
+    await touchConversation(params.conversationId);
+
+    // 异步抽取并存储用户记忆，不阻塞用户拿到回复
+    void extractAndStoreMemories({
+      userId: params.userId,
+      conversationId: params.conversationId,
+      bookId: conversation.book_id,
+      userMessage: params.content,
+      aiResponse: response,
+    }).catch(e => console.error('[memory] extract failed', e));
 
     return {
       message: {
@@ -248,14 +261,14 @@ export class ConversationService {
     streamCallback?: (chunk: string) => void
   ): Promise<string> {
     // 获取对话上下文
-    const context = getConversationContext(conversation.id, 10);
+    const context = await getConversationContext(conversation.id, 10);
 
     let systemPrompt: string;
     let messages = [...context];
 
     if (conversation.type === 'character' && conversation.character_id) {
       // 角色对话
-      const character = getCharacterById(conversation.character_id);
+      const character = await getCharacterById(conversation.character_id);
       if (!character) {
         throw new Error('Character not found');
       }
@@ -278,6 +291,10 @@ export class ConversationService {
         description: book.description,
       });
     }
+
+    // 注入跨会话用户记忆
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
+    systemPrompt = systemPrompt + memoryBlock;
 
     // 添加系统提示词到消息开头
     const chatMessages: ChatMessage[] = [
@@ -315,7 +332,7 @@ export class ConversationService {
     streamCallback?: (chunk: string) => void
   ): Promise<{ response: string; sources: any[] }> {
     // 获取对话上下文
-    const context = getConversationContext(conversation.id, 10);
+    const context = await getConversationContext(conversation.id, 10);
 
     // 检索相关内容
     const retrievalResult = await this.ragConversation.retrieveContext(
@@ -341,7 +358,7 @@ export class ConversationService {
 
     if (conversation.type === 'character' && conversation.character_id) {
       // 角色对话 + RAG
-      const character = getCharacterById(conversation.character_id);
+      const character = await getCharacterById(conversation.character_id);
       if (!character) {
         throw new Error('Character not found');
       }
@@ -364,6 +381,10 @@ export class ConversationService {
         retrievedContent: retrievalResult.documents,
       });
     }
+
+    // 注入跨会话用户记忆
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
+    systemPrompt = systemPrompt + memoryBlock;
 
     // 准备消息
     const messages = [
@@ -408,7 +429,7 @@ export class ConversationService {
     streamCallback?: (chunk: string) => void
   ): Promise<{ response: string; sources?: any[] }> {
     // 获取对话上下文
-    const context = getConversationContext(conversation.id, 10);
+    const context = await getConversationContext(conversation.id, 10);
 
     // 尝试检索相关内容
     let retrievalResult: any = { documents: [] };
@@ -427,7 +448,7 @@ export class ConversationService {
 
     if (conversation.type === 'character' && conversation.character_id) {
       // 角色对话
-      const character = getCharacterById(conversation.character_id);
+      const character = await getCharacterById(conversation.character_id);
       if (!character) {
         throw new Error('Character not found');
       }
@@ -460,6 +481,10 @@ export class ConversationService {
       systemPrompt += this.formatRetrievedContent(retrievalResult.documents);
       systemPrompt += '\n\n请综合你的知识和参考内容，提供全面的回答。';
     }
+
+    // 注入跨会话用户记忆
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
+    systemPrompt = systemPrompt + memoryBlock;
 
     // 准备消息
     const messages = [
@@ -528,12 +553,12 @@ export class ConversationService {
       const startTime = Date.now();
 
       // 获取对话和书籍信息
-      const conversation = getConversationById(conversationId);
+      const conversation = await getConversationById(conversationId);
       if (!conversation) {
         throw new Error('Conversation not found');
       }
 
-      const book = getBookById(conversation.book_id);
+      const book = await getBookById(conversation.book_id);
       if (!book) {
         throw new Error('Book not found');
       }
@@ -555,9 +580,9 @@ export class ConversationService {
       let book_title = book.title;
 
       if (conversation.type === 'character' && conversation.character_id) {
-        const character = getCharacterById(conversation.character_id);
+        const character = await getCharacterById(conversation.character_id);
         if (character) {
-          cover_url = character.avatar_url || undefined;
+          cover_url = (character as any).avatar_url || undefined;
           character_name = character.name;
         }
       } else {
@@ -578,14 +603,14 @@ export class ConversationService {
       };
 
       // 创建流式生成器
-      const contextMessages = getConversationContext(conversationId, 10);
+      const contextMessages = await getConversationContext(conversationId, 10);
 
       // 根据对话类型构建不同的system prompt
       let systemPrompt: string;
 
       if (conversation.type === 'character' && conversation.character_id) {
         // 角色对话：使用角色prompt
-        const character = getCharacterById(conversation.character_id);
+        const character = await getCharacterById(conversation.character_id);
         if (!character) {
           throw new Error('Character not found');
         }
@@ -692,6 +717,6 @@ export class ConversationService {
    * 验证对话访问权限
    */
   async validateAccess(userId: string, conversationId: string): Promise<boolean> {
-    return userOwnsConversation(userId, conversationId);
+    return await userOwnsConversation(userId, conversationId);
   }
 }

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     // 3. 检查是否为admin用户
     console.log('[Admin Me API] Session data:', JSON.stringify(sessionData));
 
-    const userId = sessionData.user?.id || sessionData.user_id;
+    const userId = sessionData.user?.id;
     console.log('[Admin Me API] User ID:', userId);
 
     if (userId !== 'admin') {

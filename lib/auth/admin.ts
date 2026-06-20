@@ -43,7 +43,7 @@ export function verifyAdminPassword(password: string): boolean {
 export async function createAdminSession(adminId: string = 'admin') {
   try {
     // 使用数据库层的 createAdminSession 创建带 admin_ 前缀的 token
-    const session = dbCreateAdminSession(adminId);
+    const session = await dbCreateAdminSession(adminId);
 
     // 设置管理员cookie
     await setAdminSessionCookie(session.session_token, session.expires_at);

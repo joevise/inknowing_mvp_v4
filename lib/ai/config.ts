@@ -18,21 +18,21 @@ export interface AIConfig {
 /**
  * 获取AI配置（从运行时配置或环境变量）
  */
-export function getAIConfig(): AIConfig {
+export async function getAIConfig(): Promise<AIConfig> {
   console.log('[AI Config] 初始化AI配置...');
 
   // 从运行时配置读取，如果未设置则使用环境变量
-  const qwenApiKey = getConfig('QWEN_API_KEY') || process.env.QWEN_API_KEY;
-  const openaiApiKey = getConfig('OPENAI_API_KEY') || process.env.OPENAI_API_KEY;
+  const qwenApiKey = (await getConfig('QWEN_API_KEY')) || process.env.QWEN_API_KEY;
+  const openaiApiKey = (await getConfig('OPENAI_API_KEY')) || process.env.OPENAI_API_KEY;
 
   if (qwenApiKey && qwenApiKey !== 'sk-your_actual_key_here') {
     console.log('[AI Config] 使用通义千问API (runtime config)');
     return {
       provider: 'qwen',
       apiKey: qwenApiKey,
-      baseUrl: getConfig('QWEN_BASE_URL') || process.env.QWEN_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      chatModel: getConfig('QWEN_MODEL') || process.env.QWEN_CHAT_MODEL || 'qwen-max',
-      embeddingModel: getConfig('QWEN_EMBEDDING_MODEL') || process.env.QWEN_EMBEDDING_MODEL || 'text-embedding-v3',
+      baseUrl: (await getConfig('QWEN_BASE_URL')) || process.env.QWEN_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      chatModel: (await getConfig('QWEN_MODEL')) || process.env.QWEN_CHAT_MODEL || 'qwen-max',
+      embeddingModel: (await getConfig('QWEN_EMBEDDING_MODEL')) || process.env.QWEN_EMBEDDING_MODEL || 'text-embedding-v3',
       timeout: 30000, // 30秒超时
       maxRetries: 3
     };
@@ -41,9 +41,9 @@ export function getAIConfig(): AIConfig {
     return {
       provider: 'openai',
       apiKey: openaiApiKey,
-      baseUrl: getConfig('OPENAI_BASE_URL') || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-      chatModel: getConfig('OPENAI_MODEL') || process.env.AI_CHAT_MODEL || 'gpt-3.5-turbo',
-      embeddingModel: getConfig('OPENAI_EMBEDDING_MODEL') || process.env.AI_EMBEDDING_MODEL || 'text-embedding-ada-002',
+      baseUrl: (await getConfig('OPENAI_BASE_URL')) || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+      chatModel: (await getConfig('OPENAI_MODEL')) || process.env.AI_CHAT_MODEL || 'gpt-3.5-turbo',
+      embeddingModel: (await getConfig('OPENAI_EMBEDDING_MODEL')) || process.env.AI_EMBEDDING_MODEL || 'text-embedding-ada-002',
       timeout: 30000,
       maxRetries: 3
     };

@@ -17,10 +17,12 @@ const seedData = {
   // 测试用户
   users: [
     {
+      username: 'testuser',
       email: 'test@example.com',
       password: 'password123',
     },
     {
+      username: 'demo',
       email: 'demo@inknowing.com',
       password: 'demo123',
     },
@@ -232,7 +234,7 @@ export async function seed(options?: { reset?: boolean }) {
     console.log('📚 Creating books...');
     const books: any[] = [];
     for (const bookData of seedData.books) {
-      const book = createBook(bookData);
+      const book = await createBook(bookData);
       books.push(book);
       console.log(`  ✓ Created book: ${bookData.title}`);
     }
@@ -242,7 +244,7 @@ export async function seed(options?: { reset?: boolean }) {
     const honglouBook = books.find(b => b.title === '红楼梦');
     if (honglouBook) {
       for (const charData of seedData.honglouCharacters) {
-        createCharacter({
+        await createCharacter({
           ...charData,
           book_id: honglouBook.id,
         });
@@ -255,7 +257,7 @@ export async function seed(options?: { reset?: boolean }) {
     const santiBook = books.find(b => b.title === '三体');
     if (santiBook) {
       for (const charData of seedData.santiCharacters) {
-        createCharacter({
+        await createCharacter({
           ...charData,
           book_id: santiBook.id,
         });
@@ -267,7 +269,7 @@ export async function seed(options?: { reset?: boolean }) {
     console.log('💬 Creating sample conversations...');
     const testUser = users[0];
     if (honglouBook && testUser) {
-      const conversation = createConversation({
+      const conversation = await createConversation({
         user_id: testUser.id,
         book_id: honglouBook.id,
         type: 'book',
@@ -275,13 +277,13 @@ export async function seed(options?: { reset?: boolean }) {
       });
 
       // 添加示例消息
-      createMessage({
+      await createMessage({
         conversation_id: conversation.id,
         role: 'user',
         content: '请介绍一下红楼梦这本书的主要内容。',
       });
 
-      createMessage({
+      await createMessage({
         conversation_id: conversation.id,
         role: 'assistant',
         content: '《红楼梦》是中国古典文学的巅峰之作，主要讲述了贾、史、王、薛四大家族的兴衰史，以贾宝玉、林黛玉、薛宝钗的爱情婚姻悲剧为主线，展现了封建社会末期的社会百态。小说通过对贾府日常生活的细致描绘，塑造了众多性格鲜明的人物形象，深刻揭示了封建社会的种种矛盾和人性的复杂。',

@@ -34,7 +34,7 @@ export async function POST(
     const { user } = authResult;
 
     // 2. 验证对话权限
-    if (!userOwnsConversation(user.id, params.id)) {
+    if (!(await userOwnsConversation(user.id, params.id))) {
       return NextResponse.json(
         { error: '无权访问此对话' },
         { status: 403 }
@@ -73,7 +73,7 @@ export async function POST(
     });
 
     console.log('[API] 消息发送成功:', {
-      messageId: result.message.id,
+      messageId: result.message.assistantMessage.id,
       strategy: result.strategy,
       hasSource: !!result.sources,
       responseTime: result.responseTime,
@@ -122,7 +122,7 @@ export async function GET(
     const { user } = authResult;
 
     // 2. 验证对话权限
-    if (!userOwnsConversation(user.id, params.id)) {
+    if (!(await userOwnsConversation(user.id, params.id))) {
       return NextResponse.json(
         { error: '无权访问此对话' },
         { status: 403 }
@@ -135,11 +135,11 @@ export async function GET(
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // 4. 获取消息列表
-    const messages = getMessagesByConversationId(params.id, limit, offset);
+    const messages = await getMessagesByConversationId(params.id, { limit, offset });
 
     // 5. 为没有头像信息的消息补充默认头像（使用书籍封面）
-    const conversation = getConversationById(params.id);
-    const book = conversation ? getBookById(conversation.book_id) : null;
+    const conversation = await getConversationById(params.id);
+    const book = conversation ? await getBookById(conversation.book_id) : null;
 
     const messagesWithAvatar = messages.map((msg: any) => {
       // 只处理assistant消息

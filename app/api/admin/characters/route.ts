@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN books b ON c.book_id = b.id
       ${whereClause}
     `;
-    const countResult = db().prepare(countQuery).get(...params) as any;
+    const countResult = await db().prepare(countQuery).get(...params) as any;
     const total = countResult?.total || 0;
 
     // 验证sortBy字段
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?
     `;
 
-    const characters = db().prepare(query).all(...params, pageSize, offset) as any[];
+    const characters = await db().prepare(query).all(...params, pageSize, offset) as any[];
 
     // 格式化数据
     const formattedCharacters = characters.map((char) => ({
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const character = createCharacter({
+    const character = await createCharacter({
       book_id,
       name,
       description,

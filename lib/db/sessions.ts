@@ -21,7 +21,7 @@ function generateSessionToken(): string {
 /**
  * 创建新会话
  */
-export function createSession(input: CreateSessionInput): Session {
+export async function createSession(input: CreateSessionInput): Promise<Session> {
   const id = generateId();
   const sessionToken = generateSessionToken();
   const createdAt = new Date();
@@ -37,7 +37,7 @@ export function createSession(input: CreateSessionInput): Session {
     ) VALUES (?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  await stmt.run(
     id,
     input.user_id,
     sessionToken,
@@ -45,18 +45,18 @@ export function createSession(input: CreateSessionInput): Session {
     createdAt.toISOString()
   );
 
-  return getSessionById(id)!;
+  return (await getSessionById(id))!;
 }
 
 /**
  * 通过ID获取会话
  */
-export function getSessionById(id: string): Session | null {
+export async function getSessionById(id: string): Promise<Session | null> {
   const stmt = db().prepare(`
     SELECT * FROM sessions WHERE id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
@@ -72,12 +72,12 @@ export function getSessionById(id: string): Session | null {
 /**
  * 通过token获取会话
  */
-export function getSessionByToken(token: string): Session | null {
+export async function getSessionByToken(token: string): Promise<Session | null> {
   const stmt = db().prepare(`
     SELECT * FROM sessions WHERE session_token = ?
   `);
 
-  const row = stmt.get(token) as any;
+  const row = await stmt.get(token) as any;
 
   if (!row) return null;
 
@@ -93,13 +93,13 @@ export function getSessionByToken(token: string): Session | null {
 /**
  * 验证会话是否有效
  */
-export function validateSession(token: string): {
+export async function validateSession(token: string): Promise<{
   valid: boolean;
   session?: Session;
   userId?: string;
   reason?: string;
-} {
-  const session = getSessionByToken(token);
+}> {
+  const session = await getSessionByToken(token);
 
   if (!session) {
     return {
@@ -108,10 +108,10 @@ export function validateSession(token: string): {
     };
   }
 
-  const now = new Date();
-  if (session.expires_at < now) {
+  const nowDate = new Date();
+  if (session.expires_at < nowDate) {
     // 会话已过期，删除它
-    deleteSession(session.id);
+    await deleteSession(session.id);
     return {
       valid: false,
       reason: 'Session expired',
@@ -128,8 +128,8 @@ export function validateSession(token: string): {
 /**
  * 续期会话
  */
-export function renewSession(id: string, hoursToAdd: number = 24): Session | null {
-  const session = getSessionById(id);
+export async function renewSession(id: string, hoursToAdd: number = 24): Promise<Session | null> {
+  const session = await getSessionById(id);
   if (!session) {
     throw new Error('Session not found');
   }
@@ -143,58 +143,58 @@ export function renewSession(id: string, hoursToAdd: number = 24): Session | nul
     WHERE id = ?
   `);
 
-  stmt.run(newExpiresAt.toISOString(), id);
+  await stmt.run(newExpiresAt.toISOString(), id);
 
-  return getSessionById(id);
+  return await getSessionById(id);
 }
 
 /**
  * 删除会话（登出）
  */
-export function deleteSession(id: string): boolean {
+export async function deleteSession(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM sessions WHERE id = ?
   `);
 
-  const result = stmt.run(id);
+  const result = await stmt.run(id);
   return result.changes > 0;
 }
 
 /**
  * 删除用户的所有会话
  */
-export function deleteUserSessions(userId: string): number {
+export async function deleteUserSessions(userId: string): Promise<number> {
   const stmt = db().prepare(`
     DELETE FROM sessions WHERE user_id = ?
   `);
 
-  const result = stmt.run(userId);
+  const result = await stmt.run(userId);
   return result.changes;
 }
 
 /**
  * 删除过期的会话（清理任务）
  */
-export function deleteExpiredSessions(): number {
+export async function deleteExpiredSessions(): Promise<number> {
   const stmt = db().prepare(`
     DELETE FROM sessions WHERE expires_at < ?
   `);
 
-  const result = stmt.run(now().toISOString());
+  const result = await stmt.run(now().toISOString());
   return result.changes;
 }
 
 /**
  * 获取用户的活跃会话
  */
-export function getUserActiveSessions(userId: string): Session[] {
+export async function getUserActiveSessions(userId: string): Promise<Session[]> {
   const stmt = db().prepare(`
     SELECT * FROM sessions
     WHERE user_id = ? AND expires_at > ?
     ORDER BY created_at DESC
   `);
 
-  const rows = stmt.all(userId, now().toISOString()) as any[];
+  const rows = await stmt.all(userId, now().toISOString()) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -208,29 +208,29 @@ export function getUserActiveSessions(userId: string): Session[] {
 /**
  * 获取会话统计信息
  */
-export function getSessionStats(): {
+export async function getSessionStats(): Promise<{
   totalSessions: number;
   activeSessions: number;
   expiredSessions: number;
   uniqueUsers: number;
-} {
+}> {
   const totalStmt = db().prepare('SELECT COUNT(*) as count FROM sessions');
-  const totalRow = totalStmt.get() as any;
+  const totalRow = await totalStmt.get() as any;
 
   const activeStmt = db().prepare(
     'SELECT COUNT(*) as count FROM sessions WHERE expires_at > ?'
   );
-  const activeRow = activeStmt.get(now().toISOString()) as any;
+  const activeRow = await activeStmt.get(now().toISOString()) as any;
 
   const expiredStmt = db().prepare(
     'SELECT COUNT(*) as count FROM sessions WHERE expires_at <= ?'
   );
-  const expiredRow = expiredStmt.get(now().toISOString()) as any;
+  const expiredRow = await expiredStmt.get(now().toISOString()) as any;
 
   const uniqueStmt = db().prepare(
     'SELECT COUNT(DISTINCT user_id) as count FROM sessions WHERE expires_at > ?'
   );
-  const uniqueRow = uniqueStmt.get(now().toISOString()) as any;
+  const uniqueRow = await uniqueStmt.get(now().toISOString()) as any;
 
   return {
     totalSessions: totalRow.count,
@@ -244,28 +244,28 @@ export function getSessionStats(): {
  * 创建或更新会话
  * 如果用户已有活跃会话，续期；否则创建新会话
  */
-export function createOrUpdateSession(userId: string): Session {
-  const activeSessions = getUserActiveSessions(userId);
+export async function createOrUpdateSession(userId: string): Promise<Session> {
+  const activeSessions = await getUserActiveSessions(userId);
 
   if (activeSessions.length > 0) {
     // 续期最新的会话
     const latestSession = activeSessions[0];
-    return renewSession(latestSession.id)!;
+    return (await renewSession(latestSession.id))!;
   }
 
   // 创建新会话
-  return createSession({ user_id: userId });
+  return await createSession({ user_id: userId });
 }
 
 /**
  * 通过token删除会话
  */
-export function deleteSessionByToken(token: string): boolean {
+export async function deleteSessionByToken(token: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM sessions WHERE session_token = ?
   `);
 
-  const result = stmt.run(token);
+  const result = await stmt.run(token);
   return result.changes > 0;
 }
 
@@ -277,7 +277,7 @@ const ADMIN_SESSION_PREFIX = 'admin_';
 /**
  * 创建管理员会话
  */
-export function createAdminSession(adminId: string = 'admin'): Session {
+export async function createAdminSession(adminId: string = 'admin'): Promise<Session> {
   const id = generateId();
   const sessionToken = ADMIN_SESSION_PREFIX + generateSessionToken();
   const createdAt = new Date();
@@ -292,19 +292,19 @@ export function createAdminSession(adminId: string = 'admin'): Session {
     ) VALUES (?, ?, ?, ?, ?)
   `);
 
-  stmt.run(id, adminId, sessionToken, expiresAt.toISOString(), createdAt.toISOString());
+  await stmt.run(id, adminId, sessionToken, expiresAt.toISOString(), createdAt.toISOString());
 
-  return getSessionById(id)!;
+  return (await getSessionById(id))!;
 }
 
 /**
  * 验证管理员会话
  */
-export function validateAdminSession(token: string): {
+export async function validateAdminSession(token: string): Promise<{
   valid: boolean;
   session?: Session;
   reason?: string;
-} {
+}> {
   if (!token.startsWith(ADMIN_SESSION_PREFIX)) {
     return {
       valid: false,
@@ -312,17 +312,17 @@ export function validateAdminSession(token: string): {
     };
   }
 
-  return validateSession(token);
+  return await validateSession(token);
 }
 
 /**
  * 清理所有管理员会话
  */
-export function clearAdminSessions(): number {
+export async function clearAdminSessions(): Promise<number> {
   const stmt = db().prepare(`
     DELETE FROM sessions WHERE session_token LIKE ?
   `);
 
-  const result = stmt.run(ADMIN_SESSION_PREFIX + '%');
+  const result = await stmt.run(ADMIN_SESSION_PREFIX + '%');
   return result.changes;
 }

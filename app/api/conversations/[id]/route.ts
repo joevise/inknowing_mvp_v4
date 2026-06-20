@@ -36,7 +36,7 @@ export async function GET(
     const { user } = authResult;
 
     // 2. 验证对话权限
-    if (!userOwnsConversation(user.id, params.id)) {
+    if (!(await userOwnsConversation(user.id, params.id))) {
       return NextResponse.json(
         { error: '无权访问此对话' },
         { status: 403 }
@@ -44,7 +44,7 @@ export async function GET(
     }
 
     // 3. 获取对话详情
-    const conversation = getConversationById(params.id);
+    const conversation = await getConversationById(params.id);
     if (!conversation) {
       return NextResponse.json(
         { error: '对话不存在' },
@@ -53,7 +53,7 @@ export async function GET(
     }
 
     // 4. 获取消息历史
-    const messages = getMessagesByConversationId(params.id);
+    const messages = await getMessagesByConversationId(params.id);
 
     // 5. 获取额外信息（书籍/角色封面、用户信息）
     let cover_url: string | undefined;
@@ -61,21 +61,21 @@ export async function GET(
     let character_name: string | undefined;
 
     if (conversation.type === 'book') {
-      const book = getBookById(conversation.book_id);
+      const book = await getBookById(conversation.book_id);
       if (book) {
         cover_url = book.cover_url || undefined;
         book_title = book.title;
       }
     } else if (conversation.type === 'character' && conversation.character_id) {
-      const character = getCharacterById(conversation.character_id);
+      const character = await getCharacterById(conversation.character_id);
       if (character) {
-        cover_url = character.avatar_url || undefined;
+        cover_url = (character as any).avatar_url || undefined;
         character_name = character.name;
       }
     }
 
     // 获取用户信息
-    const conversationUser = getUserById(conversation.user_id);
+    const conversationUser = await getUserById(conversation.user_id);
 
     // 6. 返回结果（包含封面和用户信息）
     return NextResponse.json({
@@ -124,7 +124,7 @@ export async function DELETE(
     const { user } = authResult;
 
     // 2. 验证对话权限
-    if (!userOwnsConversation(user.id, params.id)) {
+    if (!(await userOwnsConversation(user.id, params.id))) {
       return NextResponse.json(
         { error: '无权删除此对话' },
         { status: 403 }
@@ -132,7 +132,7 @@ export async function DELETE(
     }
 
     // 3. 删除对话
-    deleteConversation(params.id);
+    await deleteConversation(params.id);
 
     // 4. 返回结果
     return NextResponse.json({

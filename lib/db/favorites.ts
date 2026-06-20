@@ -8,7 +8,7 @@ import type { Favorite } from './schema';
 /**
  * 添加收藏
  */
-export function addFavorite(userId: string, bookId: string): Favorite {
+export async function addFavorite(userId: string, bookId: string): Promise<Favorite> {
   const id = generateId();
   const timestamp = now().toISOString();
 
@@ -18,55 +18,55 @@ export function addFavorite(userId: string, bookId: string): Favorite {
   `);
 
   try {
-    stmt.run(id, userId, bookId, timestamp);
+    await stmt.run(id, userId, bookId, timestamp);
   } catch (error: any) {
     // 如果已存在，返回现有记录
     if (error.message.includes('UNIQUE constraint failed')) {
-      return getFavorite(userId, bookId)!;
+      return (await getFavorite(userId, bookId))!;
     }
     throw error;
   }
 
-  return getFavorite(userId, bookId)!;
+  return (await getFavorite(userId, bookId))!;
 }
 
 /**
  * 移除收藏
  */
-export function removeFavorite(userId: string, bookId: string): boolean {
+export async function removeFavorite(userId: string, bookId: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM favorites
     WHERE user_id = ? AND book_id = ?
   `);
 
-  const result = stmt.run(userId, bookId);
+  const result = await stmt.run(userId, bookId);
   return result.changes > 0;
 }
 
 /**
  * 检查是否已收藏
  */
-export function isFavorited(userId: string, bookId: string): boolean {
+export async function isFavorited(userId: string, bookId: string): Promise<boolean> {
   const stmt = db().prepare(`
     SELECT COUNT(*) as count
     FROM favorites
     WHERE user_id = ? AND book_id = ?
   `);
 
-  const row = stmt.get(userId, bookId) as any;
+  const row = await stmt.get(userId, bookId) as any;
   return row.count > 0;
 }
 
 /**
  * 获取单个收藏记录
  */
-export function getFavorite(userId: string, bookId: string): Favorite | null {
+export async function getFavorite(userId: string, bookId: string): Promise<Favorite | null> {
   const stmt = db().prepare(`
     SELECT * FROM favorites
     WHERE user_id = ? AND book_id = ?
   `);
 
-  const row = stmt.get(userId, bookId) as any;
+  const row = await stmt.get(userId, bookId) as any;
 
   if (!row) return null;
 
@@ -81,13 +81,13 @@ export function getFavorite(userId: string, bookId: string): Favorite | null {
 /**
  * 获取用户的所有收藏（包含书籍信息）
  */
-export function getUserFavorites(
+export async function getUserFavorites(
   userId: string,
   options?: {
     limit?: number;
     offset?: number;
   }
-): Array<{
+): Promise<Array<{
   favorite: Favorite;
   book: {
     id: string;
@@ -97,7 +97,7 @@ export function getUserFavorites(
     cover_url: string;
     category: string;
   };
-}> {
+}>> {
   const limit = options?.limit || 50;
   const offset = options?.offset || 0;
 
@@ -117,7 +117,7 @@ export function getUserFavorites(
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(userId, limit, offset) as any[];
+  const rows = await stmt.all(userId, limit, offset) as any[];
 
   return rows.map(row => ({
     favorite: {
@@ -140,21 +140,21 @@ export function getUserFavorites(
 /**
  * 获取书籍的收藏数
  */
-export function getBookFavoriteCount(bookId: string): number {
+export async function getBookFavoriteCount(bookId: string): Promise<number> {
   const stmt = db().prepare(`
     SELECT COUNT(*) as count
     FROM favorites
     WHERE book_id = ?
   `);
 
-  const row = stmt.get(bookId) as any;
+  const row = await stmt.get(bookId) as any;
   return row.count;
 }
 
 /**
  * 批量获取多本书的收藏数
  */
-export function getBatchBookFavoriteCounts(bookIds: string[]): Record<string, number> {
+export async function getBatchBookFavoriteCounts(bookIds: string[]): Promise<Record<string, number>> {
   if (bookIds.length === 0) return {};
 
   const placeholders = bookIds.map(() => '?').join(',');
@@ -165,7 +165,7 @@ export function getBatchBookFavoriteCounts(bookIds: string[]): Record<string, nu
     GROUP BY book_id
   `);
 
-  const rows = stmt.all(...bookIds) as any[];
+  const rows = await stmt.all(...bookIds) as any[];
 
   const result: Record<string, number> = {};
   bookIds.forEach(id => {
@@ -182,7 +182,7 @@ export function getBatchBookFavoriteCounts(bookIds: string[]): Record<string, nu
 /**
  * 获取用户收藏的书籍ID列表
  */
-export function getUserFavoriteBookIds(userId: string): string[] {
+export async function getUserFavoriteBookIds(userId: string): Promise<string[]> {
   const stmt = db().prepare(`
     SELECT book_id
     FROM favorites
@@ -190,27 +190,27 @@ export function getUserFavoriteBookIds(userId: string): string[] {
     ORDER BY created_at DESC
   `);
 
-  const rows = stmt.all(userId) as any[];
+  const rows = await stmt.all(userId) as any[];
   return rows.map(row => row.book_id);
 }
 
 /**
  * 获取收藏统计
  */
-export function getFavoriteStats(): {
+export async function getFavoriteStats(): Promise<{
   totalFavorites: number;
   uniqueUsers: number;
   uniqueBooks: number;
   averageFavoritesPerUser: number;
-} {
+}> {
   const totalStmt = db().prepare('SELECT COUNT(*) as count FROM favorites');
-  const totalRow = totalStmt.get() as any;
+  const totalRow = await totalStmt.get() as any;
 
   const usersStmt = db().prepare('SELECT COUNT(DISTINCT user_id) as count FROM favorites');
-  const usersRow = usersStmt.get() as any;
+  const usersRow = await usersStmt.get() as any;
 
   const booksStmt = db().prepare('SELECT COUNT(DISTINCT book_id) as count FROM favorites');
-  const booksRow = booksStmt.get() as any;
+  const booksRow = await booksStmt.get() as any;
 
   const avgStmt = db().prepare(`
     SELECT AVG(fav_count) as average
@@ -220,7 +220,7 @@ export function getFavoriteStats(): {
       GROUP BY user_id
     )
   `);
-  const avgRow = avgStmt.get() as any;
+  const avgRow = await avgStmt.get() as any;
 
   return {
     totalFavorites: totalRow.count,

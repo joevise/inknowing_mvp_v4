@@ -25,7 +25,7 @@ export interface UpdateDocumentInput {
 /**
  * 创建新文档
  */
-export function createDocument(input: CreateDocumentInput): Document {
+export async function createDocument(input: CreateDocumentInput): Promise<Document> {
   const id = generateId();
   const timestamp = now().toISOString();
 
@@ -48,7 +48,7 @@ export function createDocument(input: CreateDocumentInput): Document {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  await stmt.run(
     id,
     input.book_id,
     input.type,
@@ -60,18 +60,18 @@ export function createDocument(input: CreateDocumentInput): Document {
     timestamp
   );
 
-  return getDocumentById(id)!;
+  return (await getDocumentById(id))!;
 }
 
 /**
  * 通过ID获取文档
  */
-export function getDocumentById(id: string): Document | null {
+export async function getDocumentById(id: string): Promise<Document | null> {
   const stmt = db().prepare(`
     SELECT * FROM documents WHERE id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
@@ -91,14 +91,14 @@ export function getDocumentById(id: string): Document | null {
 /**
  * 获取书籍的所有文档
  */
-export function getDocumentsByBookId(bookId: string): Document[] {
+export async function getDocumentsByBookId(bookId: string): Promise<Document[]> {
   const stmt = db().prepare(`
     SELECT * FROM documents
     WHERE book_id = ?
     ORDER BY type ASC, created_at ASC
   `);
 
-  const rows = stmt.all(bookId) as any[];
+  const rows = await stmt.all(bookId) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -116,7 +116,7 @@ export function getDocumentsByBookId(bookId: string): Document[] {
 /**
  * 获取书籍的主文档
  */
-export function getMainDocumentByBookId(bookId: string): Document | null {
+export async function getMainDocumentByBookId(bookId: string): Promise<Document | null> {
   const stmt = db().prepare(`
     SELECT * FROM documents
     WHERE book_id = ? AND type = 'main'
@@ -124,7 +124,7 @@ export function getMainDocumentByBookId(bookId: string): Document | null {
     LIMIT 1
   `);
 
-  const row = stmt.get(bookId) as any;
+  const row = await stmt.get(bookId) as any;
 
   if (!row) return null;
 
@@ -144,14 +144,14 @@ export function getMainDocumentByBookId(bookId: string): Document | null {
 /**
  * 获取书籍的补充文档
  */
-export function getSupplementDocumentsByBookId(bookId: string): Document[] {
+export async function getSupplementDocumentsByBookId(bookId: string): Promise<Document[]> {
   const stmt = db().prepare(`
     SELECT * FROM documents
     WHERE book_id = ? AND type = 'supplement'
     ORDER BY created_at ASC
   `);
 
-  const rows = stmt.all(bookId) as any[];
+  const rows = await stmt.all(bookId) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -169,11 +169,11 @@ export function getSupplementDocumentsByBookId(bookId: string): Document[] {
 /**
  * 更新文档
  */
-export function updateDocument(
+export async function updateDocument(
   id: string,
   input: UpdateDocumentInput
-): Document | null {
-  const document = getDocumentById(id);
+): Promise<Document | null> {
+  const document = await getDocumentById(id);
   if (!document) {
     throw new Error('Document not found');
   }
@@ -224,74 +224,74 @@ export function updateDocument(
     WHERE id = ?
   `);
 
-  stmt.run(...values);
+  await stmt.run(...values);
 
-  return getDocumentById(id);
+  return await getDocumentById(id);
 }
 
 /**
  * 标记文档为已向量化
  */
-export function markDocumentAsVectorized(id: string): boolean {
+export async function markDocumentAsVectorized(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     UPDATE documents
     SET vectorized = 1, updated_at = ?
     WHERE id = ?
   `);
 
-  const result = stmt.run(now().toISOString(), id);
+  const result = await stmt.run(now().toISOString(), id);
   return result.changes > 0;
 }
 
 /**
  * 标记书籍的所有文档为已向量化
  */
-export function markBookDocumentsAsVectorized(bookId: string): number {
+export async function markBookDocumentsAsVectorized(bookId: string): Promise<number> {
   const stmt = db().prepare(`
     UPDATE documents
     SET vectorized = 1, updated_at = ?
     WHERE book_id = ?
   `);
 
-  const result = stmt.run(now().toISOString(), bookId);
+  const result = await stmt.run(now().toISOString(), bookId);
   return result.changes;
 }
 
 /**
  * 删除文档
  */
-export function deleteDocument(id: string): boolean {
+export async function deleteDocument(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM documents WHERE id = ?
   `);
 
-  const result = stmt.run(id);
+  const result = await stmt.run(id);
   return result.changes > 0;
 }
 
 /**
  * 删除书籍的所有文档
  */
-export function deleteDocumentsByBookId(bookId: string): number {
+export async function deleteDocumentsByBookId(bookId: string): Promise<number> {
   const stmt = db().prepare(`
     DELETE FROM documents WHERE book_id = ?
   `);
 
-  const result = stmt.run(bookId);
+  const result = await stmt.run(bookId);
   return result.changes;
 }
 
 /**
  * 获取需要向量化的文档
  */
-export function getDocumentsToVectorize(): Document[] {
+export async function getDocumentsToVectorize(): Promise<Document[]> {
   const stmt = db().prepare(`
     SELECT * FROM documents
     WHERE vectorized = 0
     ORDER BY created_at ASC
   `);
 
-  const rows = stmt.all() as any[];
+  const rows = await stmt.all() as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -309,33 +309,33 @@ export function getDocumentsToVectorize(): Document[] {
 /**
  * 获取文档统计信息
  */
-export function getDocumentStats(): {
+export async function getDocumentStats(): Promise<{
   totalDocuments: number;
   mainDocuments: number;
   supplementDocuments: number;
   vectorizedDocuments: number;
   totalSize: number;
-} {
+}> {
   const totalStmt = db().prepare('SELECT COUNT(*) as count FROM documents');
-  const totalRow = totalStmt.get() as any;
+  const totalRow = await totalStmt.get() as any;
 
   const mainStmt = db().prepare(
     "SELECT COUNT(*) as count FROM documents WHERE type = 'main'"
   );
-  const mainRow = mainStmt.get() as any;
+  const mainRow = await mainStmt.get() as any;
 
   const supplementStmt = db().prepare(
     "SELECT COUNT(*) as count FROM documents WHERE type = 'supplement'"
   );
-  const supplementRow = supplementStmt.get() as any;
+  const supplementRow = await supplementStmt.get() as any;
 
   const vectorizedStmt = db().prepare(
     'SELECT COUNT(*) as count FROM documents WHERE vectorized = 1'
   );
-  const vectorizedRow = vectorizedStmt.get() as any;
+  const vectorizedRow = await vectorizedStmt.get() as any;
 
   const sizeStmt = db().prepare('SELECT SUM(file_size) as total FROM documents');
-  const sizeRow = sizeStmt.get() as any;
+  const sizeRow = await sizeStmt.get() as any;
 
   return {
     totalDocuments: totalRow.count,
@@ -349,12 +349,12 @@ export function getDocumentStats(): {
 /**
  * 批量创建文档（用于测试）
  */
-export function bulkCreateDocuments(documents: CreateDocumentInput[]): Document[] {
-  return transaction(() => {
+export async function bulkCreateDocuments(documents: CreateDocumentInput[]): Promise<Document[]> {
+  return transaction(async () => {
     const created: Document[] = [];
 
     for (const documentInput of documents) {
-      const document = createDocument(documentInput);
+      const document = await createDocument(documentInput);
       created.push(document);
     }
 
@@ -365,35 +365,35 @@ export function bulkCreateDocuments(documents: CreateDocumentInput[]): Document[
 /**
  * 检查书籍是否有主文档
  */
-export function bookHasMainDocument(bookId: string): boolean {
+export async function bookHasMainDocument(bookId: string): Promise<boolean> {
   const stmt = db().prepare(`
     SELECT COUNT(*) as count FROM documents
     WHERE book_id = ? AND type = 'main'
   `);
 
-  const row = stmt.get(bookId) as any;
+  const row = await stmt.get(bookId) as any;
   return row.count > 0;
 }
 
 /**
  * 获取书籍的文档数量
  */
-export function getBookDocumentCount(bookId: string): {
+export async function getBookDocumentCount(bookId: string): Promise<{
   main: number;
   supplement: number;
   total: number;
-} {
+}> {
   const mainStmt = db().prepare(`
     SELECT COUNT(*) as count FROM documents
     WHERE book_id = ? AND type = 'main'
   `);
-  const mainRow = mainStmt.get(bookId) as any;
+  const mainRow = await mainStmt.get(bookId) as any;
 
   const supplementStmt = db().prepare(`
     SELECT COUNT(*) as count FROM documents
     WHERE book_id = ? AND type = 'supplement'
   `);
-  const supplementRow = supplementStmt.get(bookId) as any;
+  const supplementRow = await supplementStmt.get(bookId) as any;
 
   return {
     main: mainRow.count,

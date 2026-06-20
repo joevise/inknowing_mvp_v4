@@ -32,7 +32,7 @@ export async function recognizeBook(bookTitle: string): Promise<{
   requiresDocument: boolean;
 }> {
   try {
-    const { client, model, temperature } = resolveParsingModel();
+    const { client, model, temperature } = await resolveParsingModel();
 
     const prompt = `
 请根据书名"${bookTitle}"，提供以下信息（以JSON格式返回）：
@@ -134,7 +134,7 @@ export async function createBook(data: {
 
   // 插入数据库
   const database = db();
-  database.prepare(`
+  await database.prepare(`
     INSERT INTO books (
       id, title, author, description, cover_url, category, tags,
       ai_knowledge_level, requires_document, conversation_strategy, status
@@ -240,7 +240,7 @@ export async function updateBook(
   values.push(bookId);
 
   const database = db();
-  database.prepare(
+  await database.prepare(
     `UPDATE books SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
   ).run(...values);
 
@@ -254,19 +254,19 @@ export async function deleteBook(bookId: string): Promise<boolean> {
   const database = db();
   try {
     // 开启事务
-    database.prepare('BEGIN TRANSACTION').run();
+    await database.prepare('BEGIN TRANSACTION').run();
 
     // 删除相关的向量数据（如果有ChromaDB集成，在这里调用）
     // await deleteBookVectors(bookId);
 
     // 删除书籍（级联删除会自动删除相关的characters、documents、conversations）
-    const result = database.prepare('DELETE FROM books WHERE id = ?').run(bookId);
+    const result = await database.prepare('DELETE FROM books WHERE id = ?').run(bookId);
 
-    database.prepare('COMMIT').run();
+    await database.prepare('COMMIT').run();
 
     return (result?.changes || 0) > 0;
   } catch (error) {
-    database.prepare('ROLLBACK').run();
+    await database.prepare('ROLLBACK').run();
     console.error('Error deleting book:', error);
     throw error;
   }
@@ -288,7 +288,7 @@ export async function toggleBookStatus(bookId: string): Promise<Book | null> {
  */
 export async function getBookById(bookId: string): Promise<Book | null> {
   const database = db();
-  const result = database.prepare('SELECT * FROM books WHERE id = ?').get(bookId);
+  const result = await database.prepare('SELECT * FROM books WHERE id = ?').get(bookId);
 
   if (!result) return null;
 
@@ -340,7 +340,7 @@ export async function getAllBooks(options?: {
   const database = db();
 
   // 获取总数
-  const countResult = database.prepare(
+  const countResult = await database.prepare(
     `SELECT COUNT(DISTINCT b.id) as total
      FROM books b ${whereClause ? whereClause.replace(/\bbooks\b/g, 'b') : ''}`
   ).get(...params);
@@ -350,7 +350,7 @@ export async function getAllBooks(options?: {
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
-  const books = database.prepare(
+  const books = await database.prepare(
     `SELECT b.*, COUNT(f.id) as favorite_count, COUNT(DISTINCT c.id) as character_count
      FROM books b
      LEFT JOIN favorites f ON b.id = f.book_id
@@ -382,7 +382,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
   const searchPattern = `%${query}%`;
   const database = db();
 
-  const books = database.prepare(`
+  const books = await database.prepare(`
     SELECT * FROM books
     WHERE (
       title LIKE ? OR
@@ -417,7 +417,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
  */
 export async function getBookCharacters(bookId: string): Promise<Character[]> {
   const database = db();
-  const characters = database.prepare(
+  const characters = await database.prepare(
     'SELECT * FROM characters WHERE book_id = ? ORDER BY created_at'
   ).all(bookId);
 
@@ -464,7 +464,7 @@ export async function getRecommendedBooks(bookId?: string, limit: number = 5): P
     params.push(limit);
   }
 
-  const books = database.prepare(query).all(...params);
+  const books = await database.prepare(query).all(...params);
 
   return books.map(book => ({
     ...book,
@@ -512,7 +512,7 @@ export async function recognizeCharacters(bookTitle: string, bookAuthor: string)
 ]
 `;
 
-    const { client, model, temperature } = resolveParsingModel();
+    const { client, model, temperature } = await resolveParsingModel();
 
     const completion = await client.chat.completions.create({
       model,

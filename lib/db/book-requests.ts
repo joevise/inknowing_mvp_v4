@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 用户书籍申请表CRUD操作
  */
@@ -21,7 +20,7 @@ export interface UpdateUserBookRequestInput {
   error_message?: string;
 }
 
-function parseRow(row: any): UserBookRequest {
+async function parseRow(row: any): Promise<UserBookRequest> {
   return {
     id: row.id,
     user_id: row.user_id,
@@ -39,7 +38,7 @@ function parseRow(row: any): UserBookRequest {
 /**
  * 创建用户书籍申请
  */
-export function createUserBookRequest(input: CreateUserBookRequestInput): UserBookRequest {
+export async function createUserBookRequest(input: CreateUserBookRequestInput): Promise<UserBookRequest> {
   const id = generateId();
   const timestamp = now().toISOString();
 
@@ -49,7 +48,7 @@ export function createUserBookRequest(input: CreateUserBookRequestInput): UserBo
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  await stmt.run(
     id,
     input.user_id,
     input.title,
@@ -59,29 +58,29 @@ export function createUserBookRequest(input: CreateUserBookRequestInput): UserBo
     timestamp
   );
 
-  return getUserBookRequestById(id)!;
+  return (await getUserBookRequestById(id))!;
 }
 
 /**
  * 通过ID获取申请
  */
-export function getUserBookRequestById(id: string): UserBookRequest | null {
+export async function getUserBookRequestById(id: string): Promise<UserBookRequest | null> {
   const stmt = db().prepare(`
     SELECT * FROM user_book_requests WHERE id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
-  return parseRow(row);
+  return await parseRow(row);
 }
 
 /**
  * 更新申请状态
  */
-export function updateUserBookRequest(id: string, input: UpdateUserBookRequestInput): UserBookRequest | null {
-  const request = getUserBookRequestById(id);
+export async function updateUserBookRequest(id: string, input: UpdateUserBookRequestInput): Promise<UserBookRequest | null> {
+  const request = await getUserBookRequestById(id);
   if (!request) {
     throw new Error('UserBookRequest not found');
   }
@@ -133,31 +132,31 @@ export function updateUserBookRequest(id: string, input: UpdateUserBookRequestIn
     WHERE id = ?
   `);
 
-  stmt.run(...values);
+  await stmt.run(...values);
 
-  return getUserBookRequestById(id);
+  return await getUserBookRequestById(id);
 }
 
 /**
  * 删除申请
  */
-export function deleteUserBookRequest(id: string): boolean {
+export async function deleteUserBookRequest(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM user_book_requests WHERE id = ?
   `);
 
-  const result = stmt.run(id);
+  const result = await stmt.run(id);
   return result.changes > 0;
 }
 
 /**
  * 获取用户的所有申请
  */
-export function getUserBookRequests(userId: string, options?: {
+export async function getUserBookRequests(userId: string, options?: {
   status?: 'pending' | 'processing' | 'created' | 'wishlist' | 'rejected' | 'failed';
   limit?: number;
   offset?: number;
-}): { requests: UserBookRequest[]; total: number } {
+}): Promise<{ requests: UserBookRequest[]; total: number }> {
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
@@ -174,7 +173,7 @@ export function getUserBookRequests(userId: string, options?: {
   const countStmt = db().prepare(`
     SELECT COUNT(*) as total FROM user_book_requests ${whereClause}
   `);
-  const countRow = countStmt.get(...values) as any;
+  const countRow = await countStmt.get(...values) as any;
   const total = countRow.total;
 
   const stmt = db().prepare(`
@@ -184,10 +183,10 @@ export function getUserBookRequests(userId: string, options?: {
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(...values, limit, offset) as any[];
+  const rows = await stmt.all(...values, limit, offset) as any[];
 
   return {
-    requests: rows.map(parseRow),
+    requests: await Promise.all(rows.map(parseRow)),
     total,
   };
 }
@@ -195,12 +194,12 @@ export function getUserBookRequests(userId: string, options?: {
 /**
  * 获取所有申请（管理员用）
  */
-export function listUserBookRequests(options?: {
+export async function listUserBookRequests(options?: {
   status?: 'pending' | 'processing' | 'created' | 'wishlist' | 'rejected' | 'failed';
   user_id?: string;
   limit?: number;
   offset?: number;
-}): { requests: (UserBookRequest & { username?: string })[]; total: number } {
+}): Promise<{ requests: (UserBookRequest & { username?: string })[]; total: number }> {
   const limit = options?.limit || 50;
   const offset = options?.offset || 0;
 
@@ -222,7 +221,7 @@ export function listUserBookRequests(options?: {
   const countStmt = db().prepare(`
     SELECT COUNT(*) as total FROM user_book_requests ubr ${whereClause}
   `);
-  const countRow = countStmt.get(...values) as any;
+  const countRow = await countStmt.get(...values) as any;
   const total = countRow.total;
 
   const stmt = db().prepare(`
@@ -234,13 +233,13 @@ export function listUserBookRequests(options?: {
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(...values, limit, offset) as any[];
+  const rows = await stmt.all(...values, limit, offset) as any[];
 
   return {
-    requests: rows.map(row => ({
-      ...parseRow(row),
+    requests: await Promise.all(rows.map(async row => ({
+      ...await parseRow(row),
       username: row.username,
-    })),
+    }))),
     total,
   };
 }
@@ -248,31 +247,31 @@ export function listUserBookRequests(options?: {
 /**
  * 统计用户今天的申请数量
  */
-export function getUserRequestCountToday(userId: string): number {
+export async function getUserRequestCountToday(userId: string): Promise<number> {
   const stmt = db().prepare(`
     SELECT COUNT(*) as count FROM user_book_requests
     WHERE user_id = ? AND DATE(created_at) = DATE('now')
   `);
 
-  const row = stmt.get(userId) as any;
+  const row = await stmt.get(userId) as any;
   return row.count;
 }
 
 /**
  * 检查是否已有相同标题的申请或书籍
  */
-export function checkDuplicateRequest(userId: string, title: string): { hasBook: boolean; hasRequest: boolean; book_id?: string; request_id?: string } {
+export async function checkDuplicateRequest(userId: string, title: string): Promise<{ hasBook: boolean; hasRequest: boolean; book_id?: string; request_id?: string }> {
   const bookStmt = db().prepare(`
     SELECT id FROM books WHERE title LIKE ? LIMIT 1
   `);
-  const bookRow = bookStmt.get(`%${title}%`) as any;
+  const bookRow = await bookStmt.get(`%${title}%`) as any;
 
   const requestStmt = db().prepare(`
     SELECT id, status FROM user_book_requests
     WHERE user_id = ? AND title LIKE ? AND status NOT IN ('rejected', 'failed')
     ORDER BY created_at DESC LIMIT 1
   `);
-  const requestRow = requestStmt.get(userId, `%${title}%`) as any;
+  const requestRow = await requestStmt.get(userId, `%${title}%`) as any;
 
   return {
     hasBook: !!bookRow,

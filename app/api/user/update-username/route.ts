@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest) {
       WHERE id = ?
     `);
 
-    const result = stmt.run(trimmedUsername, user.id);
+    const result = await stmt.run(trimmedUsername, user.id);
 
     if (result.changes === 0) {
       return NextResponse.json(

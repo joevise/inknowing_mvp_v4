@@ -97,8 +97,8 @@ export default function BooksPage() {
       });
       if (favoritesRes.ok) {
         const favoritesData = await favoritesRes.json();
-        const bookIds = new Set(
-          favoritesData.favorites?.map((fav: any) => fav.book_id) || []
+        const bookIds = new Set<string>(
+          favoritesData.favorites?.map((fav: any) => fav.book_id as string) || []
         );
         setFavoritedBookIds(bookIds);
       }

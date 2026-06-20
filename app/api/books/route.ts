@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // 只获取已上架的书籍
     const result = await getAllBooks({
-      status: 'published', // 前台只显示已上架的书籍
+      status: 'published' as any, // 前台只显示已上架的书籍
       category: category as any,
       tags,
       limit,

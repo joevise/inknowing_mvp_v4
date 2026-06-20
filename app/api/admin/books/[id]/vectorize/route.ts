@@ -23,7 +23,7 @@ export async function POST(
     const bookId = params.id;
 
     // 验证书籍存在
-    const book = getBookById(bookId);
+    const book = await getBookById(bookId);
     if (!book) {
       return NextResponse.json(
         { error: '书籍不存在' },
@@ -34,7 +34,7 @@ export async function POST(
     console.log('[API] 开始批量向量化', { bookId, bookTitle: book.title });
 
     // 获取该书籍的所有文档
-    const documents = getDocumentsByBookId(bookId);
+    const documents = await getDocumentsByBookId(bookId);
 
     if (documents.length === 0) {
       return NextResponse.json(
@@ -95,7 +95,7 @@ export async function POST(
 
         if (result.success) {
           // 标记文档为已向量化
-          markDocumentAsVectorized(doc.id);
+          await markDocumentAsVectorized(doc.id);
           successCount++;
 
           results.push({

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 书籍表CRUD操作
  */
@@ -35,7 +34,7 @@ export interface UpdateBookInput {
 /**
  * 创建新书籍
  */
-export function createBook(input: CreateBookInput): Book {
+export async function createBook(input: CreateBookInput): Promise<Book> {
   const id = generateId();
   const timestamp = now().toISOString();
 
@@ -47,7 +46,7 @@ export function createBook(input: CreateBookInput): Book {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  await stmt.run(
     id,
     input.title,
     input.author,
@@ -63,18 +62,18 @@ export function createBook(input: CreateBookInput): Book {
     timestamp
   );
 
-  return getBookById(id)!;
+  return (await getBookById(id))!;
 }
 
 /**
  * 通过ID获取书籍
  */
-export function getBookById(id: string): Book | null {
+export async function getBookById(id: string): Promise<Book | null> {
   const stmt = db().prepare(`
     SELECT * FROM books WHERE id = ?
   `);
 
-  const row = stmt.get(id) as any;
+  const row = await stmt.get(id) as any;
 
   if (!row) return null;
 
@@ -98,8 +97,8 @@ export function getBookById(id: string): Book | null {
 /**
  * 更新书籍
  */
-export function updateBook(id: string, input: UpdateBookInput): Book | null {
-  const book = getBookById(id);
+export async function updateBook(id: string, input: UpdateBookInput): Promise<Book | null> {
+  const book = await getBookById(id);
   if (!book) {
     throw new Error('Book not found');
   }
@@ -171,33 +170,33 @@ export function updateBook(id: string, input: UpdateBookInput): Book | null {
     WHERE id = ?
   `);
 
-  stmt.run(...values);
+  await stmt.run(...values);
 
-  return getBookById(id);
+  return await getBookById(id);
 }
 
 /**
  * 删除书籍
  */
-export function deleteBook(id: string): boolean {
+export async function deleteBook(id: string): Promise<boolean> {
   const stmt = db().prepare(`
     DELETE FROM books WHERE id = ?
   `);
 
-  const result = stmt.run(id);
+  const result = await stmt.run(id);
   return result.changes > 0;
 }
 
 /**
  * 获取书籍列表（包含收藏数）
  */
-export function listBooks(options?: {
+export async function listBooks(options?: {
   category?: string;
   tags?: string[];
   status?: 'published' | 'draft';
   limit?: number;
   offset?: number;
-}): { books: (Book & { favorite_count?: number })[]; total: number } {
+}): Promise<{ books: (Book & { favorite_count?: number })[]; total: number }> {
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
@@ -230,7 +229,7 @@ export function listBooks(options?: {
   const countStmt = db().prepare(`
     SELECT COUNT(*) as total FROM books b ${whereClause ? whereClause.replace('books', 'b') : ''}
   `);
-  const countRow = countStmt.get(...values) as any;
+  const countRow = await countStmt.get(...values) as any;
   const total = countRow.total;
 
   // 获取书籍列表（JOIN favorites 表统计收藏数）
@@ -247,7 +246,7 @@ export function listBooks(options?: {
     LIMIT ? OFFSET ?
   `);
 
-  const rows = stmt.all(...values) as any[];
+  const rows = await stmt.all(...values) as any[];
 
   const books = rows.map(row => ({
     id: row.id,
@@ -272,7 +271,7 @@ export function listBooks(options?: {
 /**
  * 搜索书籍
  */
-export function searchBooks(query: string): Book[] {
+export async function searchBooks(query: string): Promise<Book[]> {
   const stmt = db().prepare(`
     SELECT * FROM books
     WHERE (title LIKE ? OR author LIKE ? OR description LIKE ?)
@@ -282,7 +281,7 @@ export function searchBooks(query: string): Book[] {
   `);
 
   const searchPattern = `%${query}%`;
-  const rows = stmt.all(searchPattern, searchPattern, searchPattern) as any[];
+  const rows = await stmt.all(searchPattern, searchPattern, searchPattern) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -304,7 +303,7 @@ export function searchBooks(query: string): Book[] {
 /**
  * 获取热门书籍
  */
-export function getPopularBooks(limit: number = 10): Book[] {
+export async function getPopularBooks(limit: number = 10): Promise<Book[]> {
   // 基于对话数量获取热门书籍
   const stmt = db().prepare(`
     SELECT b.*, COUNT(c.id) as conversation_count
@@ -316,7 +315,7 @@ export function getPopularBooks(limit: number = 10): Book[] {
     LIMIT ?
   `);
 
-  const rows = stmt.all(limit) as any[];
+  const rows = await stmt.all(limit) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -338,7 +337,7 @@ export function getPopularBooks(limit: number = 10): Book[] {
 /**
  * 获取推荐书籍
  */
-export function getRecommendedBooks(userId: string, limit: number = 10): Book[] {
+export async function getRecommendedBooks(userId: string, limit: number = 10): Promise<Book[]> {
   // 基于用户历史对话推荐书籍
   const stmt = db().prepare(`
     SELECT DISTINCT b.*
@@ -351,7 +350,7 @@ export function getRecommendedBooks(userId: string, limit: number = 10): Book[] 
     LIMIT ?
   `);
 
-  const rows = stmt.all(userId, limit) as any[];
+  const rows = await stmt.all(userId, limit) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -373,24 +372,24 @@ export function getRecommendedBooks(userId: string, limit: number = 10): Book[] 
 /**
  * 获取书籍统计信息
  */
-export function getBookStats(): {
+export async function getBookStats(): Promise<{
   totalBooks: number;
   publishedBooks: number;
   draftBooks: number;
   categoryCounts: Record<string, number>;
-} {
+}> {
   const totalStmt = db().prepare('SELECT COUNT(*) as count FROM books');
-  const totalRow = totalStmt.get() as any;
+  const totalRow = await totalStmt.get() as any;
 
   const publishedStmt = db().prepare(
     "SELECT COUNT(*) as count FROM books WHERE status = 'published'"
   );
-  const publishedRow = publishedStmt.get() as any;
+  const publishedRow = await publishedStmt.get() as any;
 
   const draftStmt = db().prepare(
     "SELECT COUNT(*) as count FROM books WHERE status = 'draft'"
   );
-  const draftRow = draftStmt.get() as any;
+  const draftRow = await draftStmt.get() as any;
 
   const categoryStmt = db().prepare(`
     SELECT category, COUNT(*) as count
@@ -398,7 +397,7 @@ export function getBookStats(): {
     WHERE category IS NOT NULL
     GROUP BY category
   `);
-  const categoryRows = categoryStmt.all() as any[];
+  const categoryRows = await categoryStmt.all() as any[];
 
   const categoryCounts: Record<string, number> = {};
   for (const row of categoryRows) {
@@ -416,14 +415,14 @@ export function getBookStats(): {
 /**
  * 根据书名和作者查找书籍
  */
-export function findBookByTitleAndAuthor(title: string, author: string): Book | null {
+export async function findBookByTitleAndAuthor(title: string, author: string): Promise<Book | null> {
   const stmt = db().prepare(`
     SELECT * FROM books
     WHERE title = ? AND author = ?
     LIMIT 1
   `);
 
-  const row = stmt.get(title, author) as any;
+  const row = await stmt.get(title, author) as any;
 
   if (!row) return null;
 
@@ -447,18 +446,18 @@ export function findBookByTitleAndAuthor(title: string, author: string): Book | 
 /**
  * 批量创建书籍（用于测试）
  */
-export function bulkCreateBooks(books: CreateBookInput[]): Book[] {
-  return transaction(() => {
+export async function bulkCreateBooks(books: CreateBookInput[]): Promise<Book[]> {
+  return transaction(async () => {
     const created: Book[] = [];
 
     for (const bookInput of books) {
-      const book = createBook(bookInput);
+      const book = await createBook(bookInput);
       created.push(book);
     }
 
     return created;
   });
 }
-export function getAllBooks() {
-  return listBooks();
+export async function getAllBooks(): Promise<{ books: (Book & { favorite_count?: number })[]; total: number }> {
+  return await listBooks();
 }

@@ -42,8 +42,8 @@ export async function chat(
     options
   });
 
-  const client = getAIClient();
-  const config = getCurrentConfig();
+  const client = await getAIClient();
+  const config = await getCurrentConfig();
 
   try {
     const response = await executeWithRetry(async () => {
@@ -93,8 +93,8 @@ export async function* streamChat(
     options
   });
 
-  const client = getAIClient();
-  const config = getCurrentConfig();
+  const client = await getAIClient();
+  const config = await getCurrentConfig();
 
   try {
     const stream = await executeWithRetry(async () => {

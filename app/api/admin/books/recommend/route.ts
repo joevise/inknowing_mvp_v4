@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { client, model, temperature } = resolveConversationModel();
+    const { client, model, temperature } = await resolveConversationModel();
 
     const prompt = `
 根据用户的查询条件："${query}"，请推荐${count}本相关书籍。
@@ -69,15 +69,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const booksWithStatus = books.map((book: any) => {
-      const existingBook = findBookByTitleAndAuthor(book.title, book.author);
+    const booksWithStatus = await Promise.all(books.map(async (book: any) => {
+      const existingBook = await findBookByTitleAndAuthor(book.title, book.author);
       return {
         ...book,
         existingBookId: existingBook?.id,
         status: existingBook?.status,
         alreadyExists: !!existingBook,
       };
-    });
+    }));
 
     console.log('[Book Recommend] Success, count:', booksWithStatus.length);
 

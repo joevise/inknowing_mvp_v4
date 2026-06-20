@@ -8,21 +8,20 @@ import {
   getConversationById,
   deleteConversation,
   updateConversationTitle,
-  type Conversation,
 } from '../db/conversations';
 import {
   getMessagesByConversationId,
   getConversationContext,
-  type Message,
 } from '../db/messages';
 import { getBookById } from '../db/books';
+import type { Conversation, Message } from '../db/schema';
 
 // 历史对话项（带扩展信息）
 export interface ConversationHistoryItem extends Conversation {
   bookTitle?: string;
   messageCount?: number;
   lastMessage?: string;
-  lastMessageTime?: string;
+  lastMessageTime?: Date;
 }
 
 // 按书籍分组的对话
@@ -35,7 +34,7 @@ export interface GroupedConversations {
 /**
  * 获取用户的对话历史（时间轴）
  */
-export function getConversationHistory(
+export async function getConversationHistory(
   userId: string,
   options?: {
     limit?: number;
@@ -43,31 +42,33 @@ export function getConversationHistory(
     bookId?: string;
     type?: 'book' | 'character';
   }
-): ConversationHistoryItem[] {
-  const conversations = getUserConversations(userId, options);
+): Promise<ConversationHistoryItem[]> {
+  const conversations = await getUserConversations(userId, options);
 
   // 丰富对话信息
-  return conversations.map(conv => {
-    const book = getBookById(conv.book_id);
-    const messages = getMessagesByConversationId(conv.id, 1); // 只获取最后一条消息
+  const enriched = [];
+  for (const conv of conversations) {
+    const book = await getBookById(conv.book_id);
+    const messages = await getMessagesByConversationId(conv.id, { limit: 1 }); // 只获取最后一条消息
 
-    return {
+    enriched.push({
       ...conv,
       bookTitle: book?.title,
-      messageCount: getMessageCount(conv.id),
+      messageCount: await getMessageCount(conv.id),
       lastMessage: messages[messages.length - 1]?.content?.substring(0, 100),
       lastMessageTime: messages[messages.length - 1]?.created_at,
-    };
-  });
+    });
+  }
+  return enriched;
 }
 
 /**
  * 按书籍分组获取对话
  */
-export function getConversationsGroupedByBook(
+export async function getConversationsGroupedByBook(
   userId: string
-): GroupedConversations[] {
-  const conversations = getConversationHistory(userId);
+): Promise<GroupedConversations[]> {
+  const conversations = await getConversationHistory(userId);
   const grouped = new Map<string, ConversationHistoryItem[]>();
 
   // 按书籍分组
@@ -81,7 +82,7 @@ export function getConversationsGroupedByBook(
   // 转换为数组
   const result: GroupedConversations[] = [];
   for (const [bookId, convs] of grouped.entries()) {
-    const book = getBookById(bookId);
+    const book = await getBookById(bookId);
     result.push({
       bookId,
       bookTitle: book?.title || '未知书籍',
@@ -106,11 +107,11 @@ export function getConversationsGroupedByBook(
 /**
  * 搜索历史对话
  */
-export function searchConversationHistory(
+export async function searchConversationHistory(
   userId: string,
   query: string
-): ConversationHistoryItem[] {
-  const allConversations = getConversationHistory(userId);
+): Promise<ConversationHistoryItem[]> {
+  const allConversations = await getConversationHistory(userId);
 
   if (!query || query.trim().length === 0) {
     return allConversations;
@@ -141,15 +142,15 @@ export function searchConversationHistory(
 /**
  * 恢复对话上下文
  */
-export function restoreConversationContext(
+export async function restoreConversationContext(
   conversationId: string,
   contextSize: number = 10
-): {
+): Promise<{
   conversation: Conversation | null;
   messages: Message[];
   context: Array<{ role: string; content: string }>;
-} {
-  const conversation = getConversationById(conversationId);
+}> {
+  const conversation = await getConversationById(conversationId);
   if (!conversation) {
     return {
       conversation: null,
@@ -158,8 +159,8 @@ export function restoreConversationContext(
     };
   }
 
-  const messages = getMessagesByConversationId(conversationId);
-  const context = getConversationContext(conversationId, contextSize);
+  const messages = await getMessagesByConversationId(conversationId);
+  const context = await getConversationContext(conversationId, contextSize);
 
   return {
     conversation,
@@ -180,7 +181,7 @@ export async function continueConversation(
   reason?: string;
 }> {
   // 验证对话存在
-  const conversation = getConversationById(conversationId);
+  const conversation = await getConversationById(conversationId);
   if (!conversation) {
     return {
       conversation: null,
@@ -199,7 +200,7 @@ export async function continueConversation(
   }
 
   // 验证书籍仍然可用
-  const book = getBookById(conversation.book_id);
+  const book = await getBookById(conversation.book_id);
   if (!book || book.status !== 'published') {
     return {
       conversation,
@@ -217,15 +218,15 @@ export async function continueConversation(
 /**
  * 删除对话（包含所有消息）
  */
-export function removeConversation(
+export async function removeConversation(
   conversationId: string,
   userId: string
-): {
+): Promise<{
   success: boolean;
   error?: string;
-} {
+}> {
   try {
-    const conversation = getConversationById(conversationId);
+    const conversation = await getConversationById(conversationId);
 
     if (!conversation) {
       return {
@@ -241,7 +242,7 @@ export function removeConversation(
       };
     }
 
-    deleteConversation(conversationId);
+    await deleteConversation(conversationId);
 
     return {
       success: true,
@@ -257,16 +258,16 @@ export function removeConversation(
 /**
  * 更新对话标题
  */
-export function renameConversation(
+export async function renameConversation(
   conversationId: string,
   userId: string,
   newTitle: string
-): {
+): Promise<{
   success: boolean;
   error?: string;
-} {
+}> {
   try {
-    const conversation = getConversationById(conversationId);
+    const conversation = await getConversationById(conversationId);
 
     if (!conversation) {
       return {
@@ -289,7 +290,7 @@ export function renameConversation(
       };
     }
 
-    updateConversationTitle(conversationId, newTitle.trim());
+    await updateConversationTitle(conversationId, newTitle.trim());
 
     return {
       success: true,
@@ -305,7 +306,7 @@ export function renameConversation(
 /**
  * 获取对话统计信息
  */
-export function getConversationStats(userId: string): {
+export async function getConversationStats(userId: string): Promise<{
   totalConversations: number;
   totalMessages: number;
   bookCount: number;
@@ -315,8 +316,8 @@ export function getConversationStats(userId: string): {
     date: string;
     count: number;
   }>;
-} {
-  const conversations = getUserConversations(userId);
+}> {
+  const conversations = await getUserConversations(userId);
 
   const stats = {
     totalConversations: conversations.length,
@@ -329,7 +330,7 @@ export function getConversationStats(userId: string): {
 
   // 计算总消息数
   for (const conv of conversations) {
-    stats.totalMessages += getMessageCount(conv.id);
+    stats.totalMessages += await getMessageCount(conv.id);
   }
 
   // 计算最近7天的活动
@@ -344,7 +345,7 @@ export function getConversationStats(userId: string): {
   }
 
   for (const conv of conversations) {
-    const dateStr = conv.updated_at.split('T')[0];
+    const dateStr = conv.updated_at.toISOString().split('T')[0];
     if (activityMap.has(dateStr)) {
       activityMap.set(dateStr, activityMap.get(dateStr)! + 1);
     }
@@ -360,9 +361,9 @@ export function getConversationStats(userId: string): {
 /**
  * 辅助函数：获取消息数量
  */
-function getMessageCount(conversationId: string): number {
+async function getMessageCount(conversationId: string): Promise<number> {
   try {
-    const messages = getMessagesByConversationId(conversationId);
+    const messages = await getMessagesByConversationId(conversationId);
     return messages.length;
   } catch {
     return 0;
@@ -372,9 +373,9 @@ function getMessageCount(conversationId: string): number {
 /**
  * 构建上下文窗口（用于继续对话）
  */
-export function buildContextWindow(
+export async function buildContextWindow(
   conversationId: string,
   windowSize: number = 10
-): Array<{ role: string; content: string }> {
-  return getConversationContext(conversationId, windowSize);
+): Promise<Array<{ role: string; content: string }>> {
+  return await getConversationContext(conversationId, windowSize);
 }

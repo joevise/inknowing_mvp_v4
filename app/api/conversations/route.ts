@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // 3. 获取对话列表
-    const result = getConversationsByUserId(
+    const result = await getConversationsByUserId(
       user.id,
       {
         book_id: bookId || undefined,

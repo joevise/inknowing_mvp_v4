@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       email: user.email || '',
       username: user.username || '用户', // 使用数据库中的真实用户名
       created_at: user.created_at ? new Date(user.created_at).toISOString() : new Date().toISOString(),
-      conversation_count: userConversations.length,
+      conversation_count: userConversations.conversations.length,
       last_active: user.updated_at ? new Date(user.updated_at).toISOString() : new Date().toISOString(),
     };
 
