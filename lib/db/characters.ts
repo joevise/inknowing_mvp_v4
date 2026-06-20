@@ -253,7 +253,7 @@ export async function getPopularCharacters(
     JOIN books b ON c.book_id = b.id
     LEFT JOIN conversations conv ON c.id = conv.character_id
     WHERE b.status = 'published'
-    GROUP BY c.id
+    GROUP BY c.id, b.title
     ORDER BY conversation_count DESC
     LIMIT ? OFFSET ?
   `);
@@ -343,7 +343,7 @@ export async function getCharacterStats(): Promise<{
     FROM characters c
     JOIN books b ON c.book_id = b.id
     LEFT JOIN conversations conv ON c.id = conv.character_id
-    GROUP BY c.id
+    GROUP BY c.id, c.name, b.title
     ORDER BY conversations DESC
     LIMIT 5
   `);
