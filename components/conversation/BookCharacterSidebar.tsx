@@ -1,12 +1,13 @@
 // @ts-nocheck
 /**
  * 书籍角色信息侧边栏组件
- * 显示当前书籍信息和角色列表,支持角色切换
+ * 显示当前书籍信息和角色列表,支持进入角色/书籍的独立对话
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Book {
   id: string;
@@ -31,6 +32,14 @@ interface Conversation {
   type: 'book' | 'character';
 }
 
+interface UserConversation {
+  id: string;
+  book_id: string;
+  character_id?: string | null;
+  type: 'book' | 'character';
+  updated_at: string;
+}
+
 interface BookCharacterSidebarProps {
   conversation: Conversation;
   onCharacterSwitch?: (characterId: string) => void;
@@ -40,8 +49,10 @@ export default function BookCharacterSidebar({
   conversation,
   onCharacterSwitch,
 }: BookCharacterSidebarProps) {
+  const router = useRouter();
   const [book, setBook] = useState<Book | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [userConversations, setUserConversations] = useState<UserConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +60,7 @@ export default function BookCharacterSidebar({
   useEffect(() => {
     if (conversation.book_id) {
       loadBookAndCharacters();
+      loadUserConversations();
     }
   }, [conversation.book_id]);
 
@@ -79,33 +91,70 @@ export default function BookCharacterSidebar({
     }
   };
 
+  const loadUserConversations = async () => {
+    try {
+      const response = await fetch(
+        `/api/conversations?bookId=${conversation.book_id}&limit=100`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      setUserConversations(data.conversations || []);
+    } catch (err) {
+      console.error('[BookCharacterSidebar] 获取用户对话历史失败:', err);
+    }
+  };
+
+  const getLatestCharacterConversation = (characterId: string): UserConversation | undefined => {
+    return userConversations
+      .filter((conv) => conv.character_id === characterId)
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+  };
+
+  const getLatestBookConversation = (): UserConversation | undefined => {
+    return userConversations
+      .filter((conv) => conv.type === 'book' && !conv.character_id)
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+  };
+
   const handleSwitchCharacter = async (characterId: string) => {
     if (characterId === conversation.character_id) return;
+
+    const latest = getLatestCharacterConversation(characterId);
+    if (latest) {
+      setSwitching(true);
+      router.push(`/conversations/${latest.id}`);
+      return;
+    }
 
     try {
       setSwitching(true);
       setError('');
 
-      const response = await fetch(`/api/conversations/${conversation.id}/character`, {
-        method: 'PUT',
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ characterId }),
+        body: JSON.stringify({
+          bookId: conversation.book_id,
+          characterId,
+          type: 'character',
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error('切换角色失败');
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/conversations/${data.conversation.id}`);
+      } else {
+        router.push('/auth/login');
       }
-
-      // 通知父组件更新对话状态
-      if (onCharacterSwitch) {
-        onCharacterSwitch(characterId);
-      }
-
     } catch (err) {
-      console.error('[BookCharacterSidebar] 切换角色失败:', err);
-      setError(err instanceof Error ? err.message : '切换角色失败');
-    } finally {
+      console.error('[BookCharacterSidebar] 进入角色对话失败:', err);
+      setError(err instanceof Error ? err.message : '进入角色对话失败');
       setSwitching(false);
     }
   };
@@ -113,30 +162,36 @@ export default function BookCharacterSidebar({
   const handleSwitchToBook = async () => {
     if (conversation.type === 'book') return;
 
+    const latest = getLatestBookConversation();
+    if (latest) {
+      setSwitching(true);
+      router.push(`/conversations/${latest.id}`);
+      return;
+    }
+
     try {
       setSwitching(true);
       setError('');
 
-      const response = await fetch(`/api/conversations/${conversation.id}/character`, {
-        method: 'PUT',
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ characterId: null }), // null表示切换回书籍对话
+        body: JSON.stringify({
+          bookId: conversation.book_id,
+          type: 'book',
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error('切换到书籍对话失败');
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/conversations/${data.conversation.id}`);
+      } else {
+        router.push('/auth/login');
       }
-
-      // 通知父组件更新对话状态
-      if (onCharacterSwitch) {
-        onCharacterSwitch(''); // 空字符串表示书籍对话
-      }
-
     } catch (err) {
-      console.error('[BookCharacterSidebar] 切换到书籍对话失败:', err);
-      setError(err instanceof Error ? err.message : '切换到书籍对话失败');
-    } finally {
+      console.error('[BookCharacterSidebar] 进入书籍对话失败:', err);
+      setError(err instanceof Error ? err.message : '进入书籍对话失败');
       setSwitching(false);
     }
   };
@@ -291,7 +346,7 @@ export default function BookCharacterSidebar({
 
         {switching && (
           <div className="mt-4 text-center">
-            <p className="text-xs font-light text-gray-500">切换中...</p>
+            <p className="text-xs font-light text-gray-500">打开中...</p>
           </div>
         )}
       </div>
