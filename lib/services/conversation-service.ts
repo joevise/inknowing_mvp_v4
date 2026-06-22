@@ -11,12 +11,14 @@ import {
   createConversation,
   getConversationById,
   touchConversation,
+  updateConversation,
   userOwnsConversation,
 } from '@/lib/db/conversations';
 import {
   saveUserMessage,
   saveAIResponse,
   getConversationContext,
+  getMessagesByConversationId,
 } from '@/lib/db/messages';
 import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
@@ -91,24 +93,13 @@ export class ConversationService {
       }
     }
 
-    // 生成对话标题
-    let title = params.title;
-    if (!title) {
-      if (params.type === 'character' && params.characterId) {
-        const character = await getCharacterById(params.characterId);
-        title = `与${character?.name}的对话`;
-      } else {
-        title = `关于《${book.title}》的讨论`;
-      }
-    }
-
     // 创建对话
     const conversation = await createConversation({
       user_id: params.userId,
       book_id: params.bookId,
       character_id: params.characterId || null,
       type: params.type,
-      title,
+      title: params.title,
     });
 
     return conversation;
@@ -229,6 +220,9 @@ export class ConversationService {
 
     // 更新对话活动时间
     await touchConversation(params.conversationId);
+
+    // 第一轮完整问答后，若标题为空则自动生成标题
+    await this.maybeGenerateTitle(conversation);
 
     // 异步抽取并存储用户记忆，不阻塞用户拿到回复
     void extractAndStoreMemories({
@@ -711,6 +705,54 @@ export class ConversationService {
     return documents
       .map((doc, index) => `[段落 ${index + 1}]\n${doc.content}`)
       .join('\n\n');
+  }
+
+  /**
+   * 第一轮完整问答后自动生成标题
+   */
+  private async maybeGenerateTitle(conversation: Conversation): Promise<void> {
+    if (conversation.title) return;
+
+    try {
+      const messages = await getMessagesByConversationId(conversation.id);
+
+      // 仅当存在且仅存在一条用户消息和一条AI回复时生成标题
+      if (messages.length !== 2) return;
+
+      const firstUser = messages.find(m => m.role === 'user');
+      const firstAssistant = messages.find(m => m.role === 'assistant');
+      if (!firstUser || !firstAssistant) return;
+
+      let title: string;
+      try {
+        const result = await chat([
+          {
+            role: 'system',
+            content: '你是一个对话标题生成器，根据用户的第一句话和AI回复，生成一个不超过15字的简洁中文标题，只输出标题本身，不要引号不要标点。',
+          },
+          {
+            role: 'user',
+            content: `用户：${firstUser.content}\nAI：${firstAssistant.content.slice(0, 100)}`,
+          },
+        ], { temperature: 0.3, maxTokens: 30 });
+
+        title = result.content
+          .trim()
+          .replace(/^["'「『【】\s]+|["'」』】\s]+$/g, '')
+          .slice(0, 15);
+
+        if (!title) {
+          throw new Error('AI generated empty title');
+        }
+      } catch (err) {
+        console.error('[Title] AI生成标题失败，使用fallback:', err);
+        title = firstUser.content.trim().slice(0, 15);
+      }
+
+      await updateConversation(conversation.id, { title });
+    } catch (err) {
+      console.error('[Title] 自动生成标题流程失败:', err);
+    }
   }
 
   /**

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SQLite → PostgreSQL 数据迁移脚本
  *

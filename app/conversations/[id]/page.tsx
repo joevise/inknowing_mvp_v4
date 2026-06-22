@@ -60,6 +60,7 @@ export default function ConversationPage() {
   const [streamingMessage, setStreamingMessage] = useState('');
   const [streamingMetadata, setStreamingMetadata] = useState<any>({});
   const [error, setError] = useState('');
+  const [creatingNewTopic, setCreatingNewTopic] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -126,6 +127,37 @@ export default function ConversationPage() {
     }
     const data = await response.json();
     setMessages(data.messages || []);
+  };
+
+  const handleNewTopic = async () => {
+    if (!conversation || creatingNewTopic) return;
+
+    setCreatingNewTopic(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          bookId: conversation.book_id,
+          characterId: conversation.character_id,
+          type: conversation.type,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('创建新话题失败');
+      }
+
+      const data = await response.json();
+      router.push(`/conversations/${data.conversation.id}`);
+    } catch (err) {
+      console.error('[Conversation] 创建新话题失败:', err);
+      setError(err instanceof Error ? err.message : '创建新话题失败');
+      setCreatingNewTopic(false);
+    }
   };
 
   const handleSendWithStream = async () => {
@@ -294,13 +326,22 @@ export default function ConversationPage() {
         <div className="flex-1 flex flex-col bg-[#FAF9F7]">
           {/* 对话标题栏 */}
           <div className="px-6 py-4 bg-white border-b border-gray-200">
-            <div className="max-w-4xl mx-auto">
-              <h1 className="text-lg font-light text-gray-800">
-                {conversation?.character_name || conversation?.book_title || '对话'}
-              </h1>
-              <p className="text-sm font-light text-gray-500">
-                {conversation?.type === 'character' ? '角色对话模式' : '书籍对话模式'}
-              </p>
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-lg font-light text-gray-800">
+                  {conversation?.character_name || conversation?.book_title || '对话'}
+                </h1>
+                <p className="text-sm font-light text-gray-500">
+                  {conversation?.type === 'character' ? '角色对话模式' : '书籍对话模式'}
+                </p>
+              </div>
+              <button
+                onClick={handleNewTopic}
+                disabled={creatingNewTopic}
+                className="px-4 py-2 bg-[#2C5530] text-white text-sm font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              >
+                {creatingNewTopic ? '创建中...' : '+ 新话题'}
+              </button>
             </div>
           </div>
 
