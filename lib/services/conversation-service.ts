@@ -28,6 +28,7 @@ import {
 } from '@/lib/ai/prompts';
 import type { Conversation, Message, Book, Character } from '@/lib/db/schema';
 import {
+  buildBookInteractionBlock,
   buildMemoryContextBlock,
   extractAndStoreMemories,
 } from './user-memory-service';
@@ -286,9 +287,18 @@ export class ConversationService {
       });
     }
 
-    // 注入跨会话用户记忆
-    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
-    systemPrompt = systemPrompt + memoryBlock;
+    // 注入按书隔离的用户记忆 + 书内交互足迹
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id, conversation.book_id);
+    let interactionBlock = '';
+    if (conversation.type === 'character' && conversation.character_id) {
+      interactionBlock = await buildBookInteractionBlock(
+        conversation.user_id,
+        conversation.book_id,
+        conversation.character_id,
+        book.title
+      );
+    }
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
 
     // 添加系统提示词到消息开头
     const chatMessages: ChatMessage[] = [
@@ -376,9 +386,18 @@ export class ConversationService {
       });
     }
 
-    // 注入跨会话用户记忆
-    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
-    systemPrompt = systemPrompt + memoryBlock;
+    // 注入按书隔离的用户记忆 + 书内交互足迹
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id, conversation.book_id);
+    let interactionBlock = '';
+    if (conversation.type === 'character' && conversation.character_id) {
+      interactionBlock = await buildBookInteractionBlock(
+        conversation.user_id,
+        conversation.book_id,
+        conversation.character_id,
+        book.title
+      );
+    }
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
 
     // 准备消息
     const messages = [
@@ -476,9 +495,18 @@ export class ConversationService {
       systemPrompt += '\n\n请综合你的知识和参考内容，提供全面的回答。';
     }
 
-    // 注入跨会话用户记忆
-    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
-    systemPrompt = systemPrompt + memoryBlock;
+    // 注入按书隔离的用户记忆 + 书内交互足迹
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id, conversation.book_id);
+    let interactionBlock = '';
+    if (conversation.type === 'character' && conversation.character_id) {
+      interactionBlock = await buildBookInteractionBlock(
+        conversation.user_id,
+        conversation.book_id,
+        conversation.character_id,
+        book.title
+      );
+    }
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
 
     // 准备消息
     const messages = [

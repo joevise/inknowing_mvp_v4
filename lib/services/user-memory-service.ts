@@ -11,6 +11,7 @@ import {
   getUserMemories,
   touchMemoryAccess,
 } from '@/lib/db/user-memories';
+import { getInteractedCharactersInBook } from '@/lib/db/conversations';
 
 interface ExtractParams {
   userId: string;
@@ -131,12 +132,15 @@ AI 回复：
 }
 
 /**
- * 构建用于注入对话上下文的记忆文本块。
+ * 构建用于注入对话上下文的记忆文本块（按书隔离）。
  * 无记忆时返回空字符串。
  */
-export async function buildMemoryContextBlock(userId: string): Promise<string> {
+export async function buildMemoryContextBlock(
+  userId: string,
+  bookId?: string | null
+): Promise<string> {
   try {
-    const memories = await getTopMemoriesForInjection(userId);
+    const memories = await getTopMemoriesForInjection(userId, bookId);
     if (memories.length === 0) {
       return '';
     }
@@ -152,6 +156,29 @@ export async function buildMemoryContextBlock(userId: string): Promise<string> {
     return `\n\n[关于这位用户你已知道的信息]\n${lines}`;
   } catch (error) {
     console.error('[memory] buildMemoryContextBlock failed:', error);
+    return '';
+  }
+}
+
+/**
+ * 构建「书内交互足迹」注入块：让同书其他角色自然知晓这位读者还和谁聊过。
+ * 只暴露"和谁聊过"这一客观事实，不暴露聊天内容，避免角色串味。
+ * 无足迹（这本书第一次开口）时返回空字符串。
+ */
+export async function buildBookInteractionBlock(
+  userId: string,
+  bookId: string,
+  currentCharacterId: string | null | undefined,
+  bookTitle: string
+): Promise<string> {
+  try {
+    const names = await getInteractedCharactersInBook(userId, bookId, currentCharacterId);
+    if (names.length === 0) {
+      return '';
+    }
+    return `\n\n[这位读者在《${bookTitle}》中的交流足迹]\n该读者此前还与以下角色有过对话：${names.join('、')}。你与他们同属这本书的世界，可以自然地知晓这一点，就像听同伴提起过这位读者；但你并不知道他们具体聊了什么。`;
+  } catch (error) {
+    console.error('[memory] buildBookInteractionBlock failed:', error);
     return '';
   }
 }

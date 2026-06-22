@@ -525,3 +525,36 @@ export async function getUserConversations(
   });
   return result.conversations;
 }
+
+/**
+ * 查询用户在某本书内已交互过的角色名列表（书内交互足迹）。
+ * 排除当前正在对话的角色，去重。用于让同书其他角色自然知晓"你和谁聊过"。
+ */
+export async function getInteractedCharactersInBook(
+  userId: string,
+  bookId: string,
+  excludeCharacterId?: string | null
+): Promise<string[]> {
+  const conditions: string[] = [
+    'conv.user_id = ?',
+    'conv.book_id = ?',
+    "conv.type = 'character'",
+    'conv.character_id IS NOT NULL',
+  ];
+  const values: any[] = [userId, bookId];
+
+  if (excludeCharacterId) {
+    conditions.push('conv.character_id != ?');
+    values.push(excludeCharacterId);
+  }
+
+  const stmt = db().prepare(`
+    SELECT DISTINCT c.name AS name
+    FROM conversations conv
+    JOIN characters c ON conv.character_id = c.id
+    WHERE ${conditions.join(' AND ')}
+  `);
+
+  const rows = await stmt.all(...values) as any[];
+  return rows.map(r => r.name).filter(Boolean);
+}
