@@ -530,22 +530,6 @@ export class ConversationService {
     metadata?: any;
   }> {
     try {
-      let fullResponse = '';
-      const metadata: any = {};
-
-      // 发送消息并获取流式响应
-      const responsePromise = this.sendMessage({
-        conversationId,
-        userId,
-        content,
-        streamCallback: (chunk) => {
-          fullResponse += chunk;
-        },
-      });
-
-      // 等待路由决策
-      const startTime = Date.now();
-
       // 获取对话和书籍信息
       const conversation = await getConversationById(conversationId);
       if (!conversation) {
@@ -596,97 +580,72 @@ export class ConversationService {
         },
       };
 
-      // 创建流式生成器
-      const contextMessages = await getConversationContext(conversationId, 10);
+      // 使用队列/泵模式桥接 sendMessage 的同步 streamCallback 与 async generator
+      const chunks: string[] = [];
+      let notify: (() => void) | null = null;
+      let finished = false;
+      let sendError: Error | null = null;
 
-      // 根据对话类型构建不同的system prompt
-      let systemPrompt: string;
+      const responsePromise = this.sendMessage({
+        conversationId,
+        userId,
+        content,
+        streamCallback: (chunk) => {
+          chunks.push(chunk);
+          if (notify) {
+            notify();
+            notify = null;
+          }
+        },
+      });
 
-      if (conversation.type === 'character' && conversation.character_id) {
-        // 角色对话：使用角色prompt
-        const character = await getCharacterById(conversation.character_id);
-        if (!character) {
-          throw new Error('Character not found');
-        }
-
-        // 安全解析personality_traits (可能已经被parseJson解析过)
-        let personality: string[] = [];
-        if (character.personality_traits) {
-          if (Array.isArray(character.personality_traits)) {
-            // 已经是数组,直接使用
-            personality = character.personality_traits;
-          } else if (typeof character.personality_traits === 'string') {
-            // 如果是字符串,尝试解析或分割
-            try {
-              const parsed = JSON.parse(character.personality_traits);
-              personality = Array.isArray(parsed) ? parsed : [String(parsed)];
-            } catch (e) {
-              // 如果不是有效JSON,按逗号分割
-              personality = character.personality_traits.split(',').map(s => s.trim());
-            }
-          } else {
-            // 其他类型,转换为数组
-            personality = [String(character.personality_traits)];
+      responsePromise.then(
+        () => {
+          finished = true;
+          if (notify) {
+            notify();
+            notify = null;
+          }
+        },
+        (err) => {
+          sendError = err instanceof Error ? err : new Error(String(err));
+          finished = true;
+          if (notify) {
+            notify();
+            notify = null;
           }
         }
+      );
 
-        systemPrompt = buildCharacterChatPrompt({
-          bookTitle: book.title,
-          characterName: character.name,
-          description: character.description,
-          personality: personality,
-          speakingStyle: character.speaking_style || '自然对话',
-          backgroundStory: character.background_story,
-          keyQuotes: [],
-        });
-      } else {
-        // 书籍对话：使用书籍prompt
-        systemPrompt = buildBookChatPrompt({
-          bookTitle: book.title,
-          author: book.author,
-          description: book.description,
-        });
-      }
-
-      // 如果需要RAG，先检索
-      if (routingDecision.strategy === ResponseStrategy.RAG ||
-          routingDecision.strategy === ResponseStrategy.HYBRID) {
-        const retrievalResult = await this.ragConversation.retrieveContext(
-          content,
-          book.id,
-          5
-        );
-        if (retrievalResult.documents.length > 0) {
-          systemPrompt += '\n\n检索到的相关内容：\n';
-          systemPrompt += this.formatRetrievedContent(retrievalResult.documents);
-          metadata.sources = retrievalResult.documents;
+      while (!finished || chunks.length > 0) {
+        if (chunks.length > 0) {
+          const chunk = chunks.shift()!;
+          yield {
+            type: 'chunk',
+            data: chunk,
+          };
+        } else {
+          await new Promise<void>((resolve) => {
+            notify = resolve;
+          });
         }
       }
 
-      // 准备完整消息
-      const chatMessages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        ...contextMessages,
-        { role: 'user', content },
-      ];
-
-      // 流式生成
-      const stream = streamChat(chatMessages);
-
-      for await (const chunk of stream) {
-        yield {
-          type: 'chunk',
-          data: chunk,
-        };
+      if (sendError) {
+        throw sendError;
       }
+
+      const result = await responsePromise;
 
       // 完成
       yield {
         type: 'done',
         data: '',
         metadata: {
-          ...metadata,
-          responseTime: Date.now() - startTime,
+          strategy: result.strategy,
+          queryType: result.queryType,
+          sources: result.sources,
+          responseTime: result.responseTime,
         },
       };
 
