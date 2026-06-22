@@ -57,12 +57,21 @@ export default function BookCharacterSidebar({
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState('');
 
+  // 书籍信息和角色列表只依赖 book_id：同书内切换角色不必重拉，省请求
   useEffect(() => {
     if (conversation.book_id) {
       loadBookAndCharacters();
-      loadUserConversations();
     }
   }, [conversation.book_id]);
+
+  // 用户对话历史依赖 conversation.id：每次切换/新建对话都刷新快照，
+  // 否则同书内点角色时拿到的是进书那一刻的旧快照，新建的对话不在其中，
+  // 会被误判为"没聊过"而反复新建空对话。
+  useEffect(() => {
+    if (conversation.book_id) {
+      loadUserConversations();
+    }
+  }, [conversation.id]);
 
   const loadBookAndCharacters = async () => {
     try {
