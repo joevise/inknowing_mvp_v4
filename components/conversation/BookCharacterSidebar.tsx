@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 书籍角色信息侧边栏组件
  * 显示当前书籍信息和角色列表,支持进入角色/书籍的独立对话
@@ -43,11 +42,13 @@ interface UserConversation {
 interface BookCharacterSidebarProps {
   conversation: Conversation;
   onCharacterSwitch?: (characterId: string) => void;
+  onSwitch?: (conversationId: string) => void;
 }
 
 export default function BookCharacterSidebar({
   conversation,
   onCharacterSwitch,
+  onSwitch,
 }: BookCharacterSidebarProps) {
   const router = useRouter();
   const [book, setBook] = useState<Book | null>(null);
@@ -131,12 +132,16 @@ export default function BookCharacterSidebar({
   };
 
   const handleSwitchCharacter = async (characterId: string) => {
+    if (onCharacterSwitch) {
+      await onCharacterSwitch(characterId);
+    }
+
     if (characterId === conversation.character_id) return;
 
     const latest = getLatestCharacterConversation(characterId);
     if (latest) {
       setSwitching(true);
-      router.push(`/conversations/${latest.id}`);
+      onSwitch?.(latest.id);
       return;
     }
 
@@ -157,7 +162,7 @@ export default function BookCharacterSidebar({
 
       if (response.ok) {
         const data = await response.json();
-        router.push(`/conversations/${data.conversation.id}`);
+        onSwitch?.(data.conversation.id);
       } else {
         router.push('/auth/login');
       }
@@ -174,7 +179,7 @@ export default function BookCharacterSidebar({
     const latest = getLatestBookConversation();
     if (latest) {
       setSwitching(true);
-      router.push(`/conversations/${latest.id}`);
+      onSwitch?.(latest.id);
       return;
     }
 
@@ -194,7 +199,7 @@ export default function BookCharacterSidebar({
 
       if (response.ok) {
         const data = await response.json();
-        router.push(`/conversations/${data.conversation.id}`);
+        onSwitch?.(data.conversation.id);
       } else {
         router.push('/auth/login');
       }
@@ -331,7 +336,7 @@ export default function BookCharacterSidebar({
                       <span className={`text-lg font-light ${
                         isActive ? 'text-white' : 'text-white'
                       }`}>
-                        {character.name[0]}
+                        {character.name.charAt(0)}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
