@@ -23,11 +23,13 @@ interface Conversation {
 interface ConversationHistorySidebarProps {
   currentConversationId?: string;
   onSelectConversation?: (conversationId: string) => void;
+  onDeletedCurrent?: () => void;
 }
 
 export default function ConversationHistorySidebar({
   currentConversationId,
   onSelectConversation,
+  onDeletedCurrent,
 }: ConversationHistorySidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ export default function ConversationHistorySidebar({
 
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [currentConversationId]);
 
   const loadConversations = async () => {
     try {
@@ -82,9 +84,13 @@ export default function ConversationHistorySidebar({
       // 重新加载对话列表
       await loadConversations();
 
-      // 如果删除的是当前对话,跳转到书籍列表
+      // 如果删除的是当前对话,优先交父级决定,未提供再回退到书籍列表
       if (conversationId === currentConversationId) {
-        window.location.href = '/books';
+        if (onDeletedCurrent) {
+          onDeletedCurrent();
+        } else {
+          window.location.href = '/books';
+        }
       }
     } catch (err) {
       console.error('[HistorySidebar] 删除失败:', err);

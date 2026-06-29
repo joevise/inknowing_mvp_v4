@@ -18,6 +18,15 @@ interface Character {
   conversation_count: number;
 }
 
+interface UserConversation {
+  id: string;
+  book_id: string;
+  character_id?: string;
+  type: 'book' | 'character';
+  title?: string;
+  updated_at: string;
+}
+
 export default function CharactersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -25,12 +34,16 @@ export default function CharactersPage() {
   const [total, setTotal] = useState(0);
   const [error, setError] = useState('');
 
-  // 分页状态
   const [page, setPage] = useState(1);
   const pageSize = 24; // 每页显示24个角色
 
+  const [creatingConversation, setCreatingConversation] = useState<string | null>(null);
+  const [continuingCharacterId, setContinuingCharacterId] = useState<string | null>(null);
+  const [userConversations, setUserConversations] = useState<UserConversation[]>([]);
+
   useEffect(() => {
     fetchCharacters();
+    fetchUserConversations();
   }, [page]);
 
   const fetchCharacters = async () => {
@@ -59,7 +72,41 @@ export default function CharactersPage() {
     }
   };
 
-  const [creatingConversation, setCreatingConversation] = useState<string | null>(null);
+  const fetchUserConversations = async () => {
+    try {
+      const response = await fetch('/api/conversations?type=character&limit=50', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        // 未登录或获取失败，静默处理
+        return;
+      }
+
+      const data = await response.json();
+      setUserConversations(data.conversations || []);
+    } catch (err) {
+      console.error('[Characters] 获取用户对话历史失败:', err);
+    }
+  };
+
+  const getLatestConversation = (characterId: string): UserConversation | undefined => {
+    return userConversations
+      .filter((conv) => conv.character_id === characterId)
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+  };
+
+  const handleContinueConversation = async (characterId: string, bookId: string) => {
+    if (continuingCharacterId === characterId) return;
+
+    const latest = getLatestConversation(characterId);
+    if (latest) {
+      setContinuingCharacterId(characterId);
+      router.push(`/conversations/${latest.id}`);
+    } else {
+      handleStartConversation(characterId, bookId);
+    }
+  };
 
   const handleStartConversation = async (characterId: string, bookId: string) => {
     // 防止重复点击
@@ -171,16 +218,44 @@ export default function CharactersPage() {
                         </div>
                       )}
 
-                      {/* 开始对话按钮 */}
-                      <button
-                        onClick={() => handleStartConversation(char.id, char.book_id)}
-                        disabled={creatingConversation === char.id}
-                        className="w-full py-2 bg-[#2C5530] text-white rounded-lg
-                                 font-light text-sm hover:bg-[#234426] transition-colors
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {creatingConversation === char.id ? '创建中...' : '开始对话'}
-                      </button>
+                      {/* 开始/继续对话按钮 */}
+                      {(() => {
+                        const latestConv = getLatestConversation(char.id);
+                        const hasHistory = !!latestConv;
+
+                        return hasHistory ? (
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => handleContinueConversation(char.id, char.book_id)}
+                              disabled={continuingCharacterId === char.id}
+                              className="w-full py-2 bg-[#2C5530] text-white rounded-lg
+                                       font-light text-sm hover:bg-[#234426] transition-colors
+                                       disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {continuingCharacterId === char.id ? '跳转中...' : '继续上次对话'}
+                            </button>
+                            <button
+                              onClick={() => handleStartConversation(char.id, char.book_id)}
+                              disabled={creatingConversation === char.id}
+                              className="w-full py-2 bg-white text-[#2C5530] border border-[#2C5530] rounded-lg
+                                       font-light text-sm hover:bg-[#FAF9F7] transition-colors
+                                       disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {creatingConversation === char.id ? '创建中...' : '开新话题'}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleStartConversation(char.id, char.book_id)}
+                            disabled={creatingConversation === char.id}
+                            className="w-full py-2 bg-[#2C5530] text-white rounded-lg
+                                     font-light text-sm hover:bg-[#234426] transition-colors
+                                     disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {creatingConversation === char.id ? '创建中...' : '开始对话'}
+                          </button>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

@@ -82,6 +82,49 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 }
 
 /**
+ * 查找可复用的空对话（同一用户+书+角色+type 且 0 条消息）
+ */
+export async function findReusableEmptyConversation(
+  userId: string,
+  bookId: string,
+  characterId: string | null,
+  type: 'book' | 'character'
+): Promise<Conversation | null> {
+  // PG 强类型下裸参数 `? IS NULL` 推断不出类型(42P18),故在 JS 层按 characterId 是否为 null 分支,
+  // 两条路径都避免裸参数 IS NULL,同时兼容 PG 与 SQLite。
+  const characterClause =
+    characterId === null ? 'c.character_id IS NULL' : 'c.character_id = ?';
+
+  const stmt = db().prepare(`
+    SELECT c.* FROM conversations c
+    WHERE c.user_id = ?
+      AND c.book_id = ?
+      AND ${characterClause}
+      AND c.type = ?
+      AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+    ORDER BY c.created_at DESC
+    LIMIT 1
+  `);
+
+  const row = (characterId === null
+    ? await stmt.get(userId, bookId, type)
+    : await stmt.get(userId, bookId, characterId, type)) as any;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    book_id: row.book_id,
+    character_id: row.character_id,
+    type: row.type,
+    title: row.title,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+/**
  * 获取用户的所有对话
  */
 export async function getConversationsByUserId(
@@ -524,4 +567,37 @@ export async function getUserConversations(
     offset: options?.offset,
   });
   return result.conversations;
+}
+
+/**
+ * 查询用户在某本书内已交互过的角色名列表（书内交互足迹）。
+ * 排除当前正在对话的角色，去重。用于让同书其他角色自然知晓"你和谁聊过"。
+ */
+export async function getInteractedCharactersInBook(
+  userId: string,
+  bookId: string,
+  excludeCharacterId?: string | null
+): Promise<string[]> {
+  const conditions: string[] = [
+    'conv.user_id = ?',
+    'conv.book_id = ?',
+    "conv.type = 'character'",
+    'conv.character_id IS NOT NULL',
+  ];
+  const values: any[] = [userId, bookId];
+
+  if (excludeCharacterId) {
+    conditions.push('conv.character_id != ?');
+    values.push(excludeCharacterId);
+  }
+
+  const stmt = db().prepare(`
+    SELECT DISTINCT c.name AS name
+    FROM conversations conv
+    JOIN characters c ON conv.character_id = c.id
+    WHERE ${conditions.join(' AND ')}
+  `);
+
+  const rows = await stmt.all(...values) as any[];
+  return rows.map(r => r.name).filter(Boolean);
 }

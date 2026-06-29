@@ -10,12 +10,37 @@ services:
       - ./data:/app/data
       - ./uploads:/app/uploads
       - ./public/covers:/app/public/covers
+    # .env 提供 DATABASE_URL(app 经 docker 网络用服务名 postgres 访问) + 所有密钥
     env_file:
       - .env
     environment:
       - CHROMA_URL=http://inknowing-chromadb:8000
     depends_on:
-      - chromadb
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - inknowing_network
+
+  postgres:
+    image: postgres:16
+    container_name: inknowing-pg
+    # 仅本机回环暴露(规模前瞻:数据隔离/不对公网开放),宿主机迁移脚本经 127.0.0.1:5433 连
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      - POSTGRES_USER=inknowing
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=inknowing
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inknowing -d inknowing"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
     networks:
       - inknowing_network

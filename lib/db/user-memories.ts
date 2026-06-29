@@ -118,20 +118,32 @@ export async function getUserMemories(
 }
 
 /**
- * 获取最高重要度的记忆，用于注入对话上下文
+ * 获取最高重要度的记忆，用于注入对话上下文。
+ * 传入 bookId 时按「书」隔离：只返回该书内沉淀的记忆，实现跨书清零、书内共享。
  */
 export async function getTopMemoriesForInjection(
   userId: string,
+  bookId?: string | null,
   limit: number = 12
 ): Promise<UserMemory[]> {
+  const conditions: string[] = ['user_id = ?'];
+  const values: any[] = [userId];
+
+  if (bookId) {
+    conditions.push('source_book_id = ?');
+    values.push(bookId);
+  }
+
+  values.push(limit);
+
   const stmt = db().prepare(`
     SELECT * FROM user_memories
-    WHERE user_id = ?
+    WHERE ${conditions.join(' AND ')}
     ORDER BY importance DESC, updated_at DESC
     LIMIT ?
   `);
 
-  const rows = await stmt.all(userId, limit) as any[];
+  const rows = await stmt.all(...values) as any[];
   return rows.map(rowToUserMemory);
 }
 

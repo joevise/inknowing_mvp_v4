@@ -67,7 +67,7 @@ async function run(): Promise<void> {
     importance: 0.7,
   });
 
-  const top2 = await getTopMemoriesForInjection(TEST_USER_ID, 2);
+  const top2 = await getTopMemoriesForInjection(TEST_USER_ID, null, 2);
   assert(top2.length === 2, 'top2 length should be 2');
   assert(top2[0].id === m2.id, 'top2[0] should be highest importance');
   assert(top2[1].id === m1.id, 'top2[1] should be second highest importance');

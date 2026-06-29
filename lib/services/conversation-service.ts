@@ -9,14 +9,17 @@ import { ConversationRouter, ResponseStrategy } from './conversation-router';
 import { RAGConversation } from './rag-conversation';
 import {
   createConversation,
+  findReusableEmptyConversation,
   getConversationById,
   touchConversation,
+  updateConversation,
   userOwnsConversation,
 } from '@/lib/db/conversations';
 import {
   saveUserMessage,
   saveAIResponse,
   getConversationContext,
+  getMessagesByConversationId,
 } from '@/lib/db/messages';
 import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
@@ -26,6 +29,7 @@ import {
 } from '@/lib/ai/prompts';
 import type { Conversation, Message, Book, Character } from '@/lib/db/schema';
 import {
+  buildBookInteractionBlock,
   buildMemoryContextBlock,
   extractAndStoreMemories,
 } from './user-memory-service';
@@ -91,15 +95,15 @@ export class ConversationService {
       }
     }
 
-    // 生成对话标题
-    let title = params.title;
-    if (!title) {
-      if (params.type === 'character' && params.characterId) {
-        const character = await getCharacterById(params.characterId);
-        title = `与${character?.name}的对话`;
-      } else {
-        title = `关于《${book.title}》的讨论`;
-      }
+    // 幂等兜底：同一用户+书+角色(+type) 已存在 0 消息对话则直接复用，避免堆积空对话
+    const reuse = await findReusableEmptyConversation(
+      params.userId,
+      params.bookId,
+      params.characterId || null,
+      params.type
+    );
+    if (reuse) {
+      return reuse;
     }
 
     // 创建对话
@@ -108,7 +112,7 @@ export class ConversationService {
       book_id: params.bookId,
       character_id: params.characterId || null,
       type: params.type,
-      title,
+      title: params.title,
     });
 
     return conversation;
@@ -230,6 +234,9 @@ export class ConversationService {
     // 更新对话活动时间
     await touchConversation(params.conversationId);
 
+    // 第一轮完整问答后，若标题为空则自动生成标题
+    await this.maybeGenerateTitle(conversation);
+
     // 异步抽取并存储用户记忆，不阻塞用户拿到回复
     void extractAndStoreMemories({
       userId: params.userId,
@@ -292,9 +299,18 @@ export class ConversationService {
       });
     }
 
-    // 注入跨会话用户记忆
-    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
-    systemPrompt = systemPrompt + memoryBlock;
+    // 注入按书隔离的用户记忆 + 书内交互足迹
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id, conversation.book_id);
+    let interactionBlock = '';
+    if (conversation.type === 'character' && conversation.character_id) {
+      interactionBlock = await buildBookInteractionBlock(
+        conversation.user_id,
+        conversation.book_id,
+        conversation.character_id,
+        book.title
+      );
+    }
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
 
     // 添加系统提示词到消息开头
     const chatMessages: ChatMessage[] = [
@@ -382,9 +398,18 @@ export class ConversationService {
       });
     }
 
-    // 注入跨会话用户记忆
-    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
-    systemPrompt = systemPrompt + memoryBlock;
+    // 注入按书隔离的用户记忆 + 书内交互足迹
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id, conversation.book_id);
+    let interactionBlock = '';
+    if (conversation.type === 'character' && conversation.character_id) {
+      interactionBlock = await buildBookInteractionBlock(
+        conversation.user_id,
+        conversation.book_id,
+        conversation.character_id,
+        book.title
+      );
+    }
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
 
     // 准备消息
     const messages = [
@@ -482,9 +507,18 @@ export class ConversationService {
       systemPrompt += '\n\n请综合你的知识和参考内容，提供全面的回答。';
     }
 
-    // 注入跨会话用户记忆
-    const memoryBlock = await buildMemoryContextBlock(conversation.user_id);
-    systemPrompt = systemPrompt + memoryBlock;
+    // 注入按书隔离的用户记忆 + 书内交互足迹
+    const memoryBlock = await buildMemoryContextBlock(conversation.user_id, conversation.book_id);
+    let interactionBlock = '';
+    if (conversation.type === 'character' && conversation.character_id) {
+      interactionBlock = await buildBookInteractionBlock(
+        conversation.user_id,
+        conversation.book_id,
+        conversation.character_id,
+        book.title
+      );
+    }
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
 
     // 准备消息
     const messages = [
@@ -536,22 +570,6 @@ export class ConversationService {
     metadata?: any;
   }> {
     try {
-      let fullResponse = '';
-      const metadata: any = {};
-
-      // 发送消息并获取流式响应
-      const responsePromise = this.sendMessage({
-        conversationId,
-        userId,
-        content,
-        streamCallback: (chunk) => {
-          fullResponse += chunk;
-        },
-      });
-
-      // 等待路由决策
-      const startTime = Date.now();
-
       // 获取对话和书籍信息
       const conversation = await getConversationById(conversationId);
       if (!conversation) {
@@ -602,97 +620,72 @@ export class ConversationService {
         },
       };
 
-      // 创建流式生成器
-      const contextMessages = await getConversationContext(conversationId, 10);
+      // 使用队列/泵模式桥接 sendMessage 的同步 streamCallback 与 async generator
+      const chunks: string[] = [];
+      let notify: (() => void) | null = null;
+      let finished = false;
+      let sendError: Error | null = null;
 
-      // 根据对话类型构建不同的system prompt
-      let systemPrompt: string;
+      const responsePromise = this.sendMessage({
+        conversationId,
+        userId,
+        content,
+        streamCallback: (chunk) => {
+          chunks.push(chunk);
+          if (notify) {
+            notify();
+            notify = null;
+          }
+        },
+      });
 
-      if (conversation.type === 'character' && conversation.character_id) {
-        // 角色对话：使用角色prompt
-        const character = await getCharacterById(conversation.character_id);
-        if (!character) {
-          throw new Error('Character not found');
-        }
-
-        // 安全解析personality_traits (可能已经被parseJson解析过)
-        let personality: string[] = [];
-        if (character.personality_traits) {
-          if (Array.isArray(character.personality_traits)) {
-            // 已经是数组,直接使用
-            personality = character.personality_traits;
-          } else if (typeof character.personality_traits === 'string') {
-            // 如果是字符串,尝试解析或分割
-            try {
-              const parsed = JSON.parse(character.personality_traits);
-              personality = Array.isArray(parsed) ? parsed : [String(parsed)];
-            } catch (e) {
-              // 如果不是有效JSON,按逗号分割
-              personality = character.personality_traits.split(',').map(s => s.trim());
-            }
-          } else {
-            // 其他类型,转换为数组
-            personality = [String(character.personality_traits)];
+      responsePromise.then(
+        () => {
+          finished = true;
+          if (notify) {
+            notify();
+            notify = null;
+          }
+        },
+        (err) => {
+          sendError = err instanceof Error ? err : new Error(String(err));
+          finished = true;
+          if (notify) {
+            notify();
+            notify = null;
           }
         }
+      );
 
-        systemPrompt = buildCharacterChatPrompt({
-          bookTitle: book.title,
-          characterName: character.name,
-          description: character.description,
-          personality: personality,
-          speakingStyle: character.speaking_style || '自然对话',
-          backgroundStory: character.background_story,
-          keyQuotes: [],
-        });
-      } else {
-        // 书籍对话：使用书籍prompt
-        systemPrompt = buildBookChatPrompt({
-          bookTitle: book.title,
-          author: book.author,
-          description: book.description,
-        });
-      }
-
-      // 如果需要RAG，先检索
-      if (routingDecision.strategy === ResponseStrategy.RAG ||
-          routingDecision.strategy === ResponseStrategy.HYBRID) {
-        const retrievalResult = await this.ragConversation.retrieveContext(
-          content,
-          book.id,
-          5
-        );
-        if (retrievalResult.documents.length > 0) {
-          systemPrompt += '\n\n检索到的相关内容：\n';
-          systemPrompt += this.formatRetrievedContent(retrievalResult.documents);
-          metadata.sources = retrievalResult.documents;
+      while (!finished || chunks.length > 0) {
+        if (chunks.length > 0) {
+          const chunk = chunks.shift()!;
+          yield {
+            type: 'chunk',
+            data: chunk,
+          };
+        } else {
+          await new Promise<void>((resolve) => {
+            notify = resolve;
+          });
         }
       }
 
-      // 准备完整消息
-      const chatMessages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        ...contextMessages,
-        { role: 'user', content },
-      ];
-
-      // 流式生成
-      const stream = streamChat(chatMessages);
-
-      for await (const chunk of stream) {
-        yield {
-          type: 'chunk',
-          data: chunk,
-        };
+      if (sendError) {
+        throw sendError;
       }
+
+      const result = await responsePromise;
 
       // 完成
       yield {
         type: 'done',
         data: '',
         metadata: {
-          ...metadata,
-          responseTime: Date.now() - startTime,
+          strategy: result.strategy,
+          queryType: result.queryType,
+          sources: result.sources,
+          responseTime: result.responseTime,
         },
       };
 
@@ -711,6 +704,54 @@ export class ConversationService {
     return documents
       .map((doc, index) => `[段落 ${index + 1}]\n${doc.content}`)
       .join('\n\n');
+  }
+
+  /**
+   * 第一轮完整问答后自动生成标题
+   */
+  private async maybeGenerateTitle(conversation: Conversation): Promise<void> {
+    if (conversation.title) return;
+
+    try {
+      const messages = await getMessagesByConversationId(conversation.id);
+
+      // 仅当存在且仅存在一条用户消息和一条AI回复时生成标题
+      if (messages.length !== 2) return;
+
+      const firstUser = messages.find(m => m.role === 'user');
+      const firstAssistant = messages.find(m => m.role === 'assistant');
+      if (!firstUser || !firstAssistant) return;
+
+      let title: string;
+      try {
+        const result = await chat([
+          {
+            role: 'system',
+            content: '你是一个对话标题生成器，根据用户的第一句话和AI回复，生成一个不超过15字的简洁中文标题，只输出标题本身，不要引号不要标点。',
+          },
+          {
+            role: 'user',
+            content: `用户：${firstUser.content}\nAI：${firstAssistant.content.slice(0, 100)}`,
+          },
+        ], { temperature: 0.3, maxTokens: 30 });
+
+        title = result.content
+          .trim()
+          .replace(/^["'「『【】\s]+|["'」』】\s]+$/g, '')
+          .slice(0, 15);
+
+        if (!title) {
+          throw new Error('AI generated empty title');
+        }
+      } catch (err) {
+        console.error('[Title] AI生成标题失败，使用fallback:', err);
+        title = firstUser.content.trim().slice(0, 15);
+      }
+
+      await updateConversation(conversation.id, { title });
+    } catch (err) {
+      console.error('[Title] 自动生成标题流程失败:', err);
+    }
   }
 
   /**
