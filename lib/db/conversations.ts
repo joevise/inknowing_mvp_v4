@@ -139,25 +139,25 @@ export async function getConversationsByUserId(
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
-  // 构建查询条件
-  const conditions: string[] = ['user_id = ?'];
+  // 构建查询条件 (统一加 c. 前缀:list 查询 JOIN 了 books/characters,book_id/user_id/type 不加前缀会歧义报500)
+  const conditions: string[] = ['c.user_id = ?'];
   const values: any[] = [userId];
 
   if (options?.book_id) {
-    conditions.push('book_id = ?');
+    conditions.push('c.book_id = ?');
     values.push(options.book_id);
   }
 
   if (options?.type) {
-    conditions.push('type = ?');
+    conditions.push('c.type = ?');
     values.push(options.type);
   }
 
   const whereClause = conditions.join(' AND ');
 
-  // 获取总数
+  // 获取总数 (加别名 c 与 list 查询一致,兼容带 c. 前缀的 whereClause)
   const countStmt = db().prepare(`
-    SELECT COUNT(*) as total FROM conversations
+    SELECT COUNT(*) as total FROM conversations c
     WHERE ${whereClause}
   `);
   const countRow = await countStmt.get(...values) as any;

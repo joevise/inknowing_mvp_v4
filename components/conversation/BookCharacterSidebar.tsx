@@ -132,7 +132,7 @@ export default function BookCharacterSidebar({
     characterId: string
   ): UserConversation | undefined => {
     return convs
-      .filter((conv) => conv.character_id === characterId)
+      .filter((conv) => conv.book_id === conversation.book_id && conv.character_id === characterId)
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
   };
 
@@ -140,7 +140,7 @@ export default function BookCharacterSidebar({
     convs: UserConversation[]
   ): UserConversation | undefined => {
     return convs
-      .filter((conv) => conv.type === 'book' && !conv.character_id)
+      .filter((conv) => conv.book_id === conversation.book_id && conv.type === 'book' && !conv.character_id)
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
   };
 
