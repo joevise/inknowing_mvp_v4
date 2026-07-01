@@ -9,6 +9,7 @@ import { ConversationRouter, ResponseStrategy } from './conversation-router';
 import { RAGConversation } from './rag-conversation';
 import {
   createConversation,
+  findReusableEmptyConversation,
   getConversationById,
   touchConversation,
   updateConversation,
@@ -92,6 +93,17 @@ export class ConversationService {
       if (!character) {
         throw new Error('Character not found');
       }
+    }
+
+    // 幂等兜底：同一用户+书+角色(+type) 已存在 0 消息对话则直接复用，避免堆积空对话
+    const reuse = await findReusableEmptyConversation(
+      params.userId,
+      params.bookId,
+      params.characterId || null,
+      params.type
+    );
+    if (reuse) {
+      return reuse;
     }
 
     // 创建对话

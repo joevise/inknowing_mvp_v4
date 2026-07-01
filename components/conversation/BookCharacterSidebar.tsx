@@ -74,6 +74,11 @@ export default function BookCharacterSidebar({
     }
   }, [conversation.id]);
 
+  // 切换完成(父组件传入新对话, id变化)即复位 switching, 否则 SPA 常驻组件会一直卡 disabled
+  useEffect(() => {
+    setSwitching(false);
+  }, [conversation.id]);
+
   const loadBookAndCharacters = async () => {
     try {
       setLoading(true);
@@ -101,7 +106,7 @@ export default function BookCharacterSidebar({
     }
   };
 
-  const loadUserConversations = async () => {
+  const loadUserConversations = async (): Promise<UserConversation[]> => {
     try {
       const response = await fetch(
         `/api/conversations?bookId=${conversation.book_id}&limit=100`,
@@ -109,24 +114,32 @@ export default function BookCharacterSidebar({
       );
 
       if (!response.ok) {
-        return;
+        return [];
       }
 
       const data = await response.json();
-      setUserConversations(data.conversations || []);
+      const list: UserConversation[] = data.conversations || [];
+      setUserConversations(list);
+      return list;
     } catch (err) {
       console.error('[BookCharacterSidebar] 获取用户对话历史失败:', err);
+      return [];
     }
   };
 
-  const getLatestCharacterConversation = (characterId: string): UserConversation | undefined => {
-    return userConversations
+  const getLatestCharacterConversation = (
+    convs: UserConversation[],
+    characterId: string
+  ): UserConversation | undefined => {
+    return convs
       .filter((conv) => conv.character_id === characterId)
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
   };
 
-  const getLatestBookConversation = (): UserConversation | undefined => {
-    return userConversations
+  const getLatestBookConversation = (
+    convs: UserConversation[]
+  ): UserConversation | undefined => {
+    return convs
       .filter((conv) => conv.type === 'book' && !conv.character_id)
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
   };
@@ -138,16 +151,16 @@ export default function BookCharacterSidebar({
 
     if (characterId === conversation.character_id) return;
 
-    const latest = getLatestCharacterConversation(characterId);
-    if (latest) {
-      setSwitching(true);
-      onSwitch?.(latest.id);
-      return;
-    }
+    setSwitching(true);
+    setError('');
 
     try {
-      setSwitching(true);
-      setError('');
+      const convs = await loadUserConversations();
+      const latest = getLatestCharacterConversation(convs, characterId);
+      if (latest) {
+        onSwitch?.(latest.id);
+        return;
+      }
 
       const response = await fetch('/api/conversations', {
         method: 'POST',
@@ -164,7 +177,13 @@ export default function BookCharacterSidebar({
         const data = await response.json();
         onSwitch?.(data.conversation.id);
       } else {
-        router.push('/auth/login');
+        // 仅 401/403 才视为未登录跳登录页;500 等服务端错误只提示,不再把已登录用户误踢去登录
+        if (response.status === 401 || response.status === 403) {
+          router.push('/auth/login');
+        } else {
+          setError('操作失败,请稍后重试');
+        }
+        setSwitching(false);
       }
     } catch (err) {
       console.error('[BookCharacterSidebar] 进入角色对话失败:', err);
@@ -176,16 +195,16 @@ export default function BookCharacterSidebar({
   const handleSwitchToBook = async () => {
     if (conversation.type === 'book') return;
 
-    const latest = getLatestBookConversation();
-    if (latest) {
-      setSwitching(true);
-      onSwitch?.(latest.id);
-      return;
-    }
+    setSwitching(true);
+    setError('');
 
     try {
-      setSwitching(true);
-      setError('');
+      const convs = await loadUserConversations();
+      const latest = getLatestBookConversation(convs);
+      if (latest) {
+        onSwitch?.(latest.id);
+        return;
+      }
 
       const response = await fetch('/api/conversations', {
         method: 'POST',
@@ -201,7 +220,13 @@ export default function BookCharacterSidebar({
         const data = await response.json();
         onSwitch?.(data.conversation.id);
       } else {
-        router.push('/auth/login');
+        // 仅 401/403 才视为未登录跳登录页;500 等服务端错误只提示,不再把已登录用户误踢去登录
+        if (response.status === 401 || response.status === 403) {
+          router.push('/auth/login');
+        } else {
+          setError('操作失败,请稍后重试');
+        }
+        setSwitching(false);
       }
     } catch (err) {
       console.error('[BookCharacterSidebar] 进入书籍对话失败:', err);

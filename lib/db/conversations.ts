@@ -82,6 +82,49 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 }
 
 /**
+ * 查找可复用的空对话（同一用户+书+角色+type 且 0 条消息）
+ */
+export async function findReusableEmptyConversation(
+  userId: string,
+  bookId: string,
+  characterId: string | null,
+  type: 'book' | 'character'
+): Promise<Conversation | null> {
+  // PG 强类型下裸参数 `? IS NULL` 推断不出类型(42P18),故在 JS 层按 characterId 是否为 null 分支,
+  // 两条路径都避免裸参数 IS NULL,同时兼容 PG 与 SQLite。
+  const characterClause =
+    characterId === null ? 'c.character_id IS NULL' : 'c.character_id = ?';
+
+  const stmt = db().prepare(`
+    SELECT c.* FROM conversations c
+    WHERE c.user_id = ?
+      AND c.book_id = ?
+      AND ${characterClause}
+      AND c.type = ?
+      AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+    ORDER BY c.created_at DESC
+    LIMIT 1
+  `);
+
+  const row = (characterId === null
+    ? await stmt.get(userId, bookId, type)
+    : await stmt.get(userId, bookId, characterId, type)) as any;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    book_id: row.book_id,
+    character_id: row.character_id,
+    type: row.type,
+    title: row.title,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+/**
  * 获取用户的所有对话
  */
 export async function getConversationsByUserId(
