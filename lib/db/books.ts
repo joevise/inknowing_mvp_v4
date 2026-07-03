@@ -16,6 +16,9 @@ export interface CreateBookInput {
   requires_document?: boolean;
   conversation_strategy?: 'ai_native' | 'rag_only' | 'hybrid';
   status?: 'published' | 'draft';
+  language_mode?: 'zh_native' | 'multilingual' | 'en_native';
+  title_en?: string;
+  description_en?: string;
 }
 
 export interface UpdateBookInput {
@@ -29,6 +32,9 @@ export interface UpdateBookInput {
   requires_document?: boolean;
   conversation_strategy?: 'ai_native' | 'rag_only' | 'hybrid';
   status?: 'published' | 'draft';
+  language_mode?: 'zh_native' | 'multilingual' | 'en_native';
+  title_en?: string;
+  description_en?: string;
 }
 
 /**
@@ -42,8 +48,9 @@ export async function createBook(input: CreateBookInput): Promise<Book> {
     INSERT INTO books (
       id, title, author, description, cover_url, category, tags,
       ai_knowledge_level, requires_document, conversation_strategy,
-      status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status, language_mode, title_en, description_en,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   await stmt.run(
@@ -58,6 +65,9 @@ export async function createBook(input: CreateBookInput): Promise<Book> {
     input.requires_document ? 1 : 0,
     input.conversation_strategy || 'ai_native',
     input.status || 'draft',
+    input.language_mode || 'zh_native',
+    input.title_en || null,
+    input.description_en || null,
     timestamp,
     timestamp
   );
@@ -89,6 +99,9 @@ export async function getBookById(id: string): Promise<Book | null> {
     requires_document: !!row.requires_document,
     conversation_strategy: row.conversation_strategy,
     status: row.status,
+    language_mode: row.language_mode || 'zh_native',
+    title_en: row.title_en,
+    description_en: row.description_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };
@@ -154,6 +167,21 @@ export async function updateBook(id: string, input: UpdateBookInput): Promise<Bo
   if (input.status !== undefined) {
     updates.push('status = ?');
     values.push(input.status);
+  }
+
+  if (input.language_mode !== undefined) {
+    updates.push('language_mode = ?');
+    values.push(input.language_mode);
+  }
+
+  if (input.title_en !== undefined) {
+    updates.push('title_en = ?');
+    values.push(input.title_en);
+  }
+
+  if (input.description_en !== undefined) {
+    updates.push('description_en = ?');
+    values.push(input.description_en);
   }
 
   if (updates.length === 0) {
@@ -260,6 +288,9 @@ export async function listBooks(options?: {
     requires_document: !!row.requires_document,
     conversation_strategy: row.conversation_strategy,
     status: row.status,
+    language_mode: row.language_mode || 'zh_native',
+    title_en: row.title_en,
+    description_en: row.description_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     favorite_count: row.favorite_count || 0,
@@ -295,6 +326,9 @@ export async function searchBooks(query: string): Promise<Book[]> {
     requires_document: !!row.requires_document,
     conversation_strategy: row.conversation_strategy,
     status: row.status,
+    language_mode: row.language_mode || 'zh_native',
+    title_en: row.title_en,
+    description_en: row.description_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -329,6 +363,9 @@ export async function getPopularBooks(limit: number = 10): Promise<Book[]> {
     requires_document: !!row.requires_document,
     conversation_strategy: row.conversation_strategy,
     status: row.status,
+    language_mode: row.language_mode || 'zh_native',
+    title_en: row.title_en,
+    description_en: row.description_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -364,6 +401,9 @@ export async function getRecommendedBooks(userId: string, limit: number = 10): P
     requires_document: !!row.requires_document,
     conversation_strategy: row.conversation_strategy,
     status: row.status,
+    language_mode: row.language_mode || 'zh_native',
+    title_en: row.title_en,
+    description_en: row.description_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -438,6 +478,9 @@ export async function findBookByTitleAndAuthor(title: string, author: string): P
     requires_document: !!row.requires_document,
     conversation_strategy: row.conversation_strategy,
     status: row.status,
+    language_mode: row.language_mode || 'zh_native',
+    title_en: row.title_en,
+    description_en: row.description_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };

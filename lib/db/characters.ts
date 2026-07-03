@@ -14,6 +14,11 @@ export interface CreateCharacterInput {
   speaking_style?: string;
   background_story?: string;
   prompt_template?: string;
+  name_en?: string;
+  description_en?: string;
+  speaking_style_en?: string;
+  background_story_en?: string;
+  prompt_template_en?: string;
 }
 
 export interface UpdateCharacterInput {
@@ -23,6 +28,11 @@ export interface UpdateCharacterInput {
   speaking_style?: string;
   background_story?: string;
   prompt_template?: string;
+  name_en?: string;
+  description_en?: string;
+  speaking_style_en?: string;
+  background_story_en?: string;
+  prompt_template_en?: string;
 }
 
 /**
@@ -36,8 +46,9 @@ export async function createCharacter(input: CreateCharacterInput): Promise<Char
     INSERT INTO characters (
       id, book_id, name, description, personality_traits,
       speaking_style, background_story, prompt_template,
+      name_en, description_en, speaking_style_en, background_story_en, prompt_template_en,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   await stmt.run(
@@ -49,6 +60,11 @@ export async function createCharacter(input: CreateCharacterInput): Promise<Char
     input.speaking_style || null,
     input.background_story || null,
     input.prompt_template || null,
+    input.name_en || null,
+    input.description_en || null,
+    input.speaking_style_en || null,
+    input.background_story_en || null,
+    input.prompt_template_en || null,
     timestamp,
     timestamp
   );
@@ -77,6 +93,11 @@ export async function getCharacterById(id: string): Promise<Character | null> {
     speaking_style: row.speaking_style,
     background_story: row.background_story,
     prompt_template: row.prompt_template,
+    name_en: row.name_en,
+    description_en: row.description_en,
+    speaking_style_en: row.speaking_style_en,
+    background_story_en: row.background_story_en,
+    prompt_template_en: row.prompt_template_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };
@@ -103,6 +124,11 @@ export async function getCharactersByBookId(bookId: string): Promise<Character[]
     speaking_style: row.speaking_style,
     background_story: row.background_story,
     prompt_template: row.prompt_template,
+    name_en: row.name_en,
+    description_en: row.description_en,
+    speaking_style_en: row.speaking_style_en,
+    background_story_en: row.background_story_en,
+    prompt_template_en: row.prompt_template_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -151,6 +177,31 @@ export async function updateCharacter(
   if (input.prompt_template !== undefined) {
     updates.push('prompt_template = ?');
     values.push(input.prompt_template);
+  }
+
+  if (input.name_en !== undefined) {
+    updates.push('name_en = ?');
+    values.push(input.name_en);
+  }
+
+  if (input.description_en !== undefined) {
+    updates.push('description_en = ?');
+    values.push(input.description_en);
+  }
+
+  if (input.speaking_style_en !== undefined) {
+    updates.push('speaking_style_en = ?');
+    values.push(input.speaking_style_en);
+  }
+
+  if (input.background_story_en !== undefined) {
+    updates.push('background_story_en = ?');
+    values.push(input.background_story_en);
+  }
+
+  if (input.prompt_template_en !== undefined) {
+    updates.push('prompt_template_en = ?');
+    values.push(input.prompt_template_en);
   }
 
   if (updates.length === 0) {
@@ -221,6 +272,11 @@ export async function searchCharacters(query: string): Promise<Array<Character &
     speaking_style: row.speaking_style,
     background_story: row.background_story,
     prompt_template: row.prompt_template,
+    name_en: row.name_en,
+    description_en: row.description_en,
+    speaking_style_en: row.speaking_style_en,
+    background_story_en: row.background_story_en,
+    prompt_template_en: row.prompt_template_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     book_title: row.book_title,
@@ -269,6 +325,11 @@ export async function getPopularCharacters(
     speaking_style: row.speaking_style,
     background_story: row.background_story,
     prompt_template: row.prompt_template,
+    name_en: row.name_en,
+    description_en: row.description_en,
+    speaking_style_en: row.speaking_style_en,
+    background_story_en: row.background_story_en,
+    prompt_template_en: row.prompt_template_en,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     book_title: row.book_title,

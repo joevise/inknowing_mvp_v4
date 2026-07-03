@@ -25,6 +25,11 @@ export interface Book {
   requires_document: boolean;
   conversation_strategy: 'ai_native' | 'rag_only' | 'hybrid';
   status: 'published' | 'draft';
+  // 语言原生度:zh_native 仅中文/multilingual 中英双语/en_native 仅英文
+  // DB 层 NOT NULL DEFAULT 'zh_native' 保证总有值,此处可选仅为兼容旧代码字面量构造。
+  language_mode?: 'zh_native' | 'multilingual' | 'en_native';
+  title_en?: string;
+  description_en?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -38,6 +43,11 @@ export interface Character {
   speaking_style: string;
   background_story: string;
   prompt_template: string;
+  name_en?: string;
+  description_en?: string;
+  speaking_style_en?: string;
+  background_story_en?: string;
+  prompt_template_en?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -393,6 +403,9 @@ export const PG_SCHEMA_SQL = `
     requires_document BOOLEAN DEFAULT FALSE,
     conversation_strategy TEXT CHECK (conversation_strategy IN ('ai_native', 'rag_only', 'hybrid')),
     status TEXT CHECK (status IN ('published', 'draft')) DEFAULT 'draft',
+    language_mode TEXT NOT NULL DEFAULT 'zh_native' CHECK (language_mode IN ('zh_native','multilingual','en_native')),
+    title_en TEXT,
+    description_en TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   );
@@ -409,6 +422,11 @@ export const PG_SCHEMA_SQL = `
     speaking_style TEXT,
     background_story TEXT,
     prompt_template TEXT,
+    name_en TEXT,
+    description_en TEXT,
+    speaking_style_en TEXT,
+    background_story_en TEXT,
+    prompt_template_en TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   );
@@ -521,6 +539,16 @@ export const PG_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_user_memories_user_id ON user_memories(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_memories_user_importance ON user_memories(user_id, importance DESC, updated_at DESC);
   CREATE INDEX IF NOT EXISTS idx_user_memories_type ON user_memories(user_id, memory_type);
+
+  -- 多语言字段(幂等补列,兼容已存在的库)
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS language_mode TEXT NOT NULL DEFAULT 'zh_native';
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS title_en TEXT;
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS description_en TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS name_en TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS description_en TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS speaking_style_en TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS background_story_en TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS prompt_template_en TEXT;
 
   -- 统一的 updated_at 自动更新触发器函数
   CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
