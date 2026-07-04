@@ -69,4 +69,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
-.cachepublic/covers/
+.cache
+public/covers/
+
+# OpenCode 过程任务简报（临时，不入库）
+.opencode-task-*.md
+# 本地 .env 备份
+.env.bak.*
+data/backups/
