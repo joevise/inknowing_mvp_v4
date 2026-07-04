@@ -85,7 +85,7 @@ ALTER TABLE characters ADD COLUMN background_story_en TEXT;
 - 根布局动态 `lang`、metadata 双语
 - **产出可上线**：界面可英文（内容仍中文，靠 Phase 1 数据）
 
-### Phase 3 — 语言切换 + 自动探测
+### Phase 3 — 语言切换 + 自动探测  ✅ 已完成 (2026-07-04, commit 7863675)
 - `middleware.ts`：首访按 **Accept-Language + IP 地理**判断默认语言（国内→zh，海外→en）
 - **永远提供显眼切换按钮**，选择写 cookie（`NEXT_LOCALE`），覆盖自动判断
 - 路由策略：`/zh/...` `/en/...`（或 cookie-only，二选一，方案里默认走 cookie + 可选前缀，Phase 3 细定）
