@@ -7,9 +7,11 @@
 
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 function NewConversationContent() {
   const router = useRouter();
+  const t = useTranslations();
   const searchParams = useSearchParams();
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(true);
@@ -29,9 +31,10 @@ function NewConversationContent() {
       hasCreated.current = true;
       createConversation();
     } else {
-      setError('缺少书籍ID');
+      setError(t('conversationNew.errorMissingBookId'));
       setCreating(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, characterId]);
 
   const createConversation = async () => {
@@ -67,7 +70,7 @@ function NewConversationContent() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || '创建对话失败');
+        throw new Error(data.error || t('conversationNew.errorCreateFailed'));
       }
 
       const data = await response.json();
@@ -83,7 +86,7 @@ function NewConversationContent() {
 
     } catch (err) {
       console.error('[NewConversation] 创建失败:', err);
-      setError(err instanceof Error ? err.message : '创建对话失败');
+      setError(err instanceof Error ? err.message : t('conversationNew.errorCreateFailed'));
       setCreating(false);
       hasCreated.current = false; // 重置状态以便重试
     }
@@ -116,7 +119,7 @@ function NewConversationContent() {
                 />
               </svg>
             </div>
-            <p className="text-gray-600">正在创建对话...</p>
+            <p className="text-gray-600">{t('conversationNew.creating')}</p>
           </>
         )}
 
@@ -142,7 +145,7 @@ function NewConversationContent() {
               onClick={() => router.back()}
               className="px-6 py-2 bg-[#2F5233] text-white rounded-lg hover:bg-[#1a2e1c] transition-colors"
             >
-              返回
+              {t('conversationNew.back')}
             </button>
           </>
         )}
@@ -152,6 +155,7 @@ function NewConversationContent() {
 }
 
 function LoadingFallback() {
+  const t = useTranslations();
   return (
     <div className="min-h-screen bg-[#F5F5DC] flex items-center justify-center">
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 text-center">
@@ -177,7 +181,7 @@ function LoadingFallback() {
             />
           </svg>
         </div>
-        <p className="text-gray-600">正在加载...</p>
+        <p className="text-gray-600">{t('conversationNew.loading')}</p>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 interface Book {
   id: string;
@@ -51,6 +52,7 @@ export default function BookCharacterSidebar({
   onSwitch,
 }: BookCharacterSidebarProps) {
   const router = useRouter();
+  const t = useTranslations();
   const [book, setBook] = useState<Book | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [userConversations, setUserConversations] = useState<UserConversation[]>([]);
@@ -63,6 +65,7 @@ export default function BookCharacterSidebar({
     if (conversation.book_id) {
       loadBookAndCharacters();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation.book_id]);
 
   // 用户对话历史依赖 conversation.id：每次切换/新建对话都刷新快照，
@@ -72,6 +75,7 @@ export default function BookCharacterSidebar({
     if (conversation.book_id) {
       loadUserConversations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation.id]);
 
   // 切换完成(父组件传入新对话, id变化)即复位 switching, 否则 SPA 常驻组件会一直卡 disabled
@@ -100,7 +104,7 @@ export default function BookCharacterSidebar({
 
     } catch (err) {
       console.error('[BookCharacterSidebar] 加载失败:', err);
-      setError('加载失败');
+      setError(t('conversation.loadBookCharFailed'));
     } finally {
       setLoading(false);
     }
@@ -181,13 +185,13 @@ export default function BookCharacterSidebar({
         if (response.status === 401 || response.status === 403) {
           router.push('/auth/login');
         } else {
-          setError('操作失败,请稍后重试');
+          setError(t('conversation.errorGeneric'));
         }
         setSwitching(false);
       }
     } catch (err) {
       console.error('[BookCharacterSidebar] 进入角色对话失败:', err);
-      setError(err instanceof Error ? err.message : '进入角色对话失败');
+      setError(err instanceof Error ? err.message : t('conversation.enterCharacterFailed'));
       setSwitching(false);
     }
   };
@@ -224,13 +228,13 @@ export default function BookCharacterSidebar({
         if (response.status === 401 || response.status === 403) {
           router.push('/auth/login');
         } else {
-          setError('操作失败,请稍后重试');
+          setError(t('conversation.errorGeneric'));
         }
         setSwitching(false);
       }
     } catch (err) {
       console.error('[BookCharacterSidebar] 进入书籍对话失败:', err);
-      setError(err instanceof Error ? err.message : '进入书籍对话失败');
+      setError(err instanceof Error ? err.message : t('conversation.enterBookFailed'));
       setSwitching(false);
     }
   };
@@ -238,7 +242,7 @@ export default function BookCharacterSidebar({
   if (loading) {
     return (
       <div className="w-80 h-full bg-white border-l border-gray-200 flex items-center justify-center">
-        <p className="text-sm font-light text-gray-500">加载中...</p>
+        <p className="text-sm font-light text-gray-500">{t('conversation.loading')}</p>
       </div>
     );
   }
@@ -259,7 +263,7 @@ export default function BookCharacterSidebar({
             </div>
           ) : (
             <div className="aspect-[3/4] w-full bg-gradient-to-br from-[#2C5530] to-[#234426] rounded-lg flex items-center justify-center mb-4">
-              <span className="text-white text-6xl font-light opacity-20">书</span>
+              <span className="text-white text-6xl font-light opacity-20">{t('conversation.placeholderBook')}</span>
             </div>
           )}
 
@@ -280,10 +284,10 @@ export default function BookCharacterSidebar({
       {/* 角色列表 */}
       <div className="flex-1 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-light text-gray-800">角色列表</h3>
+          <h3 className="text-base font-light text-gray-800">{t('conversation.characterListTitle')}</h3>
           {conversation.type === 'character' && (
             <span className="text-xs font-light text-gray-500">
-              当前角色模式
+              {t('conversation.currentCharacterMode')}
             </span>
           )}
         </div>
@@ -296,7 +300,7 @@ export default function BookCharacterSidebar({
 
         {characters.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm font-light text-gray-400">暂无角色</p>
+            <p className="text-sm font-light text-gray-400">{t('conversation.noCharacters')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -319,19 +323,19 @@ export default function BookCharacterSidebar({
                   <span className={`text-lg font-light ${
                     conversation.type === 'book' ? 'text-white' : 'text-white'
                   }`}>
-                    书
+                    {t('conversation.placeholderBook')}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-light ${
                     conversation.type === 'book' ? 'text-white' : 'text-gray-800'
                   }`}>
-                    与书籍对话
+                    {t('conversation.talkToBook')}
                   </p>
                   <p className={`text-xs font-light mt-0.5 ${
                     conversation.type === 'book' ? 'text-gray-200' : 'text-gray-500'
                   }`}>
-                    综合理解全书内容
+                    {t('conversation.talkToBookDesc')}
                   </p>
                 </div>
               </div>
@@ -385,7 +389,7 @@ export default function BookCharacterSidebar({
 
         {switching && (
           <div className="mt-4 text-center">
-            <p className="text-xs font-light text-gray-500">打开中...</p>
+            <p className="text-xs font-light text-gray-500">{t('conversation.openingHint')}</p>
           </div>
         )}
       </div>

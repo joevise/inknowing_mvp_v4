@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 interface Conversation {
   id: string;
@@ -31,6 +32,7 @@ export default function ConversationHistorySidebar({
   onSelectConversation,
   onDeletedCurrent,
 }: ConversationHistorySidebarProps) {
+  const t = useTranslations();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'timeline' | 'book'>('timeline');
@@ -49,7 +51,7 @@ export default function ConversationHistorySidebar({
       });
 
       if (!response.ok) {
-        throw new Error('获取对话历史失败');
+        throw new Error(t('conversation.errorFetchHistory'));
       }
 
       const data = await response.json();
@@ -57,7 +59,7 @@ export default function ConversationHistorySidebar({
       setConversations(data.conversations || []);
     } catch (err) {
       console.error('[HistorySidebar] 加载失败:', err);
-      setError(err instanceof Error ? err.message : '加载对话历史失败');
+      setError(err instanceof Error ? err.message : t('conversation.errorLoadHistory'));
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,7 @@ export default function ConversationHistorySidebar({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!confirm('确定要删除这个对话吗？')) {
+    if (!confirm(t('conversation.confirmDelete'))) {
       return;
     }
 
@@ -78,7 +80,7 @@ export default function ConversationHistorySidebar({
       });
 
       if (!response.ok) {
-        throw new Error('删除对话失败');
+        throw new Error(t('conversation.errorDelete'));
       }
 
       // 重新加载对话列表
@@ -94,7 +96,7 @@ export default function ConversationHistorySidebar({
       }
     } catch (err) {
       console.error('[HistorySidebar] 删除失败:', err);
-      alert(err instanceof Error ? err.message : '删除对话失败');
+      alert(err instanceof Error ? err.message : t('conversation.errorDelete'));
     }
   };
 
@@ -103,7 +105,7 @@ export default function ConversationHistorySidebar({
     const bookId = conv.book_id;
     if (!groups[bookId]) {
       groups[bookId] = {
-        book_title: conv.book_title || '未知书籍',
+        book_title: conv.book_title || t('conversation.unknownBook'),
         conversations: [],
       };
     }
@@ -130,9 +132,9 @@ export default function ConversationHistorySidebar({
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days === 0) return '今天';
-    if (days === 1) return '昨天';
-    if (days < 7) return `${days}天前`;
+    if (days === 0) return t('conversation.todayLabel');
+    if (days === 1) return t('conversation.yesterdayLabel');
+    if (days < 7) return t('conversation.daysAgo', { count: days });
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
 
@@ -153,7 +155,7 @@ export default function ConversationHistorySidebar({
     const [isHovering, setIsHovering] = useState(false);
 
     // 生成显示标题: 优先使用title, 其次使用角色名/书名, 最后默认文本
-    const displayTitle = conv.title || conv.character_name || conv.book_title || '新对话';
+    const displayTitle = conv.title || conv.character_name || conv.book_title || t('conversation.newChatDefault');
 
     return (
       <div
@@ -169,7 +171,7 @@ export default function ConversationHistorySidebar({
               onSelectConversation(conv.id);
             }
           }}
-          title={`创建时间: ${formatFullTime(conv.created_at)}\n最后更新: ${formatFullTime(conv.updated_at)}`}
+          title={`${t('conversation.tooltipCreatedAt', { time: formatFullTime(conv.created_at) })}\n${t('conversation.tooltipUpdatedAt', { time: formatFullTime(conv.updated_at) })}`}
           className={`block px-4 py-3 rounded-lg transition-colors ${
             isActive
               ? 'bg-[#2C5530] text-white'
@@ -203,7 +205,7 @@ export default function ConversationHistorySidebar({
           <button
             onClick={(e) => handleDeleteConversation(e, conv.id)}
             className="absolute right-2 top-3 p-1.5 rounded hover:bg-red-50 transition-colors"
-            title="删除对话"
+            title={t('conversation.deleteChat')}
           >
             <svg className="w-4 h-4 text-gray-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -217,7 +219,7 @@ export default function ConversationHistorySidebar({
   if (loading) {
     return (
       <div className="w-64 h-full bg-white border-r border-gray-200 flex items-center justify-center">
-        <p className="text-sm font-light text-gray-500">加载中...</p>
+        <p className="text-sm font-light text-gray-500">{t('conversation.loading')}</p>
       </div>
     );
   }
@@ -226,7 +228,7 @@ export default function ConversationHistorySidebar({
     <div className="w-64 h-full bg-white border-r border-gray-200 flex flex-col">
       {/* 标题栏 */}
       <div className="px-4 py-4 border-b border-gray-200">
-        <h2 className="text-base font-light text-gray-800">对话历史</h2>
+        <h2 className="text-base font-light text-gray-800">{t('conversation.historyTitle')}</h2>
       </div>
 
       {/* 视图切换 */}
@@ -240,7 +242,7 @@ export default function ConversationHistorySidebar({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            时间轴
+            {t('conversation.viewTimeline')}
           </button>
           <button
             onClick={() => setViewMode('book')}
@@ -250,7 +252,7 @@ export default function ConversationHistorySidebar({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            按书籍
+            {t('conversation.viewByBook')}
           </button>
         </div>
       </div>
@@ -265,7 +267,7 @@ export default function ConversationHistorySidebar({
 
         {conversations.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm font-light text-gray-400">暂无对话历史</p>
+            <p className="text-sm font-light text-gray-400">{t('conversation.emptyHistory')}</p>
           </div>
         ) : viewMode === 'timeline' ? (
           <div className="space-y-2">
@@ -334,7 +336,7 @@ export default function ConversationHistorySidebar({
           href="/books"
           className="block w-full px-4 py-2 bg-[#2C5530] text-white text-sm font-light text-center rounded-lg hover:bg-[#234426] transition-colors"
         >
-          开始新对话
+          {t('conversation.newChat')}
         </Link>
       </div>
     </div>

@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
@@ -30,6 +31,7 @@ interface ConversationGroup {
 
 export default function ConversationsPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [error, setError] = useState('');
@@ -60,7 +62,7 @@ export default function ConversationsPage() {
       });
 
       if (!conversationsResponse.ok) {
-        throw new Error('获取对话列表失败');
+        throw new Error(t('conversations.errorFetchFailed'));
       }
 
       const data = await conversationsResponse.json();
@@ -70,7 +72,7 @@ export default function ConversationsPage() {
 
     } catch (err) {
       console.error('[Conversations] 获取失败:', err);
-      setError(err instanceof Error ? err.message : '获取对话列表失败');
+      setError(err instanceof Error ? err.message : t('conversations.errorFetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -89,7 +91,7 @@ export default function ConversationsPage() {
       if (!groupMap.has(key)) {
         groupMap.set(key, {
           key,
-          name: name || (isCharacter ? '未命名角色' : '未命名书籍'),
+          name: name || (isCharacter ? t('conversations.defaultCharacterName') : t('conversations.defaultBookName')),
           type: conv.type,
           conversations: [],
         });
@@ -110,7 +112,7 @@ export default function ConversationsPage() {
         const bLatest = new Date(b.conversations[0].updated_at).getTime();
         return bLatest - aLatest;
       });
-  }, [conversations]);
+  }, [conversations, t]);
 
   return (
     <div className="min-h-screen bg-[#FAF9F7] flex flex-col">
@@ -120,9 +122,9 @@ export default function ConversationsPage() {
         {/* 页面标题区域 */}
         <section className="py-12 px-6 bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-light text-gray-800 mb-2">我的对话</h1>
+            <h1 className="text-3xl font-light text-gray-800 mb-2">{t('conversations.title')}</h1>
             <p className="text-base font-light text-gray-600">
-              查看和继续您的所有对话
+              {t('conversations.subtitle')}
             </p>
           </div>
         </section>
@@ -140,7 +142,7 @@ export default function ConversationsPage() {
             {/* 加载状态 */}
             {loading && (
               <div className="text-center py-20">
-                <div className="text-gray-400 font-light">加载中...</div>
+                <div className="text-gray-400 font-light">{t('conversations.loading')}</div>
               </div>
             )}
 
@@ -158,7 +160,7 @@ export default function ConversationsPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {group.conversations.map((conv) => {
-                        const displayTitle = conv.title || conv.character_name || conv.book_title || '未命名对话';
+                        const displayTitle = conv.title || conv.character_name || conv.book_title || t('conversations.defaultConversationTitle');
 
                         return (
                           <div
@@ -184,19 +186,19 @@ export default function ConversationsPage() {
                                     ? 'bg-[#2C5530] text-white'
                                     : 'bg-gray-100 text-gray-600'
                                 }`}>
-                                  {conv.type === 'character' ? '角色对话' : '书籍对话'}
+                                  {conv.type === 'character' ? t('conversations.typeCharacter') : t('conversations.typeBook')}
                                 </span>
                               </div>
 
                               {/* 时间 */}
                               <div className="mt-auto pt-3 border-t border-gray-100">
                                 <p className="text-xs font-light text-gray-400">
-                                  最后更新: {new Date(conv.updated_at).toLocaleString('zh-CN', {
+                                  {t('conversations.updatedAt', { time: new Date(conv.updated_at).toLocaleString('zh-CN', {
                                     month: 'short',
                                     day: 'numeric',
                                     hour: '2-digit',
                                     minute: '2-digit'
-                                  })}
+                                  }) })}
                                 </p>
                               </div>
                             </div>
@@ -213,14 +215,14 @@ export default function ConversationsPage() {
             {!loading && conversations.length === 0 && (
               <div className="text-center py-20">
                 <div className="text-gray-400 font-light mb-4">
-                  暂无对话记录
+                  {t('conversations.empty')}
                 </div>
                 <button
                   onClick={() => router.push('/books')}
                   className="px-6 py-2 bg-[#2C5530] text-white rounded-lg
                            font-light text-sm hover:bg-[#234426] transition-colors"
                 >
-                  开始新对话
+                  {t('conversations.startNew')}
                 </button>
               </div>
             )}

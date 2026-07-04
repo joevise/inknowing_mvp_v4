@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
@@ -32,6 +33,7 @@ interface BookRequest {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [error, setError] = useState('');
@@ -61,7 +63,7 @@ export default function ProfilePage() {
       fetchRequests();
     } catch (err) {
       console.error('[Profile] 获取失败:', err);
-      setError(err instanceof Error ? err.message : '获取用户信息失败');
+      setError(err instanceof Error ? err.message : t('profile.errorFetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -100,15 +102,15 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('用户名更新成功');
+        setSuccess(t('profile.successUsernameUpdated'));
         // 3秒后清除成功消息
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(data.message || '更新失败，请重试');
+        setError(data.message || t('profile.errorUpdateFailed'));
       }
     } catch (err) {
       console.error('[Profile] 更新失败:', err);
-      setError('网络错误，请稍后重试');
+      setError(t('profile.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -122,9 +124,9 @@ export default function ProfilePage() {
         {/* 页面标题区域 */}
         <section className="py-12 px-6 bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-light text-gray-800 mb-2">个人设置</h1>
+            <h1 className="text-3xl font-light text-gray-800 mb-2">{t('profile.title')}</h1>
             <p className="text-base font-light text-gray-600">
-              管理您的账户信息
+              {t('profile.subtitle')}
             </p>
           </div>
         </section>
@@ -141,7 +143,7 @@ export default function ProfilePage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                基本信息
+                {t('profile.tabProfile')}
               </button>
               <button
                 onClick={() => setActiveTab('requests')}
@@ -151,7 +153,7 @@ export default function ProfilePage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                我的申请 ({requests.length})
+                {t('profile.tabRequests', { count: requests.length })}
               </button>
             </div>
           </div>
@@ -177,7 +179,7 @@ export default function ProfilePage() {
             {/* 加载状态 */}
             {loading && (
               <div className="text-center py-20">
-                <div className="text-gray-400 font-light">加载中...</div>
+                <div className="text-gray-400 font-light">{t('profile.loading')}</div>
               </div>
             )}
 
@@ -187,29 +189,29 @@ export default function ProfilePage() {
                 {/* 基本信息卡片 */}
                 <div className="bg-white rounded-lg p-8">
                   <h2 className="text-xl font-light text-gray-800 mb-6 pb-4 border-b border-gray-200">
-                    基本信息
+                    {t('profile.sectionProfile')}
                   </h2>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between py-3">
-                      <span className="text-sm font-light text-gray-600">用户名</span>
+                      <span className="text-sm font-light text-gray-600">{t('profile.fieldUsername')}</span>
                       <span className="text-base font-light text-gray-800">{user.username}</span>
                     </div>
 
                     <div className="flex items-center justify-between py-3 border-t border-gray-100">
-                      <span className="text-sm font-light text-gray-600">邮箱地址</span>
+                      <span className="text-sm font-light text-gray-600">{t('profile.fieldEmail')}</span>
                       <span className="text-base font-light text-gray-800">{user.email}</span>
                     </div>
 
                     <div className="flex items-center justify-between py-3 border-t border-gray-100">
-                      <span className="text-sm font-light text-gray-600">注册时间</span>
+                      <span className="text-sm font-light text-gray-600">{t('profile.fieldJoinedAt')}</span>
                       <span className="text-base font-light text-gray-800">
                         {new Date(user.created_at).toLocaleDateString('zh-CN')}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between py-3 border-t border-gray-100">
-                      <span className="text-sm font-light text-gray-600">最后活跃</span>
+                      <span className="text-sm font-light text-gray-600">{t('profile.fieldLastActive')}</span>
                       <span className="text-base font-light text-gray-800">
                         {new Date(user.last_active).toLocaleDateString('zh-CN')}
                       </span>
@@ -220,7 +222,7 @@ export default function ProfilePage() {
                 {/* 统计信息卡片 */}
                 <div className="bg-white rounded-lg p-8">
                   <h2 className="text-xl font-light text-gray-800 mb-6 pb-4 border-b border-gray-200">
-                    使用统计
+                    {t('profile.sectionStats')}
                   </h2>
 
                   <div className="grid grid-cols-2 gap-6">
@@ -229,7 +231,7 @@ export default function ProfilePage() {
                         {user.conversation_count}
                       </div>
                       <div className="text-sm font-light text-gray-600">
-                        对话次数
+                        {t('profile.statsConversations')}
                       </div>
                     </div>
 
@@ -238,7 +240,7 @@ export default function ProfilePage() {
                         0
                       </div>
                       <div className="text-sm font-light text-gray-600">
-                        收藏书籍
+                        {t('profile.statsFavorites')}
                       </div>
                     </div>
                   </div>
@@ -247,13 +249,13 @@ export default function ProfilePage() {
                 {/* 编辑用户名 */}
                 <div className="bg-white rounded-lg p-8">
                   <h2 className="text-xl font-light text-gray-800 mb-6 pb-4 border-b border-gray-200">
-                    编辑信息
+                    {t('profile.sectionEdit')}
                   </h2>
 
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="username" className="block text-sm font-light text-gray-600 mb-2">
-                        用户名
+                        {t('profile.fieldUsername')}
                       </label>
                       <div className="flex gap-2">
                         <input
@@ -270,7 +272,7 @@ export default function ProfilePage() {
                           disabled={loading}
                           className="px-6 py-2 bg-[#2C5530] text-white rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-light text-sm"
                         >
-                          {loading ? '保存中...' : '保存'}
+                          {loading ? t('profile.saving') : t('common.save')}
                         </button>
                       </div>
                     </div>
@@ -280,7 +282,7 @@ export default function ProfilePage() {
                 {/* 操作按钮 */}
                 <div className="bg-white rounded-lg p-8">
                   <h2 className="text-xl font-light text-gray-800 mb-6 pb-4 border-b border-gray-200">
-                    账户操作
+                    {t('profile.sectionActions')}
                   </h2>
 
                   <div className="space-y-3">
@@ -289,7 +291,7 @@ export default function ProfilePage() {
                       className="w-full py-3 bg-[#2C5530] text-white rounded-lg
                                font-light text-sm hover:bg-[#234426] transition-colors"
                     >
-                      查看我的对话
+                      {t('profile.actionViewConversations')}
                     </button>
 
                     <button
@@ -297,7 +299,7 @@ export default function ProfilePage() {
                       className="w-full py-3 bg-white text-gray-700 rounded-lg border border-gray-200
                                font-light text-sm hover:bg-gray-50 transition-colors"
                     >
-                      修改密码
+                      {t('profile.actionChangePassword')}
                     </button>
                   </div>
                 </div>
@@ -309,17 +311,17 @@ export default function ProfilePage() {
               <div className="space-y-6">
                 <div className="bg-white rounded-lg p-8">
                   <h2 className="text-xl font-light text-gray-800 mb-6 pb-4 border-b border-gray-200">
-                    我申请上架的书籍
+                    {t('profile.myRequestsTitle')}
                   </h2>
 
                   {requests.length === 0 ? (
                     <div className="text-center py-12">
-                      <p className="text-gray-400 font-light mb-4">您还没有申请过任何书籍</p>
+                      <p className="text-gray-400 font-light mb-4">{t('profile.noRequests')}</p>
                       <a
                         href="/request-book"
                         className="text-[#2C5530] hover:underline font-light text-sm"
                       >
-                        去申请一本书 →
+                        {t('profile.goRequestBook')}
                       </a>
                     </div>
                   ) : (
@@ -339,19 +341,19 @@ export default function ProfilePage() {
                                 req.status === 'rejected' || req.status === 'failed' ? 'bg-red-100 text-red-700' :
                                 'bg-gray-100 text-gray-700'
                               }`}>
-                                {req.status === 'created' ? '已上架' :
-                                 req.status === 'wishlist' ? '待处理' :
-                                 req.status === 'pending' ? '等待中' :
-                                 req.status === 'processing' ? '处理中' :
-                                 req.status === 'rejected' ? '已拒绝' :
-                                 req.status === 'failed' ? '失败' : req.status}
+                                {req.status === 'created' ? t('profile.statusCreated') :
+                                 req.status === 'wishlist' ? t('profile.statusWishlist') :
+                                 req.status === 'pending' ? t('profile.statusPending') :
+                                 req.status === 'processing' ? t('profile.statusProcessing') :
+                                 req.status === 'rejected' ? t('profile.statusRejected') :
+                                 req.status === 'failed' ? t('profile.statusFailed') : req.status}
                               </span>
                             </div>
                             <div className="flex items-center gap-4 text-xs font-light text-gray-400">
-                              {req.author && <span>作者: {req.author}</span>}
-                              <span>申请时间: {new Date(req.created_at).toLocaleDateString('zh-CN')}</span>
+                              {req.author && <span>{t('profile.requestAuthor', { author: req.author })}</span>}
+                              <span>{t('profile.requestSubmittedAt', { date: new Date(req.created_at).toLocaleDateString('zh-CN') })}</span>
                               {req.ai_confidence && (
-                                <span>识别置信度: {Math.round(req.ai_confidence * 100)}%</span>
+                                <span>{t('profile.requestConfidence', { percent: Math.round(req.ai_confidence * 100) })}</span>
                               )}
                             </div>
                             {req.error_message && (
@@ -364,11 +366,11 @@ export default function ProfilePage() {
                                 href={`/books/${req.book_id}`}
                                 className="px-4 py-2 bg-[#2C5530] text-white rounded-lg font-light text-xs hover:bg-[#234426] transition-colors"
                               >
-                                查看书籍
+                                {t('profile.viewBook')}
                               </a>
                             )}
                             {req.status === 'wishlist' && (
-                              <span className="text-xs font-light text-gray-400">等待管理员处理</span>
+                              <span className="text-xs font-light text-gray-400">{t('profile.waitingForAdmin')}</span>
                             )}
                           </div>
                         </div>
@@ -382,7 +384,7 @@ export default function ProfilePage() {
                     href="/request-book"
                     className="text-[#2C5530] hover:underline font-light text-sm"
                   >
-                    申请上架新书 →
+                    {t('profile.requestNewBook')}
                   </a>
                 </div>
               </div>

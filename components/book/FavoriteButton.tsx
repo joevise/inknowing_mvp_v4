@@ -5,6 +5,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface FavoriteButtonProps {
   bookId: string;
@@ -23,6 +24,7 @@ export default function FavoriteButton({
   size = 'md',
   onToggle,
 }: FavoriteButtonProps) {
+  const t = useTranslations();
   const [favorited, setFavorited] = useState(initialFavorited);
   const [count, setCount] = useState(favoriteCount);
   const [loading, setLoading] = useState(false);
@@ -98,7 +100,7 @@ export default function FavoriteButton({
                   }
                   ${loading ? 'opacity-50 cursor-not-allowed' : ''}
                   font-light ${textSizeClasses[size]}`}
-      title={favorited ? '取消收藏' : '收藏到书架'}
+      title={favorited ? t('favorite.remove') : t('favorite.add')}
     >
       {/* 书架图标 */}
       <svg

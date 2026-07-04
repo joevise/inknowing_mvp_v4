@@ -7,6 +7,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import MarkdownMessage from '@/components/conversation/MarkdownMessage';
 
 interface Message {
@@ -72,6 +73,7 @@ export default function ConversationView({
   onNavigate,
 }: ConversationViewProps) {
   const router = useRouter();
+  const t = useTranslations();
 
   const [loading, setLoading] = useState(true);
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -98,6 +100,7 @@ export default function ConversationView({
         eventSourceRef.current.close();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
   useEffect(() => {
@@ -122,7 +125,7 @@ export default function ConversationView({
       await loadMessages();
     } catch (err) {
       console.error('[Conversation] 加载失败:', err);
-      setError(err instanceof Error ? err.message : '加载对话失败');
+      setError(err instanceof Error ? err.message : t('conversation.conversationLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -133,7 +136,7 @@ export default function ConversationView({
       credentials: 'include',
     });
     if (!response.ok) {
-      throw new Error('获取对话信息失败');
+      throw new Error(t('conversation.errorLoadConv'));
     }
     const data = await response.json();
     setConversation(data.conversation);
@@ -145,7 +148,7 @@ export default function ConversationView({
       credentials: 'include',
     });
     if (!response.ok) {
-      throw new Error('获取消息列表失败');
+      throw new Error(t('conversation.errorLoadMessages'));
     }
     const data = await response.json();
     setMessages(data.messages || []);
@@ -170,14 +173,14 @@ export default function ConversationView({
       });
 
       if (!response.ok) {
-        throw new Error('创建新话题失败');
+        throw new Error(t('conversation.newTopicFailed'));
       }
 
       const data = await response.json();
       onNavigate?.(data.conversation.id);
     } catch (err) {
       console.error('[Conversation] 创建新话题失败:', err);
-      setError(err instanceof Error ? err.message : '创建新话题失败');
+      setError(err instanceof Error ? err.message : t('conversation.newTopicFailed'));
       setCreatingNewTopic(false);
     }
   };
@@ -210,14 +213,14 @@ export default function ConversationView({
       });
 
       if (!response.ok) {
-        throw new Error('发送消息失败');
+        throw new Error(t('conversation.sendFailed'));
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error('无法读取响应流');
+        throw new Error(t('conversation.streamReadFailed'));
       }
 
       let assistantMessage = '';
@@ -274,7 +277,7 @@ export default function ConversationView({
                 setStreaming(false);
                 setSending(false);
               } else if (data.type === 'error') {
-                throw new Error(data.data || '生成回复失败');
+                throw new Error(data.data || t('conversation.streamParseError'));
               }
             } catch (e) {
               console.error('[Stream] 解析数据失败:', e);
@@ -284,7 +287,7 @@ export default function ConversationView({
       }
     } catch (err) {
       console.error('[Conversation] 发送失败:', err);
-      setError(err instanceof Error ? err.message : '发送消息失败');
+      setError(err instanceof Error ? err.message : t('conversation.sendFailed'));
       setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
       setStreamingMessage('');
       setStreamingMetadata({});
@@ -304,7 +307,7 @@ export default function ConversationView({
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#FAF9F7]">
-        <div className="text-gray-600 font-light">加载中...</div>
+        <div className="text-gray-600 font-light">{t('conversation.loading')}</div>
       </div>
     );
   }
@@ -318,7 +321,7 @@ export default function ConversationView({
             onClick={() => router.back()}
             className="px-6 py-2 bg-[#2C5530] text-white font-light rounded-lg hover:bg-[#234426] transition-colors"
           >
-            返回
+            {t('conversation.back')}
           </button>
         </div>
       </div>
@@ -332,10 +335,10 @@ export default function ConversationView({
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-light text-gray-800">
-              {conversation?.character_name || conversation?.book_title || '对话'}
+              {conversation?.character_name || conversation?.book_title || t('conversation.defaultTitle')}
             </h1>
             <p className="text-sm font-light text-gray-500">
-              {conversation?.type === 'character' ? '角色对话模式' : '书籍对话模式'}
+              {conversation?.type === 'character' ? t('conversation.characterChatMode') : t('conversation.bookChatMode')}
             </p>
           </div>
           <button
@@ -343,7 +346,7 @@ export default function ConversationView({
             disabled={creatingNewTopic}
             className="px-4 py-2 bg-[#2C5530] text-white text-sm font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
-            {creatingNewTopic ? '创建中...' : '+ 新话题'}
+            {creatingNewTopic ? t('conversation.creatingTopic') : t('conversation.newTopic')}
           </button>
         </div>
       </div>
@@ -353,8 +356,8 @@ export default function ConversationView({
         <div className="max-w-4xl mx-auto px-6 py-8">
           {messages.length === 0 && !streamingMessage && (
             <div className="text-center text-gray-500 font-light py-12">
-              <p className="mb-2">开始与{conversation?.character_name || conversation?.book_title}对话</p>
-              <p className="text-sm">试试问一些问题吧！</p>
+              <p className="mb-2">{t('conversation.startChatPrompt', { name: conversation?.character_name || conversation?.book_title || '' })}</p>
+              <p className="text-sm">{t('conversation.startChatHint')}</p>
             </div>
           )}
 
@@ -432,7 +435,7 @@ export default function ConversationView({
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
-                    {streamingMetadata.character_name?.charAt(0) || streamingMetadata.book_title?.charAt(0) || '书'}
+                    {streamingMetadata.character_name?.charAt(0) || streamingMetadata.book_title?.charAt(0) || t('conversation.placeholderBook')}
                   </div>
                 )}
               </div>
@@ -455,7 +458,7 @@ export default function ConversationView({
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-[#2C5530] flex items-center justify-center text-white text-sm font-light">
-                    {(conversation?.character_name || conversation?.book_title || '书')?.charAt(0)}
+                    {(conversation?.character_name || conversation?.book_title || t('conversation.placeholderBook'))?.charAt(0)}
                   </div>
                 )}
               </div>
@@ -467,7 +470,7 @@ export default function ConversationView({
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
-                  <span className="text-sm font-light text-gray-500">思考中...</span>
+                  <span className="text-sm font-light text-gray-500">{t('conversation.thinking')}</span>
                 </div>
               </div>
             </div>
@@ -491,7 +494,7 @@ export default function ConversationView({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="输入你的问题..."
+            placeholder={t('conversation.inputPlaceholder')}
             disabled={sending || streaming}
             rows={1}
             className="flex-1 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-[#2C5530] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed font-light"
@@ -502,7 +505,7 @@ export default function ConversationView({
             disabled={!input.trim() || sending || streaming}
             className="px-6 py-3 bg-[#2C5530] text-white font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
-            {sending || streaming ? '发送中...' : '发送'}
+            {sending || streaming ? t('conversation.sending') : t('conversation.send')}
           </button>
         </div>
       </div>

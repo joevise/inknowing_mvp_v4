@@ -7,6 +7,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
@@ -27,6 +28,7 @@ export default function RequestBookPage() {
 
 function RequestBookPageInner() {
   const router = useRouter();
+  const t = useTranslations();
   const params = useSearchParams();
   const presetTitle = params.get('title') || '';
   const [title, setTitle] = useState(presetTitle);
@@ -55,7 +57,7 @@ function RequestBookPageInner() {
     e.preventDefault();
 
     if (!title.trim()) {
-      setError('请输入书名');
+      setError(t('requestBook.errorTitleRequired'));
       return;
     }
 
@@ -82,7 +84,7 @@ function RequestBookPageInner() {
       }
 
       if (!response.ok) {
-        setError(data.message || '提交失败，请稍后重试');
+        setError(data.message || t('requestBook.errorSubmitFailed'));
         return;
       }
 
@@ -100,7 +102,7 @@ function RequestBookPageInner() {
       }
     } catch (err) {
       console.error('[RequestBook] 提交失败:', err);
-      setError('网络错误，请稍后重试');
+      setError(t('requestBook.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -112,13 +114,13 @@ function RequestBookPageInner() {
         <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <h2 className="text-2xl font-light text-gray-800 mb-4">请先登录</h2>
-            <p className="text-gray-600 font-light mb-6">登录后才能申请上架书籍</p>
+            <h2 className="text-2xl font-light text-gray-800 mb-4">{t('requestBook.pleaseLoginTitle')}</h2>
+            <p className="text-gray-600 font-light mb-6">{t('requestBook.pleaseLoginSubtitle')}</p>
             <Link
               href="/auth/login"
               className="inline-block px-6 py-3 bg-[#2C5530] text-white rounded-lg hover:bg-[#234426] transition-colors font-light"
             >
-              去登录
+              {t('requestBook.goLogin')}
             </Link>
           </div>
         </main>
@@ -135,9 +137,9 @@ function RequestBookPageInner() {
         {/* 页面标题区域 */}
         <section className="py-12 px-6 bg-white border-b border-gray-200">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl font-light text-gray-800 mb-2">申请上架书籍</h1>
+            <h1 className="text-3xl font-light text-gray-800 mb-2">{t('requestBook.title')}</h1>
             <p className="text-base font-light text-gray-600">
-              如果您想看的书不在图书馆中，可以在这里提交申请
+              {t('requestBook.subtitle')}
             </p>
           </div>
         </section>
@@ -165,10 +167,10 @@ function RequestBookPageInner() {
                   <div>
                     <p className="font-medium">{result.message}</p>
                     {result.status === 'created' && result.book_id && (
-                      <p className="text-xs mt-1 opacity-70">正在跳转到书籍页面...</p>
+                      <p className="text-xs mt-1 opacity-70">{t('requestBook.resultCreatedHint')}</p>
                     )}
                     {result.status === 'wishlist' && (
-                      <p className="text-xs mt-1 opacity-70">管理员会尽快处理您的申请</p>
+                      <p className="text-xs mt-1 opacity-70">{t('requestBook.resultWishlistHint')}</p>
                     )}
                   </div>
                 </div>
@@ -182,14 +184,14 @@ function RequestBookPageInner() {
                   <div className="space-y-6">
                     <div>
                       <label htmlFor="title" className="block text-sm font-light text-gray-600 mb-2">
-                        书名 <span className="text-red-500">*</span>
+                        {t('requestBook.titleLabel')} <span className="text-red-500">{t('requestBook.titleRequired')}</span>
                       </label>
                       <input
                         type="text"
                         id="title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="请输入书籍名称"
+                        placeholder={t('requestBook.titlePlaceholder')}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors font-light"
                         disabled={loading}
                       />
@@ -197,14 +199,14 @@ function RequestBookPageInner() {
 
                     <div>
                       <label htmlFor="author" className="block text-sm font-light text-gray-600 mb-2">
-                        作者 <span className="text-gray-400">(选填)</span>
+                        {t('requestBook.authorLabel')} <span className="text-gray-400">{t('requestBook.authorOptional')}</span>
                       </label>
                       <input
                         type="text"
                         id="author"
                         value={author}
                         onChange={(e) => setAuthor(e.target.value)}
-                        placeholder="请输入作者名称"
+                        placeholder={t('requestBook.authorPlaceholder')}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors font-light"
                         disabled={loading}
                       />
@@ -218,19 +220,19 @@ function RequestBookPageInner() {
                                  font-light text-sm hover:bg-[#234426] transition-colors
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loading ? '提交中...' : '提交申请'}
+                        {loading ? t('requestBook.submitting') : t('requestBook.submitButton')}
                       </button>
                     </div>
                   </div>
                 </form>
 
                 <div className="mt-8 pt-6 border-t border-gray-100">
-                  <h3 className="text-sm font-light text-gray-600 mb-3">温馨提示</h3>
+                  <h3 className="text-sm font-light text-gray-600 mb-3">{t('requestBook.tipsTitle')}</h3>
                   <ul className="text-xs font-light text-gray-400 space-y-2">
-                    <li>• 每天最多申请 5 本书籍</li>
-                    <li>• AI 会尝试识别书籍信息，识别成功后会自动入库</li>
-                    <li>• 如果识别失败，申请会进入"许愿池"由管理员处理</li>
-                    <li>• 您可以在个人中心查看申请状态</li>
+                    <li>• {t('requestBook.tip1')}</li>
+                    <li>• {t('requestBook.tip2')}</li>
+                    <li>• {t('requestBook.tip3')}</li>
+                    <li>• {t('requestBook.tip4')}</li>
                   </ul>
                 </div>
               </div>
@@ -242,7 +244,7 @@ function RequestBookPageInner() {
                 href="/"
                 className="text-sm font-light text-gray-500 hover:text-[#2C5530] transition-colors"
               >
-                ← 返回首页
+                {t('requestBook.backHome')}
               </Link>
             </div>
           </div>
