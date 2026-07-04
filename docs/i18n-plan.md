@@ -98,7 +98,7 @@ ALTER TABLE characters ADD COLUMN background_story_en TEXT;
 - 组合：banner（告知）+ 仅强中文书弹确认（不烦人）
 - **产出可上线**：智能提醒生效
 
-### Phase 5 — AI 对话语言控制
+### Phase 5 — AI 对话语言控制  ✅ 已完成 (2026-07-04, commit c8e7282)
 - `buildSystemPrompt` 增 `language` 参数；`streamResponse` 根据 `book.language_mode` + 用户当前 uiLang 决定：
   - `zh_native`：默认注入 `请用中文回复`（除非用户执意英文且已确认 → `Respond in English`）
   - `multilingual`/`en_native`：跟随 uiLang
