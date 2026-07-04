@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 /**
  * 用户注册页面
@@ -10,6 +11,7 @@ import Link from 'next/link';
  */
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -28,7 +30,7 @@ export default function RegisterPage() {
 
     // 验证密码确认
     if (formData.password !== formData.confirmPassword) {
-      setError('两次输入的密码不一致');
+      setError(t('auth.errorPasswordMismatch'));
       return;
     }
 
@@ -58,11 +60,11 @@ export default function RegisterPage() {
           router.push('/');
         }, 2000);
       } else {
-        setError(data.message || '注册失败，请重试');
+        setError(data.message || t('auth.errorRegisterFailed'));
       }
     } catch (err) {
       console.error('注册错误:', err);
-      setError('网络错误，请稍后重试');
+      setError(t('auth.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -82,10 +84,10 @@ export default function RegisterPage() {
         {/* Logo和标题 */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-light text-[#2C5530] mb-2">
-            知应 InKnowing
+            {t('common.appName')}
           </h1>
           <p className="text-gray-600 text-sm">
-            创建账户，开启知识对话之旅
+            {t('auth.registerSubtitle')}
           </p>
         </div>
 
@@ -94,7 +96,7 @@ export default function RegisterPage() {
           {/* 成功提示 */}
           {success && (
             <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
-              ✓ 注册成功！正在跳转到首页...
+              {t('auth.successMessage')}
             </div>
           )}
 
@@ -108,7 +110,7 @@ export default function RegisterPage() {
           {/* 用户名输入 */}
           <div>
             <label htmlFor="username" className="block text-sm font-light text-gray-700 mb-1">
-              用户名
+              {t('auth.username')}
             </label>
             <input
               type="text"
@@ -121,14 +123,14 @@ export default function RegisterPage() {
               minLength={2}
               maxLength={20}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white font-light"
-              placeholder="设置您的用户名"
+              placeholder={t('auth.usernamePlaceholder')}
             />
           </div>
 
           {/* 邮箱输入 */}
           <div>
             <label htmlFor="email" className="block text-sm font-light text-gray-700 mb-1">
-              邮箱
+              {t('auth.email')}
             </label>
             <input
               type="email"
@@ -139,14 +141,14 @@ export default function RegisterPage() {
               onChange={handleChange}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white font-light"
-              placeholder="your@email.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
           </div>
 
           {/* 密码输入 */}
           <div>
             <label htmlFor="password" className="block text-sm text-gray-700 mb-1">
-              密码
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -158,14 +160,14 @@ export default function RegisterPage() {
               disabled={loading}
               minLength={6}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white"
-              placeholder="至少6个字符"
+              placeholder={t('auth.passwordPlaceholderRegister')}
             />
           </div>
 
           {/* 确认密码 */}
           <div>
             <label htmlFor="confirmPassword" className="block text-sm text-gray-700 mb-1">
-              确认密码
+              {t('auth.confirmPassword')}
             </label>
             <input
               type="password"
@@ -177,7 +179,7 @@ export default function RegisterPage() {
               disabled={loading}
               minLength={6}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white"
-              placeholder="再次输入密码"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
             />
           </div>
 
@@ -187,19 +189,19 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-light"
           >
-            {loading ? '注册中...' : '创建账户'}
+            {loading ? t('auth.registering') : t('auth.registerSubmitButton')}
           </button>
         </form>
 
         {/* 登录链接 */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            已有账户？{' '}
+            {t('auth.hasAccount')}{' '}
             <Link
               href="/auth/login"
               className="text-[#2C5530] hover:underline"
             >
-              立即登录
+              {t('auth.goLogin')}
             </Link>
           </p>
         </div>
@@ -210,7 +212,7 @@ export default function RegisterPage() {
             href="/"
             className="text-sm text-gray-500 hover:text-[#2C5530] transition-colors"
           >
-            ← 返回首页
+            {t('auth.backToHome')}
           </Link>
         </div>
       </div>

@@ -1,8 +1,14 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 /**
  * 统一的页面底部组件
  * MUJI风格：简洁、细字体
+ * 注：本组件被 client 页面(如首页)引用，故用 useTranslations(client)而非 getTranslations(server)
  */
 export default function Footer() {
+  const t = useTranslations();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -11,35 +17,34 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* 关于 */}
           <div>
-            <h3 className="font-light text-sm text-gray-800 mb-4">关于知应</h3>
+            <h3 className="font-light text-sm text-gray-800 mb-4">{t('footer.aboutTitle')}</h3>
             <p className="font-light text-xs text-gray-600 leading-relaxed">
-              InKnowing 是一个基于 AI 的知识对话平台，
-              让经典书籍和角色与您对话，开启智能学习之旅。
+              {t('footer.aboutDescription')}
             </p>
           </div>
 
           {/* 快速链接 */}
           <div>
-            <h3 className="font-light text-sm text-gray-800 mb-4">快速链接</h3>
+            <h3 className="font-light text-sm text-gray-800 mb-4">{t('footer.quickLinksTitle')}</h3>
             <ul className="space-y-2">
               <li>
                 <a href="/about" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  关于知应
+                  {t('footer.aboutLink')}
                 </a>
               </li>
               <li>
                 <a href="/books" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  浏览书籍
+                  {t('footer.browseBooksLink')}
                 </a>
               </li>
               <li>
                 <a href="/characters" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  热门角色
+                  {t('footer.popularCharactersLink')}
                 </a>
               </li>
               <li>
                 <a href="/auth/login" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  登录账户
+                  {t('footer.signInLink')}
                 </a>
               </li>
             </ul>
@@ -47,21 +52,21 @@ export default function Footer() {
 
           {/* 帮助与支持 */}
           <div>
-            <h3 className="font-light text-sm text-gray-800 mb-4">帮助与支持</h3>
+            <h3 className="font-light text-sm text-gray-800 mb-4">{t('footer.helpTitle')}</h3>
             <ul className="space-y-2">
               <li>
                 <a href="/help" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  使用指南
+                  {t('footer.userGuide')}
                 </a>
               </li>
               <li>
                 <a href="/faq" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  常见问题
+                  {t('footer.faq')}
                 </a>
               </li>
               <li>
                 <a href="/contact" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  联系我们
+                  {t('footer.contactUs')}
                 </a>
               </li>
             </ul>
@@ -69,16 +74,16 @@ export default function Footer() {
 
           {/* 法律信息 */}
           <div>
-            <h3 className="font-light text-sm text-gray-800 mb-4">法律信息</h3>
+            <h3 className="font-light text-sm text-gray-800 mb-4">{t('footer.legalTitle')}</h3>
             <ul className="space-y-2">
               <li>
                 <a href="/terms" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  使用条款
+                  {t('footer.terms')}
                 </a>
               </li>
               <li>
                 <a href="/privacy" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
-                  隐私政策
+                  {t('footer.privacy')}
                 </a>
               </li>
             </ul>
@@ -88,10 +93,10 @@ export default function Footer() {
         {/* 版权信息 */}
         <div className="pt-8 border-t border-gray-200 text-center">
           <p className="font-light text-xs text-gray-500">
-            © {currentYear} InKnowing 知应. All rights reserved.
+            {t('footer.copyright', { year: currentYear })}
           </p>
           <p className="font-light text-xs text-gray-400 mt-2">
-            Powered by AI · Made with care
+            {t('footer.tagline')}
           </p>
         </div>
       </div>

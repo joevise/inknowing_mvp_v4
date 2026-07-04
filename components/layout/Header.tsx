@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface User {
   id: string;
@@ -16,6 +18,7 @@ interface User {
  */
 export default function Header() {
   const pathname = usePathname();
+  const t = useTranslations();
   const [user, setUser] = useState<User | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -66,7 +69,7 @@ export default function Header() {
             </div>
             <div className="flex flex-col">
               <span className="font-light text-lg leading-tight">InKnowing</span>
-              <span className="font-light text-xs opacity-90">知应</span>
+              <span className="font-light text-xs opacity-90">{t('header.brandSub')}</span>
             </div>
           </Link>
 
@@ -78,7 +81,7 @@ export default function Header() {
                 isActive('/') ? 'opacity-100 border-b border-white' : 'opacity-70 hover:opacity-100'
               }`}
             >
-              首页
+              {t('nav.home')}
             </Link>
             <Link
               href="/books"
@@ -86,7 +89,7 @@ export default function Header() {
                 isActive('/books') ? 'opacity-100 border-b border-white' : 'opacity-70 hover:opacity-100'
               }`}
             >
-              浏览书籍
+              {t('header.browseBooks')}
             </Link>
             <Link
               href="/characters"
@@ -94,7 +97,7 @@ export default function Header() {
                 isActive('/characters') ? 'opacity-100 border-b border-white' : 'opacity-70 hover:opacity-100'
               }`}
             >
-              热门角色
+              {t('header.popularCharacters')}
             </Link>
             <Link
               href="/about"
@@ -102,12 +105,13 @@ export default function Header() {
                 isActive('/about') ? 'opacity-100 border-b border-white' : 'opacity-70 hover:opacity-100'
               }`}
             >
-              关于知应
+              {t('header.aboutUs')}
             </Link>
           </nav>
 
           {/* 右侧：用户信息/登录 */}
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             {user ? (
               <div className="relative">
                 <button
@@ -127,32 +131,32 @@ export default function Header() {
                       href="/conversations"
                       className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      我的对话
+                      {t('header.myConversations')}
                     </Link>
                     <Link
                       href="/favorites"
                       className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      我的收藏
+                      {t('header.myFavorites')}
                     </Link>
                     <Link
                       href="/my-requests"
                       className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      我的申请
+                      {t('header.myRequests')}
                     </Link>
                     <Link
                       href="/profile"
                       className="block px-4 py-2 text-sm font-light text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      个人设置
+                      {t('header.profileSettings')}
                     </Link>
                     <hr className="my-2 border-gray-100" />
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm font-light text-red-600 hover:bg-gray-50 transition-colors"
                     >
-                      退出登录
+                      {t('common.logout')}
                     </button>
                   </div>
                 )}
@@ -163,13 +167,13 @@ export default function Header() {
                   href="/auth/login"
                   className="font-light text-sm opacity-70 hover:opacity-100 transition-opacity"
                 >
-                  登录
+                  {t('common.login')}
                 </Link>
                 <Link
                   href="/auth/register"
                   className="font-light text-sm px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
                 >
-                  注册
+                  {t('common.register')}
                 </Link>
               </div>
             )}

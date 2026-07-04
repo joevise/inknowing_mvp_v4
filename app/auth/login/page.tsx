@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 /**
  * 用户登录页面
@@ -10,6 +11,7 @@ import Link from 'next/link';
  */
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -41,11 +43,11 @@ export default function LoginPage() {
         const redirectTo = new URLSearchParams(window.location.search).get('redirect');
         window.location.href = redirectTo || '/';
       } else {
-        setError(data.message || '登录失败，请重试');
+        setError(data.message || t('auth.errorLoginFailed'));
       }
     } catch (err) {
       console.error('登录错误:', err);
-      setError('网络错误，请稍后重试');
+      setError(t('auth.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -65,10 +67,10 @@ export default function LoginPage() {
         {/* Logo和标题 */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-light text-[#2C5530] mb-2">
-            知应 InKnowing
+            {t('common.appName')}
           </h1>
           <p className="text-gray-600 text-sm">
-            登录账户，继续知识探索
+            {t('auth.loginSubtitle')}
           </p>
         </div>
 
@@ -84,7 +86,7 @@ export default function LoginPage() {
           {/* 邮箱输入 */}
           <div>
             <label htmlFor="email" className="block text-sm text-gray-700 mb-1">
-              邮箱
+              {t('auth.email')}
             </label>
             <input
               type="email"
@@ -95,7 +97,7 @@ export default function LoginPage() {
               onChange={handleChange}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white"
-              placeholder="your@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               autoComplete="email"
             />
           </div>
@@ -103,7 +105,7 @@ export default function LoginPage() {
           {/* 密码输入 */}
           <div>
             <label htmlFor="password" className="block text-sm text-gray-700 mb-1">
-              密码
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -114,7 +116,7 @@ export default function LoginPage() {
               onChange={handleChange}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white"
-              placeholder="输入密码"
+              placeholder={t('auth.passwordPlaceholderLogin')}
               autoComplete="current-password"
             />
           </div>
@@ -128,7 +130,7 @@ export default function LoginPage() {
                 className="mr-2 rounded border-gray-300 text-[#2C5530] focus:ring-[#2C5530]"
               />
               <label htmlFor="remember" className="text-sm text-gray-600">
-                记住我
+                {t('auth.rememberMe')}
               </label>
             </div>
             {/* 忘记密码链接（MVP阶段暂不实现） */}
@@ -137,10 +139,10 @@ export default function LoginPage() {
               className="text-sm text-gray-500 hover:text-[#2C5530] transition-colors"
               onClick={(e) => {
                 e.preventDefault();
-                alert('忘记密码功能将在后续版本推出');
+                alert(t('auth.forgotPasswordAlert'));
               }}
             >
-              忘记密码？
+              {t('auth.forgotPassword')}
             </Link>
           </div>
 
@@ -150,19 +152,19 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-[#2C5530] text-white py-3 rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-light"
           >
-            {loading ? '登录中...' : '登录'}
+            {loading ? t('auth.loggingIn') : t('auth.loginButton')}
           </button>
         </form>
 
         {/* 注册链接 */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            还没有账户？{' '}
+            {t('auth.noAccount')}{' '}
             <Link
               href="/auth/register"
               className="text-[#2C5530] hover:underline"
             >
-              立即注册
+              {t('auth.goRegister')}
             </Link>
           </p>
         </div>
@@ -173,7 +175,7 @@ export default function LoginPage() {
             href="/"
             className="text-sm text-gray-500 hover:text-[#2C5530] transition-colors"
           >
-            ← 返回首页
+            {t('auth.backToHome')}
           </Link>
         </div>
       </div>
