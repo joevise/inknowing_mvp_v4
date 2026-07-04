@@ -66,10 +66,15 @@ export async function POST(
       contentLength: content.length,
     });
 
+    // 读取界面语言（i18n middleware 设置的 cookie），让 AI 跟随界面语种
+    const uiLang: 'zh' | 'en' =
+      request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+
     const result = await conversationService.sendMessage({
       conversationId: params.id,
       userId: user.id,
       content: content.trim(),
+      uiLang,
     });
 
     console.log('[API] 消息发送成功:', {

@@ -33,6 +33,11 @@ import {
   buildMemoryContextBlock,
   extractAndStoreMemories,
 } from './user-memory-service';
+import {
+  resolveResponseLanguage,
+  buildLanguageDirective,
+  pickCharacterFields,
+} from '@/lib/ai/language-directive';
 
 // 对话创建参数
 export interface CreateConversationParams {
@@ -49,6 +54,7 @@ export interface SendMessageParams {
   userId: string;
   content: string;
   streamCallback?: (chunk: string) => void;
+  uiLang?: 'zh' | 'en';
 }
 
 // 消息响应
@@ -172,7 +178,8 @@ export class ConversationService {
           params.content,
           conversation,
           book,
-          params.streamCallback
+          params.streamCallback,
+          params.uiLang
         );
         response = ragResult.response;
         sources = ragResult.sources;
@@ -183,7 +190,8 @@ export class ConversationService {
           params.content,
           conversation,
           book,
-          params.streamCallback
+          params.streamCallback,
+          params.uiLang
         );
         response = hybridResult.response;
         sources = hybridResult.sources;
@@ -195,7 +203,8 @@ export class ConversationService {
           params.content,
           conversation,
           book,
-          params.streamCallback
+          params.streamCallback,
+          params.uiLang
         );
         break;
     }
@@ -265,10 +274,13 @@ export class ConversationService {
     query: string,
     conversation: Conversation,
     book: Book,
-    streamCallback?: (chunk: string) => void
+    streamCallback?: (chunk: string) => void,
+    uiLang?: 'zh' | 'en'
   ): Promise<string> {
     // 获取对话上下文
     const context = await getConversationContext(conversation.id, 10);
+
+    const lang = resolveResponseLanguage(book.language_mode, uiLang);
 
     let systemPrompt: string;
     let messages = [...context];
@@ -280,15 +292,16 @@ export class ConversationService {
         throw new Error('Character not found');
       }
 
+      const f = pickCharacterFields(character, lang);
       systemPrompt = buildCharacterChatPrompt({
         bookTitle: book.title,
         characterName: character.name,
-        description: character.description,
+        description: f.description,
         personality: character.personality_traits
           ? Object.values(character.personality_traits as any)
           : [],
-        speakingStyle: character.speaking_style,
-        backgroundStory: character.background_story,
+        speakingStyle: f.speakingStyle,
+        backgroundStory: f.backgroundStory,
       });
     } else {
       // 书籍对话
@@ -310,7 +323,7 @@ export class ConversationService {
         book.title
       );
     }
-    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock + buildLanguageDirective(lang);
 
     // 添加系统提示词到消息开头
     const chatMessages: ChatMessage[] = [
@@ -345,7 +358,8 @@ export class ConversationService {
     query: string,
     conversation: Conversation,
     book: Book,
-    streamCallback?: (chunk: string) => void
+    streamCallback?: (chunk: string) => void,
+    uiLang?: 'zh' | 'en'
   ): Promise<{ response: string; sources: any[] }> {
     // 获取对话上下文
     const context = await getConversationContext(conversation.id, 10);
@@ -364,10 +378,13 @@ export class ConversationService {
         query,
         conversation,
         book,
-        streamCallback
+        streamCallback,
+        uiLang
       );
       return { response, sources: [] };
     }
+
+    const lang = resolveResponseLanguage(book.language_mode, uiLang);
 
     // 构建RAG提示词
     let systemPrompt: string;
@@ -379,13 +396,14 @@ export class ConversationService {
         throw new Error('Character not found');
       }
 
+      const f = pickCharacterFields(character, lang);
       systemPrompt = this.ragConversation.buildRAGPrompt({
         bookTitle: book.title,
         author: book.author,
         description: book.description,
         characterMode: true,
         characterName: character.name,
-        characterDescription: character.description,
+        characterDescription: f.description,
         retrievedContent: retrievalResult.documents,
       });
     } else {
@@ -409,10 +427,11 @@ export class ConversationService {
         book.title
       );
     }
-    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock + buildLanguageDirective(lang);
 
-    // 准备消息
+    // 准备消息（system 内联到消息头，与 AI 原生路径一致）
     const messages = [
+      { role: 'system' as const, content: systemPrompt },
       ...context,
       { role: 'user' as const, content: query },
     ];
@@ -420,14 +439,15 @@ export class ConversationService {
     // 调用AI生成回答
     let response: string;
     if (streamCallback) {
-      const stream = await this.aiClient.streamChat(messages, { systemPrompt });
+      const stream = streamChat(messages);
       response = '';
       for await (const chunk of stream) {
         response += chunk;
         streamCallback(chunk);
       }
     } else {
-      response = await this.aiClient.chat(messages, { systemPrompt });
+      const result = await chat(messages);
+      response = result.content;
     }
 
     // 添加来源标注
@@ -451,7 +471,8 @@ export class ConversationService {
     query: string,
     conversation: Conversation,
     book: Book,
-    streamCallback?: (chunk: string) => void
+    streamCallback?: (chunk: string) => void,
+    uiLang?: 'zh' | 'en'
   ): Promise<{ response: string; sources?: any[] }> {
     // 获取对话上下文
     const context = await getConversationContext(conversation.id, 10);
@@ -468,6 +489,8 @@ export class ConversationService {
       console.log('RAG retrieval failed in hybrid mode:', error);
     }
 
+    const lang = resolveResponseLanguage(book.language_mode, uiLang);
+
     // 构建混合提示词
     let systemPrompt: string;
 
@@ -478,15 +501,16 @@ export class ConversationService {
         throw new Error('Character not found');
       }
 
+      const f = pickCharacterFields(character, lang);
       systemPrompt = buildCharacterChatPrompt({
         bookTitle: book.title,
         characterName: character.name,
-        description: character.description,
+        description: f.description,
         personality: character.personality_traits
           ? Object.values(character.personality_traits as any)
           : [],
-        speakingStyle: character.speaking_style,
-        backgroundStory: character.background_story,
+        speakingStyle: f.speakingStyle,
+        backgroundStory: f.backgroundStory,
       });
     } else {
       // 书籍对话
@@ -518,10 +542,11 @@ export class ConversationService {
         book.title
       );
     }
-    systemPrompt = systemPrompt + memoryBlock + interactionBlock;
+    systemPrompt = systemPrompt + memoryBlock + interactionBlock + buildLanguageDirective(lang);
 
-    // 准备消息
+    // 准备消息（system 内联到消息头，与 AI 原生路径一致）
     const messages = [
+      { role: 'system' as const, content: systemPrompt },
       ...context,
       { role: 'user' as const, content: query },
     ];
@@ -529,14 +554,15 @@ export class ConversationService {
     // 调用AI生成回答
     let response: string;
     if (streamCallback) {
-      const stream = await this.aiClient.streamChat(messages, { systemPrompt });
+      const stream = streamChat(messages);
       response = '';
       for await (const chunk of stream) {
         response += chunk;
         streamCallback(chunk);
       }
     } else {
-      response = await this.aiClient.chat(messages, { systemPrompt });
+      const result = await chat(messages);
+      response = result.content;
     }
 
     // 如果有检索内容，轻量标注
@@ -563,7 +589,8 @@ export class ConversationService {
   async *streamResponse(
     conversationId: string,
     userId: string,
-    content: string
+    content: string,
+    uiLang?: 'zh' | 'en'
   ): AsyncGenerator<{
     type: 'chunk' | 'done' | 'error';
     data: string;
@@ -637,6 +664,7 @@ export class ConversationService {
             notify = null;
           }
         },
+        uiLang,
       });
 
       responsePromise.then(

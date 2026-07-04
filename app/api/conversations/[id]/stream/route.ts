@@ -56,6 +56,10 @@ export async function POST(
       );
     }
 
+    // 读取界面语言（来自 i18n middleware 设置的 cookie），用于让 AI 跟随界面语种
+    const uiLang: 'zh' | 'en' =
+      request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+
     // 4. 创建流式响应
     console.log('[API] 开始流式对话:', {
       conversationId: params.id,
@@ -73,7 +77,8 @@ export async function POST(
           for await (const event of conversationService.streamResponse(
             params.id,
             session.user.id,
-            content.trim()
+            content.trim(),
+            uiLang
           )) {
             // 发送SSE格式的数据
             const data = JSON.stringify(event);
