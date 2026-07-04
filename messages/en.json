@@ -1,0 +1,29 @@
+{
+  "common": {
+    "appName": "InKnowing",
+    "loading": "Loading...",
+    "search": "Search",
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "register": "Sign Up",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "back": "Back",
+    "submit": "Submit"
+  },
+  "nav": {
+    "home": "Home",
+    "books": "Books",
+    "characters": "Characters",
+    "favorites": "Favorites",
+    "profile": "Profile",
+    "conversations": "Chats"
+  },
+  "language": {
+    "switchTo": "Language",
+    "zh": "中文",
+    "en": "English"
+  }
+}

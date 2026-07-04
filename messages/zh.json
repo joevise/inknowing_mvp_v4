@@ -1,0 +1,29 @@
+{
+  "common": {
+    "appName": "知应 InKnowing",
+    "loading": "加载中...",
+    "search": "搜索",
+    "login": "登录",
+    "logout": "退出登录",
+    "register": "注册",
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "delete": "删除",
+    "back": "返回",
+    "submit": "提交"
+  },
+  "nav": {
+    "home": "首页",
+    "books": "书籍",
+    "characters": "角色",
+    "favorites": "收藏",
+    "profile": "我的",
+    "conversations": "对话"
+  },
+  "language": {
+    "switchTo": "切换语言",
+    "zh": "中文",
+    "en": "English"
+  }
+}
