@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
@@ -29,6 +30,7 @@ interface UserConversation {
 
 export default function CharactersPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [total, setTotal] = useState(0);
@@ -56,7 +58,7 @@ export default function CharactersPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || '获取角色列表失败');
+        throw new Error(data.error || t('characters.errorFetchFailed'));
       }
 
       const data = await response.json();
@@ -66,7 +68,7 @@ export default function CharactersPage() {
       console.log('[Characters] 获取角色列表:', data);
     } catch (err) {
       console.error('[Characters] 获取失败:', err);
-      setError(err instanceof Error ? err.message : '获取角色列表失败');
+      setError(err instanceof Error ? err.message : t('characters.errorFetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -151,9 +153,9 @@ export default function CharactersPage() {
         {/* 页面标题区域 */}
         <section className="py-12 px-6 bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-light text-gray-800 mb-2">热门角色</h1>
+            <h1 className="text-3xl font-light text-gray-800 mb-2">{t('characters.title')}</h1>
             <p className="text-base font-light text-gray-600">
-              与经典书籍中的角色对话，获得独特的知识体验
+              {t('characters.subtitle')}
             </p>
           </div>
         </section>
@@ -171,7 +173,7 @@ export default function CharactersPage() {
             {/* 加载状态 */}
             {loading && (
               <div className="text-center py-20">
-                <div className="text-gray-400 font-light">加载中...</div>
+                <div className="text-gray-400 font-light">{t('common.loading')}</div>
               </div>
             )}
 
@@ -179,7 +181,7 @@ export default function CharactersPage() {
             {!loading && characters.length > 0 && (
               <>
                 <div className="mb-6 text-sm font-light text-gray-500">
-                  共 {total} 个角色 · 第 {page} 页 / 共 {Math.ceil(total / pageSize)} 页
+                  {t('characters.totalCount', { total, page, totalPages: Math.ceil(total / pageSize) })}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -202,7 +204,7 @@ export default function CharactersPage() {
                           {char.name}
                         </h3>
                         <p className="font-light text-xs text-gray-500 mb-3">
-                          来自《{char.book_title}》
+                          {t('characters.fromBook', { title: char.book_title })}
                         </p>
                         <p className="font-light text-xs text-gray-400 line-clamp-3 text-left">
                           {char.description}
@@ -213,7 +215,7 @@ export default function CharactersPage() {
                       {char.conversation_count > 0 && (
                         <div className="text-center mb-4">
                           <span className="text-xs font-light text-gray-400">
-                            {char.conversation_count} 次对话
+                            {t('characters.conversationCount', { count: char.conversation_count })}
                           </span>
                         </div>
                       )}
@@ -232,7 +234,7 @@ export default function CharactersPage() {
                                        font-light text-sm hover:bg-[#234426] transition-colors
                                        disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {continuingCharacterId === char.id ? '跳转中...' : '继续上次对话'}
+                              {continuingCharacterId === char.id ? t('characters.redirecting') : t('characters.continueChat')}
                             </button>
                             <button
                               onClick={() => handleStartConversation(char.id, char.book_id)}
@@ -241,7 +243,7 @@ export default function CharactersPage() {
                                        font-light text-sm hover:bg-[#FAF9F7] transition-colors
                                        disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {creatingConversation === char.id ? '创建中...' : '开新话题'}
+                              {creatingConversation === char.id ? t('characters.creatingChat') : t('characters.newTopic')}
                             </button>
                           </div>
                         ) : (
@@ -252,7 +254,7 @@ export default function CharactersPage() {
                                      font-light text-sm hover:bg-[#234426] transition-colors
                                      disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {creatingConversation === char.id ? '创建中...' : '开始对话'}
+                            {creatingConversation === char.id ? t('characters.creatingChat') : t('characters.startChat')}
                           </button>
                         );
                       })()}
@@ -271,7 +273,7 @@ export default function CharactersPage() {
                                disabled:opacity-30 disabled:cursor-not-allowed
                                bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                     >
-                      上一页
+                      {t('characters.prevPage')}
                     </button>
 
                     {/* 页码 */}
@@ -311,7 +313,7 @@ export default function CharactersPage() {
                                disabled:opacity-30 disabled:cursor-not-allowed
                                bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                     >
-                      下一页
+                      {t('characters.nextPage')}
                     </button>
                   </div>
                 )}
@@ -322,7 +324,7 @@ export default function CharactersPage() {
             {!loading && characters.length === 0 && (
               <div className="text-center py-20">
                 <div className="text-gray-400 font-light mb-4">
-                  暂无角色
+                  {t('characters.empty')}
                 </div>
               </div>
             )}

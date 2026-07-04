@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FavoriteButton from '@/components/book/FavoriteButton';
@@ -33,6 +34,7 @@ interface BooksResponse {
 
 export default function BooksPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [books, setBooks] = useState<Book[]>([]);
   const [total, setTotal] = useState(0);
@@ -74,7 +76,7 @@ export default function BooksPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || '获取书籍列表失败');
+        throw new Error(data.error || t('books.errorFetchFailed'));
       }
 
       const data: BooksResponse = await response.json();
@@ -84,7 +86,7 @@ export default function BooksPage() {
       console.log('[Books] 获取书籍列表:', data);
     } catch (err) {
       console.error('[Books] 获取失败:', err);
-      setError(err instanceof Error ? err.message : '获取书籍列表失败');
+      setError(err instanceof Error ? err.message : t('books.errorFetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -159,8 +161,8 @@ export default function BooksPage() {
         {/* 页面标题区域 */}
         <section className="py-12 px-6 bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-light text-gray-800 mb-2">浏览书籍</h1>
-            <p className="text-base font-light text-gray-600">探索精选的经典书籍，与AI开启智能对话</p>
+            <h1 className="text-3xl font-light text-gray-800 mb-2">{t('books.title')}</h1>
+            <p className="text-base font-light text-gray-600">{t('books.subtitle')}</p>
           </div>
         </section>
 
@@ -168,7 +170,7 @@ export default function BooksPage() {
         <section className="py-8 px-6 bg-[#FAF9F7]">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-sm font-light text-gray-600">分类：</span>
+              <span className="text-sm font-light text-gray-600">{t('books.categoryLabel')}</span>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleCategoryChange('')}
@@ -178,7 +180,7 @@ export default function BooksPage() {
                       : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                   }`}
                 >
-                  全部
+                  {t('books.categoryAll')}
                 </button>
                 {categories.map((category) => (
                   <button
@@ -211,7 +213,7 @@ export default function BooksPage() {
             {/* 加载状态 */}
             {loading && (
               <div className="text-center py-20">
-                <div className="text-gray-400 font-light">加载中...</div>
+                <div className="text-gray-400 font-light">{t('common.loading')}</div>
               </div>
             )}
 
@@ -219,7 +221,7 @@ export default function BooksPage() {
             {!loading && books.length > 0 && (
               <>
                 <div className="mb-6 text-sm font-light text-gray-500">
-                  共 {total} 本书籍 · 第 {page} 页 / 共 {Math.ceil(total / pageSize)} 页
+                  {t('books.totalCount', { total, page, totalPages: Math.ceil(total / pageSize) })}
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -241,7 +243,7 @@ export default function BooksPage() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center
                                         bg-gradient-to-br from-[#2C5530] to-[#234426]">
-                            <span className="text-white text-2xl font-light opacity-20">书</span>
+                            <span className="text-white text-2xl font-light opacity-20">{t('books.placeholderCover')}</span>
                           </div>
                         )}
                       </div>
@@ -288,7 +290,7 @@ export default function BooksPage() {
                                    translate-y-2 group-hover:translate-y-0
                                    disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {creatingConversation === book.id ? '创建中...' : '开始对话'}
+                          {creatingConversation === book.id ? t('books.creatingChat') : t('books.startChat')}
                         </button>
                       </div>
                     </div>
@@ -306,7 +308,7 @@ export default function BooksPage() {
                                disabled:opacity-30 disabled:cursor-not-allowed
                                bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                     >
-                      上一页
+                      {t('books.prevPage')}
                     </button>
 
                     {/* 页码 */}
@@ -346,7 +348,7 @@ export default function BooksPage() {
                                disabled:opacity-30 disabled:cursor-not-allowed
                                bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                     >
-                      下一页
+                      {t('books.nextPage')}
                     </button>
                   </div>
                 )}
@@ -358,8 +360,8 @@ export default function BooksPage() {
               <div className="text-center py-20">
                 <div className="text-gray-400 font-light mb-4">
                   {selectedCategory || selectedTags.length > 0
-                    ? '没有找到符合条件的书籍'
-                    : '暂无书籍'}
+                    ? t('books.emptyFiltered')
+                    : t('books.empty')}
                 </div>
                 {(selectedCategory || selectedTags.length > 0) && (
                   <button
@@ -369,7 +371,7 @@ export default function BooksPage() {
                     }}
                     className="text-[#2C5530] hover:opacity-70 transition-opacity font-light text-sm"
                   >
-                    清除筛选条件
+                    {t('books.clearFilters')}
                   </button>
                 )}
               </div>

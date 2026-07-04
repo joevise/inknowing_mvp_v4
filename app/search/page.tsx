@@ -8,6 +8,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FavoriteButton from '@/components/book/FavoriteButton';
@@ -41,6 +42,7 @@ interface SearchResponse {
 function SearchPageContent() {
   const router = useRouter();
   const params = useSearchParams();
+  const t = useTranslations();
   const q = params.get('q') || '';
 
   const [input, setInput] = useState(q);
@@ -55,11 +57,11 @@ function SearchPageContent() {
     setError('');
     fetch(`/api/search?q=${encodeURIComponent(q)}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error(`搜索失败 (${r.status})`);
+        if (!r.ok) throw new Error(`${t('search.errorFailed')} (${r.status})`);
         return r.json();
       })
       .then((d: SearchResponse) => setData(d))
-      .catch((e: any) => setError(e.message || '搜索失败'))
+      .catch((e: any) => setError(e.message || t('search.errorFailed')))
       .finally(() => setLoading(false));
   }, [q]);
 
@@ -96,7 +98,7 @@ function SearchPageContent() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="搜索书名、作者或主题…"
+              placeholder={t('search.placeholder')}
               className="w-full px-6 py-4 pr-32 bg-white border border-gray-200 rounded-lg
                          font-light text-base focus:outline-none focus:border-[#2C5530]
                          transition-colors"
@@ -109,12 +111,12 @@ function SearchPageContent() {
                          hover:bg-[#234426] disabled:opacity-40 disabled:cursor-not-allowed
                          transition-colors"
             >
-              搜索
+              {t('search.searchButton')}
             </button>
           </div>
           {q && (
             <p className="mt-4 text-center text-sm font-light text-gray-500">
-              当前搜索：<span className="text-gray-700">{q}</span>
+              {t('search.currentSearch')}<span className="text-gray-700">{q}</span>
             </p>
           )}
         </form>
@@ -122,7 +124,7 @@ function SearchPageContent() {
         {/* 状态 */}
         {loading && (
           <div className="text-center py-20 font-light text-gray-500">
-            搜索中…
+            {t('search.loading')}
           </div>
         )}
         {error && (
@@ -136,22 +138,22 @@ function SearchPageContent() {
           <div className="max-w-2xl mx-auto bg-white rounded-lg p-10 text-center
                           border border-gray-200">
             <p className="text-lg font-light text-gray-700 mb-3">
-              没有找到 "{q}" 相关的书或角色
+              {t('search.noResultsTitle', { query: q })}
             </p>
             <p className="text-sm font-light text-gray-500 mb-8 leading-relaxed">
-              别担心 — 你可以直接申请添加这本书。<br />
-              如果 AI 认识它，会立刻为你创建并加入书库；如果还不认识，会进入许愿池等待上架。
+              {t('search.noResultsDescPart1')}<br />
+              {t('search.noResultsDescPart2')}
             </p>
             <Link
               href={`/request-book?title=${encodeURIComponent(q)}`}
               className="inline-block px-8 py-3 bg-[#2C5530] text-white text-sm
                          font-light rounded-md hover:bg-[#234426] transition-colors"
             >
-              📝 申请添加这本书
+              {t('search.requestBookButton')}
             </Link>
             {data?.suggestions && data.suggestions.length > 0 && (
               <div className="mt-10 pt-8 border-t border-gray-100">
-                <p className="text-xs font-light text-gray-400 mb-3">或试试其他关键词</p>
+                <p className="text-xs font-light text-gray-400 mb-3">{t('search.suggestionsLabel')}</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {data.suggestions.map((s, i) => (
                     <button
@@ -176,7 +178,7 @@ function SearchPageContent() {
         {!loading && data && data.books.length > 0 && (
           <section className="mb-12">
             <h2 className="text-lg font-light text-gray-800 mb-6">
-              相关书籍（{data.books.length}）
+              {t('search.booksSectionTitle', { count: data.books.length })}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {data.books.map((book) => (
@@ -197,7 +199,7 @@ function SearchPageContent() {
                   ) : (
                     <div className="aspect-[3/4] bg-gradient-to-br from-[#2C5530] to-[#234426]
                                   flex items-center justify-center">
-                      <span className="text-white text-2xl font-light opacity-20">书</span>
+                      <span className="text-white text-2xl font-light opacity-20">{t('search.placeholderCover')}</span>
                     </div>
                   )}
                   <div className="p-3">
@@ -235,7 +237,7 @@ function SearchPageContent() {
         {!loading && data && data.characters.length > 0 && (
           <section className="mb-12">
             <h2 className="text-lg font-light text-gray-800 mb-6">
-              相关角色（{data.characters.length}）
+              {t('search.charactersSectionTitle', { count: data.characters.length })}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {data.characters.map((char) => (
@@ -250,7 +252,7 @@ function SearchPageContent() {
                   </h3>
                   {char.book_title && (
                     <p className="font-light text-xs text-gray-500 mb-3">
-                      来自《{char.book_title}》
+                      {t('search.fromBook', { title: char.book_title })}
                     </p>
                   )}
                   {char.description && (
@@ -268,12 +270,12 @@ function SearchPageContent() {
         {!loading && data && !hasNoResults && (
           <div className="text-center mt-12 pt-8 border-t border-gray-100">
             <p className="text-sm font-light text-gray-500">
-              没找到你想要的？{' '}
+              {t('search.fallbackRequest')}{' '}
               <Link
                 href={`/request-book?title=${encodeURIComponent(q)}`}
                 className="text-[#2C5530] hover:underline"
               >
-                📝 申请添加这本书
+                {t('search.requestBookButton')}
               </Link>
             </p>
           </div>
@@ -286,11 +288,12 @@ function SearchPageContent() {
 }
 
 export default function SearchPage() {
+  const t = useTranslations();
   return (
     <Suspense
       fallback={
         <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center font-light text-gray-500">
-          加载中…
+          {t('common.loading')}
         </div>
       }
     >

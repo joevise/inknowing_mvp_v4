@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import FavoriteButton from '@/components/book/FavoriteButton';
 
@@ -42,6 +43,7 @@ interface BookDetail {
 export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const t = useTranslations();
   const bookId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function BookDetailPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || '获取书籍详情失败');
+        throw new Error(data.error || t('bookDetail.errorFetchFailed'));
       }
 
       const data: BookDetail = await response.json();
@@ -72,7 +74,7 @@ export default function BookDetailPage() {
       console.log('[BookDetail] 获取书籍详情:', data);
     } catch (err) {
       console.error('[BookDetail] 获取失败:', err);
-      setError(err instanceof Error ? err.message : '获取书籍详情失败');
+      setError(err instanceof Error ? err.message : t('bookDetail.errorFetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export default function BookDetailPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              返回书籍列表
+              {t('bookDetail.backToList')}
             </Link>
           </div>
 
@@ -116,7 +118,7 @@ export default function BookDetailPage() {
           {/* 加载状态 */}
           {loading && (
             <div className="text-center py-20">
-              <div className="text-gray-500 font-light">加载中...</div>
+              <div className="text-gray-500 font-light">{t('common.loading')}</div>
             </div>
           )}
 
@@ -137,7 +139,7 @@ export default function BookDetailPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#2C5530] to-[#234426]">
-                          <span className="text-white text-8xl font-light opacity-20">书</span>
+                          <span className="text-white text-8xl font-light opacity-20">{t('bookDetail.placeholderCover')}</span>
                         </div>
                       )}
                     </div>
@@ -167,7 +169,7 @@ export default function BookDetailPage() {
 
                     {/* 简介 */}
                     <div className="mb-8">
-                      <h3 className="text-base font-normal text-gray-800 mb-3">关于本书</h3>
+                      <h3 className="text-base font-normal text-gray-800 mb-3">{t('bookDetail.aboutThisBook')}</h3>
                       <p className="text-gray-600 font-light leading-relaxed">{book.description}</p>
                     </div>
 
@@ -177,7 +179,7 @@ export default function BookDetailPage() {
                         onClick={() => handleStartConversation()}
                         className="px-8 py-3 bg-[#2C5530] text-white font-light rounded hover:bg-[#234426] transition-colors"
                       >
-                        开始智能对话
+                        {t('bookDetail.startSmartChat')}
                       </button>
                       <FavoriteButton
                         bookId={bookId}
@@ -185,7 +187,7 @@ export default function BookDetailPage() {
                         size="md"
                       />
                       <div className="text-sm font-light text-gray-500">
-                        {book.character_count} 个可对话角色
+                        {t('bookDetail.characterCount', { count: book.character_count })}
                       </div>
                     </div>
                   </div>
@@ -195,7 +197,7 @@ export default function BookDetailPage() {
               {/* 角色列表 */}
               {book.characters.length > 0 && (
                 <div>
-                  <h2 className="text-2xl font-light text-gray-800 mb-6">可对话角色</h2>
+                  <h2 className="text-2xl font-light text-gray-800 mb-6">{t('bookDetail.charactersTitle')}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {book.characters.map((character) => (
                       <div
@@ -211,7 +213,7 @@ export default function BookDetailPage() {
                             <h3 className="font-normal text-gray-800 mb-2">{character.name}</h3>
                             <p className="text-sm font-light text-gray-600 line-clamp-3">{character.description}</p>
                             <div className="mt-3 text-sm font-light text-[#2C5530] opacity-0 group-hover:opacity-100 transition-opacity">
-                              点击开始对话 →
+                              {t('bookDetail.clickToChat')}
                             </div>
                           </div>
                         </div>
@@ -224,7 +226,7 @@ export default function BookDetailPage() {
               {/* 推荐书籍 */}
               {book.recommendations.length > 0 && (
                 <div>
-                  <h2 className="text-2xl font-light text-gray-800 mb-6">相关推荐</h2>
+                  <h2 className="text-2xl font-light text-gray-800 mb-6">{t('bookDetail.relatedTitle')}</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {book.recommendations.map((rec) => (
                       <div
@@ -241,7 +243,7 @@ export default function BookDetailPage() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#2C5530] to-[#234426]">
-                              <span className="text-white text-4xl font-light opacity-20">书</span>
+                              <span className="text-white text-4xl font-light opacity-20">{t('bookDetail.placeholderCover')}</span>
                             </div>
                           )}
                         </div>

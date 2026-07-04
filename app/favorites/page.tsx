@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FavoriteButton from '@/components/book/FavoriteButton';
@@ -26,6 +27,7 @@ interface FavoriteBook {
 
 export default function FavoritesPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<FavoriteBook[]>([]);
   const [error, setError] = useState('');
@@ -55,7 +57,7 @@ export default function FavoritesPage() {
       });
 
       if (!favoritesResponse.ok) {
-        throw new Error('获取收藏列表失败');
+        throw new Error(t('favorites.errorFetchFailed'));
       }
 
       const data = await favoritesResponse.json();
@@ -64,7 +66,7 @@ export default function FavoritesPage() {
       console.log('[Favorites] 获取收藏列表:', data.favorites);
     } catch (err) {
       console.error('[Favorites] 获取失败:', err);
-      setError(err instanceof Error ? err.message : '获取收藏列表失败');
+      setError(err instanceof Error ? err.message : t('favorites.errorFetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -83,9 +85,9 @@ export default function FavoritesPage() {
         {/* 页面标题区域 */}
         <section className="py-12 px-6 bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-light text-gray-800 mb-2">我的收藏</h1>
+            <h1 className="text-3xl font-light text-gray-800 mb-2">{t('favorites.title')}</h1>
             <p className="text-base font-light text-gray-600">
-              您收藏的所有书籍
+              {t('favorites.subtitle')}
             </p>
           </div>
         </section>
@@ -103,7 +105,7 @@ export default function FavoritesPage() {
             {/* 加载状态 */}
             {loading && (
               <div className="text-center py-20">
-                <div className="text-gray-400 font-light">加载中...</div>
+                <div className="text-gray-400 font-light">{t('common.loading')}</div>
               </div>
             )}
 
@@ -129,7 +131,7 @@ export default function FavoritesPage() {
                     ) : (
                       <div className="aspect-[3/4] bg-gradient-to-br from-[#2C5530] to-[#234426]
                                     flex items-center justify-center">
-                        <span className="text-white text-2xl font-light opacity-20">书</span>
+                        <span className="text-white text-2xl font-light opacity-20">{t('favorites.placeholderCover')}</span>
                       </div>
                     )}
 
@@ -165,14 +167,14 @@ export default function FavoritesPage() {
             {!loading && favorites.length === 0 && (
               <div className="text-center py-20">
                 <div className="text-gray-400 font-light mb-4">
-                  暂无收藏的书籍
+                  {t('favorites.empty')}
                 </div>
                 <button
                   onClick={() => router.push('/books')}
                   className="px-6 py-2 bg-[#2C5530] text-white rounded-lg
                            font-light text-sm hover:bg-[#234426] transition-colors"
                 >
-                  去浏览书籍
+                  {t('favorites.browseBooks')}
                 </button>
               </div>
             )}
