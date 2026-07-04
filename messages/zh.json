@@ -372,5 +372,12 @@
     "streamReadFailed": "无法读取响应流",
     "errorLoadConv": "获取对话信息失败",
     "errorLoadMessages": "获取消息列表失败"
+  },
+  "bookLangNotice": {
+    "zhNativeStrong": "这是一本中文原生作品，角色的神韵深植于中文语境。切换到英文后，对话体验会明显打折，建议使用中文以获得最佳效果。",
+    "multilingualLight": "本书适合多语言阅读，你可以自由切换语言，体验不受影响。",
+    "confirmTitle": "确定切换到英文？",
+    "confirmBody": "这是中文原著角色，英文会明显影响对话的体验和神韵。仍要切换到英文吗？",
+    "dismiss": "知道了"
   }
 }

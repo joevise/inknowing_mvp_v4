@@ -7,9 +7,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import FavoriteButton from '@/components/book/FavoriteButton';
+import { useBookLanguage } from '@/components/i18n/BookLanguageContext';
 
 interface Character {
   id: string;
@@ -38,23 +39,34 @@ interface BookDetail {
   character_count: number;
   characters: Character[];
   recommendations: Recommendation[];
+  language_mode?: 'zh_native' | 'multilingual' | 'en_native';
 }
 
 export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
   const t = useTranslations();
+  const locale = useLocale();
+  const { setLanguageMode } = useBookLanguage();
   const bookId = params.id as string;
 
   const [loading, setLoading] = useState(true);
   const [book, setBook] = useState<BookDetail | null>(null);
   const [error, setError] = useState('');
+  const [langBannerDismissed, setLangBannerDismissed] = useState(false);
 
   useEffect(() => {
     if (bookId) {
       fetchBookDetail();
     }
   }, [bookId]);
+
+  useEffect(() => {
+    if (book) {
+      setLanguageMode(book.language_mode ?? 'zh_native');
+    }
+    return () => setLanguageMode(null);
+  }, [book, setLanguageMode]);
 
   const fetchBookDetail = async () => {
     setLoading(true);
@@ -107,6 +119,48 @@ export default function BookDetailPage() {
               {t('bookDetail.backToList')}
             </Link>
           </div>
+
+          {/* 语言原生度提醒 banner（仅英文界面 + zh_native / multilingual） */}
+          {!loading && book && !langBannerDismissed && locale === 'en' && (book.language_mode === 'zh_native' || book.language_mode === 'multilingual' || book.language_mode === undefined) && (
+            <div
+              role="note"
+              className={`mb-6 px-4 py-3 rounded-lg flex items-start gap-3 font-light ${
+                book.language_mode === 'multilingual'
+                  ? 'bg-[#f0fdf5] border border-[#bbf7d1] text-[#14532b]'
+                  : 'bg-amber-50 border border-amber-200 text-amber-900'
+              }`}
+            >
+              <svg
+                className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                  book.language_mode === 'multilingual' ? 'text-[#2C5530]' : 'text-amber-600'
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div className="flex-1 text-sm leading-relaxed">
+                {book.language_mode === 'multilingual'
+                  ? t('bookLangNotice.multilingualLight')
+                  : t('bookLangNotice.zhNativeStrong')}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLangBannerDismissed(true)}
+                className={`text-xs font-light underline-offset-2 hover:underline whitespace-nowrap ${
+                  book.language_mode === 'multilingual' ? 'text-[#2C5530]' : 'text-amber-700'
+                }`}
+              >
+                {t('bookLangNotice.dismiss')}
+              </button>
+            </div>
+          )}
 
           {/* 错误提示 */}
           {error && (

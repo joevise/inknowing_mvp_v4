@@ -79,6 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       character_count: formattedCharacters.length,
       characters: formattedCharacters,
       recommendations: formattedRecommendations,
+      language_mode: book.language_mode || 'zh_native',
     });
   } catch (error) {
     console.error('[Public] Get book detail error:', error);

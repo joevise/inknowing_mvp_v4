@@ -372,5 +372,12 @@
     "streamReadFailed": "Unable to read response stream",
     "errorLoadConv": "Failed to load conversation",
     "errorLoadMessages": "Failed to load messages"
+  },
+  "bookLangNotice": {
+    "zhNativeStrong": "This is a Chinese-native work — the character's spirit is deeply rooted in its original language. Switching to English will noticeably diminish the experience; we recommend Chinese for the best results.",
+    "multilingualLight": "This title reads well in multiple languages. Feel free to switch — your experience won't be affected.",
+    "confirmTitle": "Switch to English?",
+    "confirmBody": "This character comes from a Chinese original. English will noticeably affect the feel and nuance of the conversation. Switch anyway?",
+    "dismiss": "Got it"
   }
 }
