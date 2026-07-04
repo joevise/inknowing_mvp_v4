@@ -91,7 +91,7 @@ ALTER TABLE characters ADD COLUMN background_story_en TEXT;
 - 路由策略：`/zh/...` `/en/...`（或 cookie-only，二选一，方案里默认走 cookie + 可选前缀，Phase 3 细定）
 - **产出可上线**：国内中文、海外英文自动生效
 
-### Phase 4 — 语言原生度提醒
+### Phase 4 — 语言原生度提醒  ✅ 已完成 (2026-07-04, commit 5a0c74e)
 - 前端读 `language_mode`：
   - `zh_native` + 用户切英文 → **弹确认框**（"中文原著角色，英文会明显影响体验和神韵，确定？"）+ 进书页顶部 **banner**
   - `multilingual` → 仅轻 banner，不弹框
