@@ -9,6 +9,7 @@ import {
   getBookCharacters,
   getRecommendedBooks
 } from '@/lib/services/book-service';
+import { localizeBook, localizeCharacter } from '@/lib/db/i18n-helpers';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,6 +22,9 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
+
+    // 读取界面语言（i18n middleware 设置的 cookie）
+    const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
 
     // 获取书籍信息
     const book = await getBookById(id);
@@ -46,36 +50,45 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // 获取推荐书籍（基于分类）
     const recommendations = await getRecommendedBooks(id, 5);
 
-    // 格式化角色数据（只返回必要信息）
-    const formattedCharacters = characters.map(char => ({
-      id: char.id,
-      name: char.name,
-      description: char.description,
-      // 不返回 prompt_template 等敏感信息
-    }));
+    // 顶层书籍按 lang 切换 title/description
+    const localizedBook = localizeBook(book, lang);
 
-    // 格式化推荐书籍
-    const formattedRecommendations = recommendations.map(rec => ({
-      id: rec.id,
-      title: rec.title,
-      author: rec.author,
-      cover_url: rec.cover_url,
-      category: rec.category,
-    }));
+    // 格式化角色数据（只返回必要信息），按 lang 切换 name/description
+    const formattedCharacters = characters.map(char => {
+      const localizedChar = localizeCharacter(char, lang);
+      return {
+        id: localizedChar.id,
+        name: localizedChar.name,
+        description: localizedChar.description,
+        // 不返回 prompt_template 等敏感信息
+      };
+    });
+
+    // 格式化推荐书籍，按 lang 切换 title
+    const formattedRecommendations = recommendations.map(rec => {
+      const localizedRec = localizeBook(rec, lang);
+      return {
+        id: rec.id,
+        title: localizedRec.title,
+        author: rec.author,
+        cover_url: rec.cover_url,
+        category: rec.category,
+      };
+    });
 
     // 返回书籍详情
     return NextResponse.json({
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      description: book.description,
-      cover_url: book.cover_url,
-      category: book.category,
-      tags: book.tags,
+      id: localizedBook.id,
+      title: localizedBook.title,
+      author: localizedBook.author,
+      description: localizedBook.description,
+      cover_url: localizedBook.cover_url,
+      category: localizedBook.category,
+      tags: localizedBook.tags,
       publisher: undefined, // 如果有的话
       publish_date: undefined, // 如果有的话
-      conversation_strategy: book.conversation_strategy,
-      has_document: book.requires_document,
+      conversation_strategy: localizedBook.conversation_strategy,
+      has_document: localizedBook.requires_document,
       character_count: formattedCharacters.length,
       characters: formattedCharacters,
       recommendations: formattedRecommendations,

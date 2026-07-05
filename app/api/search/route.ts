@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchBooks } from '@/lib/services/book-service';
 import { db } from '@/lib/db';
+import { localizeBook, localizeCharacter } from '@/lib/db/i18n-helpers';
 import OpenAI from 'openai';
 
 // 通义千问客户端
@@ -108,6 +109,9 @@ export async function GET(request: NextRequest) {
 
     const trimmedQuery = query.trim();
 
+    // 读取界面语言（i18n middleware 设置的 cookie）
+    const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+
     // 使用AI分析搜索意图（可选，根据需要启用）
     let intent = { type: 'general', keywords: [trimmedQuery], suggestions: [] as string[] };
 
@@ -122,26 +126,33 @@ export async function GET(request: NextRequest) {
     // 搜索角色
     const characters = await searchCharacters(trimmedQuery);
 
-    // 格式化书籍结果
-    const formattedBooks = books.map(book => ({
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      description: book.description?.substring(0, 100) + '...',
-      cover_url: book.cover_url,
-      category: book.category,
-      tags: book.tags,
-      type: 'book',
-    }));
+    // 格式化书籍结果，按 lang 切换 title/description
+    const formattedBooks = books.map(book => {
+      const localized = localizeBook(book, lang);
+      return {
+        id: localized.id,
+        title: localized.title,
+        author: localized.author,
+        description: localized.description?.substring(0, 100) + '...',
+        cover_url: localized.cover_url,
+        category: localized.category,
+        tags: localized.tags,
+        type: 'book',
+      };
+    });
 
-    // 格式化角色结果
-    const formattedCharacters = characters.map(char => ({
-      id: char.id,
-      name: char.name,
-      book_title: char.book_title,
-      description: char.description?.substring(0, 100) + '...',
-      type: 'character',
-    }));
+    // 格式化角色结果，按 lang 切换 name/description；book_title 保持原值
+    // （JOIN 出来的行未包含 b.title_en，为安全不强行本地化）
+    const formattedCharacters = characters.map(char => {
+      const localizedChar = localizeCharacter(char as any, lang);
+      return {
+        id: char.id,
+        name: localizedChar.name,
+        book_title: char.book_title,
+        description: localizedChar.description?.substring(0, 100) + '...',
+        type: 'character',
+      };
+    });
 
     // 生成搜索建议
     const suggestions = intent.suggestions.length > 0
