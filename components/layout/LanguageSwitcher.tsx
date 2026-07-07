@@ -1,8 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useBookLanguage } from '@/components/i18n/BookLanguageContext';
 
 const LOCALE_OPTIONS = [
@@ -15,11 +14,10 @@ type LocaleValue = 'zh' | 'en';
 export default function LanguageSwitcher() {
   const currentLocale = useLocale();
   const t = useTranslations();
-  const router = useRouter();
   const { languageMode } = useBookLanguage();
   const [open, setOpen] = useState(false);
   const [pendingLocale, setPendingLocale] = useState<LocaleValue | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const isPending = false;
 
   useEffect(() => {
     if (pendingLocale && currentLocale === pendingLocale) {
@@ -34,9 +32,8 @@ export default function LanguageSwitcher() {
       body: JSON.stringify({ locale }),
     });
     if (res.ok) {
-      startTransition(() => {
-        router.refresh();
-      });
+      // Full reload so both server- and client-side data re-fetch in the new locale
+      window.location.reload();
     }
   };
 
