@@ -14,6 +14,8 @@ interface BookInfo {
   title: string;
   author: string;
   description: string;
+  title_en?: string;
+  description_en?: string;
   publisher?: string;
   publishDate?: string;
   category: string;
@@ -184,9 +186,15 @@ export default function NewBookPage() {
 
             <div className="space-y-4 mb-6">
               <InfoRow label="书名" value={identifyResult.bookInfo.title} />
+              {identifyResult.bookInfo.title_en && (
+                <InfoRow label="英文书名" value={identifyResult.bookInfo.title_en} />
+              )}
               <InfoRow label="作者" value={identifyResult.bookInfo.author} />
               <InfoRow label="分类" value={identifyResult.bookInfo.category} />
               <InfoRow label="简介" value={identifyResult.bookInfo.description} />
+              {identifyResult.bookInfo.description_en && (
+                <InfoRow label="英文简介" value={identifyResult.bookInfo.description_en} />
+              )}
               {identifyResult.bookInfo.publisher && (
                 <InfoRow label="出版社" value={identifyResult.bookInfo.publisher} />
               )}

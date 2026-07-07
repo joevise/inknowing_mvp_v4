@@ -101,6 +101,9 @@ export async function POST(request: NextRequest) {
       tags: body.tags,
       aiScore: body.ai_score,
       conversationStrategy: body.conversation_strategy,
+      titleEn: body.title_en,
+      descriptionEn: body.description_en,
+      languageMode: body.language_mode,
     });
 
     return NextResponse.json(book, { status: 201 });

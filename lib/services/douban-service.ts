@@ -3,7 +3,7 @@
  * 提供豆瓣图书封面抓取功能
  */
 
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { generateId } from '@/lib/db/client';
 
@@ -32,6 +32,14 @@ export async function fetchDoubanCover(bookTitle: string): Promise<DoubanCoverRe
 
     console.log('[Douban Service] Searching:', bookTitle);
 
+    // 图片下载专用 headers：豆瓣 CDN (doubanio.com) 防盗链需要来源为 book.douban.com
+    const imageHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      'Referer': 'https://book.douban.com/'
+    };
+
     const response = await fetch(searchUrl, {
       headers,
       signal: AbortSignal.timeout(15000)
@@ -56,17 +64,32 @@ export async function fetchDoubanCover(bookTitle: string): Promise<DoubanCoverRe
 
       // 下载图片到本地
       try {
-        const imageResponse = await fetch(coverUrl, { headers });
+        const imageResponse = await fetch(coverUrl, {
+          headers: imageHeaders,
+          signal: AbortSignal.timeout(15000)
+        });
 
-        if (imageResponse.ok) {
-          const arrayBuffer = await imageResponse.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+        // 验证：必须是 ok + image/* + 大于 1024 字节
+        // 否则视为防盗链返回的 13 字节 / 418 反爬文本，丢弃
+        const contentType = imageResponse.headers.get('content-type') || '';
+        const arrayBuffer = imageResponse.ok
+          ? await imageResponse.arrayBuffer()
+          : null;
+        const buffer = arrayBuffer ? Buffer.from(arrayBuffer) : null;
+        const sizeOk = !!buffer && buffer.length > 1024;
+        const isImage = imageResponse.ok
+          && contentType.toLowerCase().startsWith('image/')
+          && sizeOk;
 
+        if (isImage && buffer) {
           // 生成唯一文件名
           const fileId = generateId();
           const ext = coverUrl.match(/\.(jpg|jpeg|png|webp)$/i)?.[1] || 'jpg';
           const fileName = `${fileId}.${ext}`;
           const filePath = join(process.cwd(), 'public', 'covers', fileName);
+
+          // 确保目录存在
+          mkdirSync(join(process.cwd(), 'public', 'covers'), { recursive: true });
 
           // 保存到本地
           writeFileSync(filePath, buffer);
@@ -80,19 +103,23 @@ export async function fetchDoubanCover(bookTitle: string): Promise<DoubanCoverRe
             localPath,
           };
         } else {
-          console.warn('[Douban Service] Failed to download image:', imageResponse.status);
-          // 下载失败，仍返回原始URL
+          // 下载失败/校验失败：不持久化外部 doubanio URL，避免在站点上展示为破图
+          console.warn('[Douban Service] Failed to download/validate image:', {
+            ok: imageResponse.ok,
+            status: imageResponse.status,
+            contentType,
+            size: buffer?.length ?? 0
+          });
           return {
-            success: true,
-            coverUrl,
+            success: false,
+            error: '封面下载失败(可能被防盗链拦截)',
           };
         }
       } catch (downloadError) {
         console.error('[Douban Service] Download error:', downloadError);
-        // 下载失败，仍返回原始URL
         return {
-          success: true,
-          coverUrl,
+          success: false,
+          error: '封面下载失败(可能被防盗链拦截)',
         };
       }
     } else {

@@ -22,6 +22,8 @@ export async function recognizeBook(bookTitle: string): Promise<{
     title: string;
     author: string;
     description: string;
+    title_en: string;
+    description_en: string;
     publisher?: string;
     publishDate?: string;
     category: string;
@@ -36,11 +38,22 @@ export async function recognizeBook(bookTitle: string): Promise<{
 
     const prompt = `
 请根据书名"${bookTitle}"，提供以下信息（以JSON格式返回）：
-1. 完整的书籍信息：title（准确书名）、author（作者）、description（200字内简介）、publisher（出版社）、publishDate（出版年份）
+1. 完整的书籍信息：
+   - title（准确的中文书名）
+   - title_en（官方/最常见的英文书名；若该书原本为英文，请保留其原始英文书名）
+   - description（200字内中文简介）
+   - description_en（200词内英文简介）
+   - author（作者）
+   - publisher（出版社）
+   - publishDate（出版年份）
 2. category（从以下选择一个：文学、商业、科学、心理、哲学、历史、艺术、技术、教育、生活）
 3. tags（5-8个相关标签，格式如：#必读 #经典）
 4. aiScore（1-10分，你对这本书的了解程度）
 5. coverOptions（3个封面图片描述，用于生成或搜索）
+
+注意：
+- 不论原书是中文还是英文，title/title_en、description/description_en 都必须同时给出。
+- 优先使用该书广为人知的官方译名（如 三国演义 -> Romance of the Three Kingdoms；Jane Eyre -> 简·爱；The Lord of the Rings -> 魔戒）。
 
 只返回JSON，不要其他内容。
 `;
@@ -79,11 +92,19 @@ export async function recognizeBook(bookTitle: string): Promise<{
     // 确定是否需要文档
     const knowledgeLevel = getAIKnowledgeLevel(bookData.aiScore || 5);
 
+    const title = bookData.title || bookTitle;
+    const description = bookData.description || '暂无简介';
+    // *_en 安全回填：缺失时回退到对应本地字段，避免空值
+    const titleEn = (bookData.title_en && String(bookData.title_en).trim()) || title;
+    const descriptionEn = (bookData.description_en && String(bookData.description_en).trim()) || description;
+
     return {
       bookInfo: {
-        title: bookData.title || bookTitle,
+        title,
         author: bookData.author || '未知',
-        description: bookData.description || '暂无简介',
+        description,
+        title_en: titleEn,
+        description_en: descriptionEn,
         publisher: bookData.publisher,
         publishDate: bookData.publishDate,
         category: bookData.category || '文学',
@@ -111,10 +132,18 @@ export async function createBook(data: {
   tags?: string[];
   aiScore?: number;
   conversationStrategy?: ConversationStrategy;
+  titleEn?: string;
+  descriptionEn?: string;
+  languageMode?: 'zh_native' | 'multilingual' | 'en_native';
 }): Promise<Book> {
   const bookId = generateId();
   const aiScore = data.aiScore || 5;
   const knowledgeLevel = getAIKnowledgeLevel(aiScore);
+
+  // *_en 标准化为 null（缺失或仅空白时入 NULL，不写空串）
+  const titleEn = data.titleEn?.trim() ? data.titleEn.trim() : null;
+  const descriptionEn = data.descriptionEn?.trim() ? data.descriptionEn.trim() : null;
+  const languageMode = data.languageMode || 'zh_native';
 
   const book: Book = {
     id: bookId,
@@ -127,6 +156,9 @@ export async function createBook(data: {
     ai_knowledge_level: aiScore,
     requires_document: knowledgeLevel.requireDoc,
     conversation_strategy: data.conversationStrategy || 'hybrid',
+    language_mode: languageMode,
+    title_en: titleEn ?? undefined,
+    description_en: descriptionEn ?? undefined,
     status: 'draft',
     created_at: new Date(),
     updated_at: new Date(),
@@ -137,8 +169,9 @@ export async function createBook(data: {
   await database.prepare(`
     INSERT INTO books (
       id, title, author, description, cover_url, category, tags,
-      ai_knowledge_level, requires_document, conversation_strategy, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ai_knowledge_level, requires_document, conversation_strategy, status,
+      language_mode, title_en, description_en
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     book.id,
     book.title,
@@ -150,7 +183,10 @@ export async function createBook(data: {
     book.ai_knowledge_level,
     book.requires_document ? 1 : 0,
     book.conversation_strategy,
-    book.status
+    book.status,
+    languageMode,
+    titleEn,
+    descriptionEn
   );
 
   return book;
@@ -172,6 +208,8 @@ export async function recognizeAndCreateBook(
   // 再创建
   const book = await createBook({
     ...recognitionResult.bookInfo,
+    titleEn: recognitionResult.bookInfo.title_en,
+    descriptionEn: recognitionResult.bookInfo.description_en,
     coverUrl: additionalData?.coverUrl,
     aiScore: recognitionResult.aiScore,
     conversationStrategy: additionalData?.conversationStrategy || 'hybrid',
