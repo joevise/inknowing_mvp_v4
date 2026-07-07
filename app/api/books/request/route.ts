@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[BookRequest] 用户 ${user.id} 申请书籍: ${trimmedTitle}${trimmedAuthor ? ` - ${trimmedAuthor}` : ''}`);
 
-    const todayCount = getUserRequestCountToday(user.id);
+    const todayCount = await getUserRequestCountToday(user.id);
     if (todayCount >= DAILY_REQUEST_LIMIT) {
       console.log(`[BookRequest] 用户 ${user.id} 今日申请数已达上限 (${todayCount})`);
       return NextResponse.json(
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const duplicate = checkDuplicateRequest(user.id, trimmedTitle);
+    const duplicate = await checkDuplicateRequest(user.id, trimmedTitle);
     if (duplicate.hasBook) {
       console.log(`[BookRequest] 书籍已存在: ${duplicate.book_id}`);
       return NextResponse.json(
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bookRequest = createUserBookRequest({
+    const bookRequest = await createUserBookRequest({
       user_id: user.id,
       title: trimmedTitle,
       author: trimmedAuthor,
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     setTimeout(async () => {
       try {
         console.log(`[BookRequest] 异步处理申请 ${bookRequest.id}`);
-        updateUserBookRequest(bookRequest.id, { status: 'processing' });
+        await updateUserBookRequest(bookRequest.id, { status: 'processing' });
 
         // 先尝试拉豆瓣封面（失败不影响主流程）
         let coverUrl: string | undefined;
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
         if (!hasAuthor || !hasDescription) {
           console.log(`[BookRequest] AI识别信息不完整，进入wishlist: author=${!!hasAuthor}, description=${book.description?.length}`);
-          updateUserBookRequest(bookRequest.id, {
+          await updateUserBookRequest(bookRequest.id, {
             status: 'wishlist',
             book_id: book.id,
             ai_confidence: recognitionResult.aiScore / 10,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
           console.error(`[BookRequest] 发布书籍失败，仍标记为created:`, e);
         }
 
-        updateUserBookRequest(bookRequest.id, {
+        await updateUserBookRequest(bookRequest.id, {
           status: 'created',
           book_id: book.id,
           ai_confidence: recognitionResult.aiScore / 10,
@@ -123,14 +123,14 @@ export async function POST(request: NextRequest) {
         console.log(`[BookRequest] 申请处理成功，书籍已创建: ${book.id}`);
       } catch (error) {
         console.error(`[BookRequest] 处理申请 ${bookRequest.id} 失败:`, error);
-        updateUserBookRequest(bookRequest.id, {
+        await updateUserBookRequest(bookRequest.id, {
           status: 'failed',
           error_message: error instanceof Error ? error.message : '处理失败',
         });
       }
     }, 100);
 
-    const pendingRequest = getUserBookRequestById(bookRequest.id);
+    const pendingRequest = await getUserBookRequestById(bookRequest.id);
     return NextResponse.json({
       request_id: bookRequest.id,
       status: pendingRequest?.status || 'pending',

@@ -22,7 +22,7 @@ export async function POST(
     const body = await request.json();
     const { reason } = body;
 
-    const bookRequest = getUserBookRequestById(id);
+    const bookRequest = await getUserBookRequestById(id);
     if (!bookRequest) {
       return NextResponse.json(
         { error: '申请不存在' },
@@ -32,7 +32,7 @@ export async function POST(
 
     console.log(`[BookRequest] 拒绝申请 ${id}: ${bookRequest.title}, 理由: ${reason}`);
 
-    updateUserBookRequest(id, {
+    await updateUserBookRequest(id, {
       status: 'rejected',
       error_message: reason || '管理员已拒绝此申请',
     });

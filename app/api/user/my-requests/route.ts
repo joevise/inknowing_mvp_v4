@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const result = getUserBookRequests(user.id, { status, limit, offset });
+    const result = await getUserBookRequests(user.id, { status, limit, offset });
 
     const formattedRequests = result.requests.map(req => ({
       id: req.id,

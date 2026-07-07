@@ -19,7 +19,7 @@ export async function DELETE(
   if (authError) return authError;
 
   try {
-    const bookRequest = getUserBookRequestById(id);
+    const bookRequest = await getUserBookRequestById(id);
     if (!bookRequest) {
       return NextResponse.json(
         { error: '申请不存在' },
@@ -29,7 +29,7 @@ export async function DELETE(
 
     console.log(`[BookRequest] 删除申请 ${id}: ${bookRequest.title}`);
 
-    deleteUserBookRequest(id);
+    await deleteUserBookRequest(id);
 
     return NextResponse.json({
       message: '删除成功',

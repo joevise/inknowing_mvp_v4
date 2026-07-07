@@ -20,7 +20,7 @@ export async function POST(
   if (authError) return authError;
 
   try {
-    const bookRequest = getUserBookRequestById(id);
+    const bookRequest = await getUserBookRequestById(id);
     if (!bookRequest) {
       return NextResponse.json(
         { error: '申请不存在' },
@@ -30,7 +30,7 @@ export async function POST(
 
     console.log(`[BookRequest] 开始重试处理申请 ${id}: ${bookRequest.title}`);
 
-    updateUserBookRequest(id, { status: 'processing' });
+    await updateUserBookRequest(id, { status: 'processing' });
 
     const { book, recognitionResult } = await recognizeAndCreateBook(bookRequest.title);
 
@@ -39,7 +39,7 @@ export async function POST(
 
     if (!hasAuthor || !hasDescription) {
       console.log(`[BookRequest] 重试识别信息不完整，进入wishlist: author=${!!hasAuthor}, description=${book.description?.length}`);
-      updateUserBookRequest(id, {
+      await updateUserBookRequest(id, {
         status: 'wishlist',
         book_id: book.id,
         ai_confidence: recognitionResult.aiScore / 10,
@@ -56,7 +56,7 @@ export async function POST(
       });
     }
 
-    updateUserBookRequest(id, {
+    await updateUserBookRequest(id, {
       status: 'created',
       book_id: book.id,
       ai_confidence: recognitionResult.aiScore / 10,
@@ -77,7 +77,7 @@ export async function POST(
 
   } catch (error) {
     console.error(`[BookRequest] 重试处理申请 ${id} 失败:`, error);
-    updateUserBookRequest(id, {
+    await updateUserBookRequest(id, {
       status: 'failed',
       error_message: error instanceof Error ? error.message : '处理失败',
     });
