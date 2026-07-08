@@ -28,6 +28,7 @@ export async function recognizeBook(bookTitle: string): Promise<{
     publishDate?: string;
     category: string;
     tags: string[];
+    language_mode: 'zh_native' | 'multilingual' | 'en_native';
   };
   aiScore: number;
   coverOptions: string[];
@@ -50,6 +51,11 @@ export async function recognizeBook(bookTitle: string): Promise<{
 3. tags（5-8个相关标签，格式如：#必读 #经典）
 4. aiScore（1-10分，你对这本书的了解程度）
 5. coverOptions（3个封面图片描述，用于生成或搜索）
+6. languageMode（原作语言归属，从以下三个值中选一个）：
+   - "zh_native"：原作是中文创作（如中国古典名著、中国当代作家作品）
+   - "en_native"：原作是英文创作且以英文名收录（如 Jane Eyre 英文版）
+   - "multilingual"：原作是外语（英语/西语/日语/德语等）、当前以中文译本流通，或本书本身适合多语言阅读
+   判断依据是「原作创作语言」，不是当前书名语言。例如：《权力的游戏》《格林童话》《百年孤独》《挪威的森林》原作都是外语 → multilingual；《西游记》《三国演义》《活着》→ zh_native。
 
 注意：
 - 不论原书是中文还是英文，title/title_en、description/description_en 都必须同时给出。
@@ -97,6 +103,11 @@ export async function recognizeBook(bookTitle: string): Promise<{
     // *_en 安全回填：缺失时回退到对应本地字段，避免空值
     const titleEn = (bookData.title_en && String(bookData.title_en).trim()) || title;
     const descriptionEn = (bookData.description_en && String(bookData.description_en).trim()) || description;
+    // 原作语言归属：AI 判断优先，非法值兜底 zh_native
+    const validModes = ['zh_native', 'multilingual', 'en_native'] as const;
+    const languageMode = validModes.includes(bookData.languageMode)
+      ? (bookData.languageMode as 'zh_native' | 'multilingual' | 'en_native')
+      : 'zh_native';
 
     return {
       bookInfo: {
@@ -109,6 +120,7 @@ export async function recognizeBook(bookTitle: string): Promise<{
         publishDate: bookData.publishDate,
         category: bookData.category || '文学',
         tags: Array.isArray(bookData.tags) ? bookData.tags : ['#待完善'],
+        language_mode: languageMode,
       },
       aiScore: bookData.aiScore || 5,
       coverOptions: bookData.coverOptions || [],
@@ -210,6 +222,7 @@ export async function recognizeAndCreateBook(
     ...recognitionResult.bookInfo,
     titleEn: recognitionResult.bookInfo.title_en,
     descriptionEn: recognitionResult.bookInfo.description_en,
+    languageMode: recognitionResult.bookInfo.language_mode,
     coverUrl: additionalData?.coverUrl,
     aiScore: recognitionResult.aiScore,
     conversationStrategy: additionalData?.conversationStrategy || 'hybrid',
