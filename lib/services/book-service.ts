@@ -365,6 +365,7 @@ export async function getBookById(bookId: string): Promise<Book | null> {
   return {
     ...result,
     tags: result.tags ? JSON.parse(result.tags) : [],
+    tags_en: result.tags_en ? JSON.parse(result.tags_en) : undefined,
     requires_document: result.requires_document === 1,
     created_at: new Date(result.created_at),
     updated_at: new Date(result.updated_at),
@@ -435,6 +436,7 @@ export async function getAllBooks(options?: {
   const formattedBooks = books.map((book: any) => ({
     ...book,
     tags: book.tags ? JSON.parse(book.tags) : [],
+    tags_en: book.tags_en ? JSON.parse(book.tags_en) : undefined,
     requires_document: book.requires_document === 1,
     created_at: new Date(book.created_at),
     updated_at: new Date(book.updated_at),
@@ -476,6 +478,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
   return books.map(book => ({
     ...book,
     tags: book.tags ? JSON.parse(book.tags) : [],
+    tags_en: book.tags_en ? JSON.parse(book.tags_en) : undefined,
     requires_document: book.requires_document === 1,
     created_at: new Date(book.created_at),
     updated_at: new Date(book.updated_at),
@@ -539,6 +542,7 @@ export async function getRecommendedBooks(bookId?: string, limit: number = 5): P
   return books.map(book => ({
     ...book,
     tags: book.tags ? JSON.parse(book.tags) : [],
+    tags_en: book.tags_en ? JSON.parse(book.tags_en) : undefined,
     requires_document: book.requires_document === 1,
     created_at: new Date(book.created_at),
     updated_at: new Date(book.updated_at),
