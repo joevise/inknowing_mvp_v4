@@ -169,7 +169,9 @@ export async function getConversationsByUserId(
     SELECT
       c.*,
       b.title as book_title,
-      ch.name as character_name
+      b.title_en as book_title_en,
+      ch.name as character_name,
+      ch.name_en as character_name_en
     FROM conversations c
     JOIN books b ON c.book_id = b.id
     LEFT JOIN characters ch ON c.character_id = ch.id
@@ -190,7 +192,9 @@ export async function getConversationsByUserId(
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     book_title: row.book_title,
+    book_title_en: row.book_title_en,
     character_name: row.character_name,
+    character_name_en: row.character_name_en,
   }));
 
   return { conversations, total };

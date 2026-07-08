@@ -119,10 +119,18 @@ export async function GET(request: NextRequest) {
       }
     );
 
+    // 3.5 按界面语言本地化书名/角色名（英文为空回退中文）
+    const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+    const conversations = result.conversations.map((c: any) => ({
+      ...c,
+      book_title: lang === 'en' ? (c.book_title_en || c.book_title) : c.book_title,
+      character_name: lang === 'en' ? (c.character_name_en || c.character_name) : c.character_name,
+    }));
+
     // 4. 返回结果
     return NextResponse.json({
       success: true,
-      conversations: result.conversations,
+      conversations,
       total: result.total,
     });
 

@@ -11,6 +11,7 @@ import { userOwnsConversation, getConversationById } from '@/lib/db/conversation
 import { getMessagesByConversationId } from '@/lib/db/messages';
 import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
+import { localizeBook } from '@/lib/db/i18n-helpers';
 
 const conversationService = new ConversationService();
 
@@ -146,22 +147,23 @@ export async function GET(
     const conversation = await getConversationById(params.id);
     const book = conversation ? await getBookById(conversation.book_id) : null;
 
+    const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+    const localizedTitle = book ? localizeBook(book, lang).title : undefined;
+
     const messagesWithAvatar = messages.map((msg: any) => {
       // 只处理assistant消息
       if (msg.role === 'assistant' && msg.metadata) {
         const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
 
-        // 如果metadata里没有头像信息，补充书籍封面作为默认值
-        if (!metadata.cover_url && book) {
-          return {
-            ...msg,
-            metadata: {
-              ...metadata,
-              cover_url: book.cover_url || undefined,
-              book_title: book.title,
-            }
-          };
-        }
+        // 统一按界面语言覆盖书名（历史metadata里固化的是中文），并补默认封面
+        return {
+          ...msg,
+          metadata: {
+            ...metadata,
+            cover_url: metadata.cover_url || book?.cover_url || undefined,
+            book_title: localizedTitle || metadata.book_title,
+          }
+        };
       }
       return msg;
     });

@@ -15,6 +15,7 @@ import { getMessagesByConversationId } from '@/lib/db/messages';
 import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
 import { getUserById } from '@/lib/db/users';
+import { localizeBook, localizeCharacter } from '@/lib/db/i18n-helpers';
 
 /**
  * GET /api/conversations/:id
@@ -63,14 +64,18 @@ export async function GET(
     if (conversation.type === 'book') {
       const book = await getBookById(conversation.book_id);
       if (book) {
+        const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+        const localized = localizeBook(book, lang);
         cover_url = book.cover_url || undefined;
-        book_title = book.title;
+        book_title = localized.title;
       }
     } else if (conversation.type === 'character' && conversation.character_id) {
       const character = await getCharacterById(conversation.character_id);
       if (character) {
+        const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
+        const localized = localizeCharacter(character, lang);
         cover_url = (character as any).avatar_url || undefined;
-        character_name = character.name;
+        character_name = localized.name;
       }
     }
 
