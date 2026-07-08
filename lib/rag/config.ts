@@ -10,8 +10,8 @@ export const RAG_CONFIG = {
     host: process.env.CHROMA_DB_URL || 'http://localhost:8000',
 
     // 租户和数据库配置
-    tenant: process.env.CHROMA_DB_TENANT || 'default',
-    database: process.env.CHROMA_DB_DATABASE || 'default',
+    tenant: process.env.CHROMA_DB_TENANT || 'default_tenant',
+    database: process.env.CHROMA_DB_DATABASE || 'default_database',
 
     // Collection命名规则
     collectionPrefix: 'inknowing_book_',

@@ -17,7 +17,7 @@ const SEMANTIC_COLLECTION_NAME = 'books_semantic';
 /**
  * 余弦距离上限(0~2,越小越相似)。放宽一些以提高召回,具体业务再调。
  */
-const SEMANTIC_DISTANCE_THRESHOLD = 0.65;
+const SEMANTIC_DISTANCE_THRESHOLD = 0.85;
 
 /**
  * 缓存 collection 句柄(全局只有一个)
@@ -57,13 +57,28 @@ function buildBookEmbeddingText(book: Partial<Book>): string {
 /**
  * 获取(必要时创建)全局语义 collection
  */
+/**
+ * 获取(必要时创建)全局语义 collection
+ * 注：我们始终显式传 embeddings，不需要 chroma 自带的 embeddingFunction，
+ * 但 JS 客户端不传会强制要求安装 @chroma-core/default-embed，故提供 no-op。
+ */
+const NOOP_EMBEDDING_FUNCTION = {
+  generate: async (texts: string[]): Promise<number[][]> => texts.map(() => []),
+} as any;
+
 async function getSemanticCollection(): Promise<Collection> {
   if (cachedCollection) return cachedCollection;
   const client = getChromaClient();
   try {
-    cachedCollection = await client.getCollection({ name: SEMANTIC_COLLECTION_NAME });
+    cachedCollection = await client.getCollection({
+      name: SEMANTIC_COLLECTION_NAME,
+      embeddingFunction: NOOP_EMBEDDING_FUNCTION,
+    } as any);
   } catch {
-    cachedCollection = await client.createCollection({ name: SEMANTIC_COLLECTION_NAME });
+    cachedCollection = await client.createCollection({
+      name: SEMANTIC_COLLECTION_NAME,
+      embeddingFunction: NOOP_EMBEDDING_FUNCTION,
+    } as any);
   }
   return cachedCollection;
 }
