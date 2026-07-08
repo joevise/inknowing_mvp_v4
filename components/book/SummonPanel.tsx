@@ -21,6 +21,7 @@ type SummonErrorCode =
   | 'book_full'
   | 'no_new_characters'
   | 'not_in_book'
+  | 'not_logged_in'
   | 'invalid_body'
   | 'invalid_mode'
   | 'missing_name'
@@ -51,10 +52,12 @@ export default function SummonPanel({ bookId, isEmpty, onCharactersUpdated }: Su
 
       if (!resp.ok) {
         const code = (data?.error as SummonErrorCode) || 'unknown';
-        // 401:未登录 → 跳到登录页
+        // 401：未登录 → 提示并跳到登录页（带回跳地址）
         if (resp.status === 401) {
-          setStatus({ kind: 'err', code: 'quota_exceeded' });
-          router.push('/login');
+          setStatus({ kind: 'err', code: 'not_logged_in' });
+          setTimeout(() => {
+            router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+          }, 800);
           return;
         }
         setStatus({ kind: 'err', code });
@@ -95,6 +98,7 @@ export default function SummonPanel({ bookId, isEmpty, onCharactersUpdated }: Su
       case 'book_full': return t('summon.errBookFull');
       case 'no_new_characters': return t('summon.errNoNew');
       case 'not_in_book': return t('summon.errNotInBook');
+      case 'not_logged_in': return t('summon.errLogin');
       case 'missing_name': return t('summon.errNotInBook');
       case 'book_not_found':
       case 'book_not_published': return t('summon.errGeneric');
