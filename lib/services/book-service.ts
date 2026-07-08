@@ -24,6 +24,8 @@ export async function recognizeBook(bookTitle: string): Promise<{
     description: string;
     title_en: string;
     description_en: string;
+    author_en: string;
+    tags_en: string[];
     publisher?: string;
     publishDate?: string;
     category: string;
@@ -44,11 +46,12 @@ export async function recognizeBook(bookTitle: string): Promise<{
    - title_en（官方/最常见的英文书名；若该书原本为英文，请保留其原始英文书名）
    - description（200字内中文简介）
    - description_en（200词内英文简介）
-   - author（作者）
+   - author（作者中文名或通用译名）
+   - author_en（作者英文名：外国作者用其原名如 George R. R. Martin；中国作者用拼音如 Wu Cheng'en）
    - publisher（出版社）
    - publishDate（出版年份）
 2. category（从以下选择一个：文学、商业、科学、心理、哲学、历史、艺术、技术、教育、生活）
-3. tags（5-8个相关标签，格式如：#必读 #经典）
+3. tags（5-8个相关中文标签，格式如：#必读 #经典）和 tags_en（与 tags 一一对应的英文标签，格式如：#MustRead #Classic）
 4. aiScore（1-10分，你对这本书的了解程度）
 5. coverOptions（3个封面图片描述，用于生成或搜索）
 6. languageMode（原作语言归属，从以下三个值中选一个）：
@@ -58,7 +61,7 @@ export async function recognizeBook(bookTitle: string): Promise<{
    判断依据是「原作创作语言」，不是当前书名语言。例如：《权力的游戏》《格林童话》《百年孤独》《挪威的森林》原作都是外语 → multilingual；《西游记》《三国演义》《活着》→ zh_native。
 
 注意：
-- 不论原书是中文还是英文，title/title_en、description/description_en 都必须同时给出。
+- 不论原书是中文还是英文，title/title_en、description/description_en、author/author_en、tags/tags_en 都必须同时给出。
 - 优先使用该书广为人知的官方译名（如 三国演义 -> Romance of the Three Kingdoms；Jane Eyre -> 简·爱；The Lord of the Rings -> 魔戒）。
 
 只返回JSON，不要其他内容。
@@ -103,6 +106,10 @@ export async function recognizeBook(bookTitle: string): Promise<{
     // *_en 安全回填：缺失时回退到对应本地字段，避免空值
     const titleEn = (bookData.title_en && String(bookData.title_en).trim()) || title;
     const descriptionEn = (bookData.description_en && String(bookData.description_en).trim()) || description;
+    const authorEn = (bookData.author_en && String(bookData.author_en).trim()) || (bookData.author || '未知');
+    const tagsEn = Array.isArray(bookData.tags_en) && bookData.tags_en.length > 0
+      ? bookData.tags_en
+      : (Array.isArray(bookData.tags) ? bookData.tags : []);
     // 原作语言归属：AI 判断优先，非法值兜底 zh_native
     const validModes = ['zh_native', 'multilingual', 'en_native'] as const;
     const languageMode = validModes.includes(bookData.languageMode)
@@ -116,6 +123,8 @@ export async function recognizeBook(bookTitle: string): Promise<{
         description,
         title_en: titleEn,
         description_en: descriptionEn,
+        author_en: authorEn,
+        tags_en: tagsEn,
         publisher: bookData.publisher,
         publishDate: bookData.publishDate,
         category: bookData.category || '文学',
@@ -146,6 +155,8 @@ export async function createBook(data: {
   conversationStrategy?: ConversationStrategy;
   titleEn?: string;
   descriptionEn?: string;
+  authorEn?: string;
+  tagsEn?: string[];
   languageMode?: 'zh_native' | 'multilingual' | 'en_native';
 }): Promise<Book> {
   const bookId = generateId();
@@ -155,6 +166,8 @@ export async function createBook(data: {
   // *_en 标准化为 null（缺失或仅空白时入 NULL，不写空串）
   const titleEn = data.titleEn?.trim() ? data.titleEn.trim() : null;
   const descriptionEn = data.descriptionEn?.trim() ? data.descriptionEn.trim() : null;
+  const authorEn = data.authorEn?.trim() ? data.authorEn.trim() : null;
+  const tagsEn = Array.isArray(data.tagsEn) && data.tagsEn.length > 0 ? data.tagsEn : null;
   const languageMode = data.languageMode || 'zh_native';
 
   const book: Book = {
@@ -171,6 +184,8 @@ export async function createBook(data: {
     language_mode: languageMode,
     title_en: titleEn ?? undefined,
     description_en: descriptionEn ?? undefined,
+    author_en: authorEn ?? undefined,
+    tags_en: tagsEn ?? undefined,
     status: 'draft',
     created_at: new Date(),
     updated_at: new Date(),
@@ -182,8 +197,8 @@ export async function createBook(data: {
     INSERT INTO books (
       id, title, author, description, cover_url, category, tags,
       ai_knowledge_level, requires_document, conversation_strategy, status,
-      language_mode, title_en, description_en
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      language_mode, title_en, description_en, author_en, tags_en
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     book.id,
     book.title,
@@ -198,7 +213,9 @@ export async function createBook(data: {
     book.status,
     languageMode,
     titleEn,
-    descriptionEn
+    descriptionEn,
+    authorEn,
+    tagsEn ? JSON.stringify(tagsEn) : null
   );
 
   return book;
@@ -222,6 +239,8 @@ export async function recognizeAndCreateBook(
     ...recognitionResult.bookInfo,
     titleEn: recognitionResult.bookInfo.title_en,
     descriptionEn: recognitionResult.bookInfo.description_en,
+    authorEn: recognitionResult.bookInfo.author_en,
+    tagsEn: recognitionResult.bookInfo.tags_en,
     languageMode: recognitionResult.bookInfo.language_mode,
     coverUrl: additionalData?.coverUrl,
     aiScore: recognitionResult.aiScore,

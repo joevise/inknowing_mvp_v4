@@ -20,6 +20,8 @@ export function localizeBook(book: Book, lang: Lang) {
       ...book,
       title: book.title_en || book.title,
       description: book.description_en || book.description,
+      author: book.author_en || book.author,
+      tags: (Array.isArray(book.tags_en) && book.tags_en.length > 0) ? book.tags_en : book.tags,
     };
   }
   return book;

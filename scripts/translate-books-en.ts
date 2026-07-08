@@ -71,8 +71,12 @@ type BookRow = {
   id: string;
   title: string;
   description: string | null;
+  author: string | null;
+  tags: string | null;
   title_en: string | null;
   description_en: string | null;
+  author_en: string | null;
+  tags_en: string | null;
 };
 
 type CharacterRow = {
@@ -92,6 +96,8 @@ type CharacterRow = {
 const BOOK_FIELDS: { en: keyof BookRow; cn: keyof BookRow }[] = [
   { en: 'title_en', cn: 'title' },
   { en: 'description_en', cn: 'description' },
+  { en: 'author_en', cn: 'author' },
+  { en: 'tags_en', cn: 'tags' },
 ];
 
 const CHARACTER_FIELDS: { en: keyof CharacterRow; cn: keyof CharacterRow }[] = [
@@ -113,6 +119,10 @@ const FIELD_HINT: Record<string, string> = {
     'English book title. World-famous works must use their standard established English title (e.g. 《简爱》→ "Jane Eyre"; 《哈姆雷特》→ "Hamlet"; 《挪威的森林》→ "Norwegian Wood"; 《思考,快与慢》→ "Thinking, Fast and Slow"; 《原则》→ "Principles"; 《富爸爸穷爸爸》→ "Rich Dad Poor Dad"; 《红楼梦》→ "Dream of the Red Chamber"; 《三国演义》→ "Romance of the Three Kingdoms"; 《西游记》→ "Journey to the West"; 《水浒传》→ "Outlaws of the Marsh"; 《论语》→ "The Analects"; 《道德经》→ "Tao Te Ching").',
   description_en:
     'Natural, fluent English book description (literary register, not literal machine-translation).',
+  author_en:
+    'English author name. Foreign authors use their original/native-latin name (e.g. 乔治·R·R·马丁 → "George R. R. Martin"; 加西亚·马尔克斯 → "Gabriel García Márquez"; 村上春树 → "Haruki Murakami"). Chinese authors use Hanyu Pinyin (e.g. 吴承恩 → "Wu Cheng\'en"; 莫言 → "Mo Yan"). Multiple authors joined with " / ". If the source is 未知 or unknown, return "Unknown".',
+  tags_en:
+    'The source is a JSON array of Chinese hashtag strings. Return a JSON ARRAY STRING (not an object) of the same length with each tag translated to concise English CamelCase hashtags, e.g. ["#必读","#经典"] → "[\\"#MustRead\\",\\"#Classic\\"]". Keep the leading #.',
   name_en:
     'English personal name. Chinese names use Hanyu Pinyin without tone marks (e.g. 丁元英 → "Ding Yuanying"; 芮小丹 → "Rui Xiaodan"; 武松 → "Wu Song"). Western / world-literature characters use their original English name (e.g. 简·爱 → "Jane Eyre"; 哈姆雷特 → "Hamlet"; 罗切斯特 → "Rochester"; 麦克白 → "Macbeth").',
   speaking_style_en:
@@ -187,7 +197,9 @@ async function callModel(
   const parsed = extractJson(content);
   const result: Record<string, string> = {};
   for (const f of missingFields) {
-    const v = parsed[f];
+    let v = parsed[f];
+    // tags_en 等字段模型可能直接返回数组 → 序列化为 JSON 字符串入库
+    if (Array.isArray(v)) v = JSON.stringify(v);
     if (typeof v === 'string' && v.trim() !== '') result[f] = v;
   }
   return result;
@@ -322,7 +334,7 @@ async function main() {
   console.log('='.repeat(60));
 
   const books = await prepare(
-    `SELECT id, title, description, title_en, description_en FROM books`,
+    `SELECT id, title, description, author, tags, title_en, description_en, author_en, tags_en FROM books`,
   ).all<BookRow>();
   const characters = await prepare(
     `SELECT id, name, description, speaking_style, background_story, prompt_template,

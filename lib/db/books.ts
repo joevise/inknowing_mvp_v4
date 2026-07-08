@@ -102,6 +102,8 @@ export async function getBookById(id: string): Promise<Book | null> {
     language_mode: row.language_mode || 'zh_native',
     title_en: row.title_en,
     description_en: row.description_en,
+    author_en: row.author_en,
+    tags_en: parseJson(row.tags_en) || undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };
@@ -291,6 +293,8 @@ export async function listBooks(options?: {
     language_mode: row.language_mode || 'zh_native',
     title_en: row.title_en,
     description_en: row.description_en,
+    author_en: row.author_en,
+    tags_en: parseJson(row.tags_en) || undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     favorite_count: row.favorite_count || 0,
@@ -329,6 +333,8 @@ export async function searchBooks(query: string): Promise<Book[]> {
     language_mode: row.language_mode || 'zh_native',
     title_en: row.title_en,
     description_en: row.description_en,
+    author_en: row.author_en,
+    tags_en: parseJson(row.tags_en) || undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -366,6 +372,8 @@ export async function getPopularBooks(limit: number = 10): Promise<Book[]> {
     language_mode: row.language_mode || 'zh_native',
     title_en: row.title_en,
     description_en: row.description_en,
+    author_en: row.author_en,
+    tags_en: parseJson(row.tags_en) || undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -404,6 +412,8 @@ export async function getRecommendedBooks(userId: string, limit: number = 10): P
     language_mode: row.language_mode || 'zh_native',
     title_en: row.title_en,
     description_en: row.description_en,
+    author_en: row.author_en,
+    tags_en: parseJson(row.tags_en) || undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -481,6 +491,8 @@ export async function findBookByTitleAndAuthor(title: string, author: string): P
     language_mode: row.language_mode || 'zh_native',
     title_en: row.title_en,
     description_en: row.description_en,
+    author_en: row.author_en,
+    tags_en: parseJson(row.tags_en) || undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };

@@ -30,6 +30,8 @@ export interface Book {
   language_mode?: 'zh_native' | 'multilingual' | 'en_native';
   title_en?: string;
   description_en?: string;
+  author_en?: string;
+  tags_en?: string[]; // 存储为JSON
   created_at: Date;
   updated_at: Date;
 }
@@ -406,6 +408,8 @@ export const PG_SCHEMA_SQL = `
     language_mode TEXT NOT NULL DEFAULT 'zh_native' CHECK (language_mode IN ('zh_native','multilingual','en_native')),
     title_en TEXT,
     description_en TEXT,
+    author_en TEXT,
+    tags_en TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   );
@@ -544,6 +548,8 @@ export const PG_SCHEMA_SQL = `
   ALTER TABLE books ADD COLUMN IF NOT EXISTS language_mode TEXT NOT NULL DEFAULT 'zh_native';
   ALTER TABLE books ADD COLUMN IF NOT EXISTS title_en TEXT;
   ALTER TABLE books ADD COLUMN IF NOT EXISTS description_en TEXT;
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS author_en TEXT;
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS tags_en TEXT;
   ALTER TABLE characters ADD COLUMN IF NOT EXISTS name_en TEXT;
   ALTER TABLE characters ADD COLUMN IF NOT EXISTS description_en TEXT;
   ALTER TABLE characters ADD COLUMN IF NOT EXISTS speaking_style_en TEXT;
