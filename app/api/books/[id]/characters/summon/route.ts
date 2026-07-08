@@ -38,7 +38,7 @@ import { resolveParsingModel } from '@/lib/ai/model-resolver';
 import { localizeCharacter } from '@/lib/db/i18n-helpers';
 
 const DAILY_SUMMON_LIMIT = 5;
-const MAX_CHARACTERS_PER_BOOK = 8;
+const MAX_CHARACTERS_PER_BOOK = 20;
 
 interface RouteParams {
   params: Promise<{ id: string }>;

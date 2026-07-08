@@ -275,7 +275,7 @@ export default function BookDetailPage() {
                       </div>
                     ))}
                   </div>
-                  {book.character_count < 8 && (
+                  {book.character_count < 20 && (
                     <SummonPanel
                       bookId={bookId}
                       isEmpty={false}
