@@ -1,21 +1,17 @@
 name: Deploy InKnowing
 
+# ⚠️ 自动部署已停用：
+# - 原配置的 host 67.209.190.54 是错误 IP（Brand2Context 机器），InKnowing 唯一生产机是 67.209.182.23
+# - 生产 /opt/inknowing 不是 git 仓库，实际部署靠 scp/tar 同步文件 + docker compose up -d --build app
+# 需要时改为 workflow_dispatch 手动触发并修正逻辑后再启用。
+
 on:
-  push:
-    branches: [main]
+  workflow_dispatch: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 67.209.190.54
-          username: root
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd /opt/inknowing
-            git pull origin main
-            docker compose up -d --build
-            echo "Deployment complete"
+      - name: Manual deploy placeholder
+        run: |
+          echo "Auto-deploy disabled. Production is synced via scp + docker compose --build app on 67.209.182.23."
