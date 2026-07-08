@@ -13,6 +13,10 @@ import {
 } from '@/lib/constants/categories';
 import OpenAI from 'openai';
 import { resolveParsingModel } from '@/lib/ai/model-resolver';
+import {
+  indexBookSemantic,
+  removeBookSemantic,
+} from './semantic-search';
 
 /**
  * AI识别书籍信息
@@ -247,6 +251,11 @@ export async function recognizeAndCreateBook(
     conversationStrategy: additionalData?.conversationStrategy || 'hybrid',
   });
 
+  // 异步 fire-and-forget 写语义索引,失败只 console.warn,不阻塞主流程
+  void indexBookSemantic(book).catch((err) =>
+    console.warn('[BookService] recognizeAndCreateBook → 语义索引失败:', err),
+  );
+
   return { book, recognitionResult };
 }
 
@@ -314,7 +323,27 @@ export async function updateBook(
     `UPDATE books SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
   ).run(...values);
 
-  return await getBookById(bookId);
+  const updated = await getBookById(bookId);
+
+  // 影响语义索引文本的字段(title/description/tags 及其 _en 变体)发生变更 → 重建索引
+  // fire-and-forget,失败仅 console.warn
+  const affectsSemanticText =
+    updates.title !== undefined ||
+    updates.title_en !== undefined ||
+    updates.author !== undefined ||
+    updates.author_en !== undefined ||
+    updates.description !== undefined ||
+    updates.description_en !== undefined ||
+    updates.tags !== undefined ||
+    updates.tags_en !== undefined ||
+    updates.category !== undefined;
+  if (updated && affectsSemanticText) {
+    void indexBookSemantic(updated).catch((err) =>
+      console.warn(`[BookService] updateBook → 语义重建失败 (book=${bookId}):`, err),
+    );
+  }
+
+  return updated;
 }
 
 /**
@@ -333,6 +362,11 @@ export async function deleteBook(bookId: string): Promise<boolean> {
     const result = await database.prepare('DELETE FROM books WHERE id = ?').run(bookId);
 
     await database.prepare('COMMIT').run();
+
+    // 同步清理语义索引(放在 COMMIT 之后,失败也不影响 DB 删除已成功的事实)
+    void removeBookSemantic(bookId).catch((err) =>
+      console.warn(`[BookService] deleteBook → 语义索引清理失败 (book=${bookId}):`, err),
+    );
 
     return (result?.changes || 0) > 0;
   } catch (error) {
@@ -449,6 +483,10 @@ export async function getAllBooks(options?: {
 
 /**
  * 搜索书籍
+ *
+ * 精确路召回:LIKE 匹配 title / author / description / tags
+ * + 扩展到英文三件套 title_en / author_en / tags_en,
+ *   tags_* 在 DB 里是 JSON 字符串,LIKE `%"foo"%` 同样能命中内部元素。
  */
 export async function searchBooks(query: string): Promise<Book[]> {
   const searchPattern = `%${query}%`;
@@ -460,19 +498,25 @@ export async function searchBooks(query: string): Promise<Book[]> {
       title LIKE ? OR
       author LIKE ? OR
       description LIKE ? OR
-      tags LIKE ?
+      tags LIKE ? OR
+      title_en LIKE ? OR
+      author_en LIKE ? OR
+      tags_en LIKE ?
     ) AND status = 'published'
     ORDER BY
       CASE
         WHEN title LIKE ? THEN 1
-        WHEN author LIKE ? THEN 2
-        ELSE 3
+        WHEN title_en LIKE ? THEN 2
+        WHEN author LIKE ? THEN 3
+        WHEN author_en LIKE ? THEN 4
+        ELSE 5
       END,
       created_at DESC
     LIMIT 20
   `).all(
     searchPattern, searchPattern, searchPattern, searchPattern,
-    searchPattern, searchPattern
+    searchPattern, searchPattern, searchPattern,
+    searchPattern, searchPattern, searchPattern, searchPattern
   );
 
   return books.map(book => ({

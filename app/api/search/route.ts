@@ -1,12 +1,20 @@
 /**
  * GET /api/search
  * 智能搜索API - 支持自然语言搜索，AI理解用户意图
+ *
+ * 两路召回:
+ *   1) 精确路:searchBooks(LIKE 命中 title/author/description/tags + *_en)
+ *   2) 语义路:semanticSearchBooks(Chroma 余弦距离命中),按 distance 升序追加,
+ *      排除精确路已返回的 book_id
+ *
+ * 参数名同时兼容 `q`(页面路由 search page 使用)与 `query`(老接口默认名)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { searchBooks } from '@/lib/services/book-service';
+import { searchBooks, getBookById } from '@/lib/services/book-service';
 import { db } from '@/lib/db';
 import { localizeBook, localizeCharacter } from '@/lib/db/i18n-helpers';
+import { semanticSearchBooks } from '@/lib/services/semantic-search';
 import OpenAI from 'openai';
 
 // 通义千问客户端
@@ -98,16 +106,17 @@ async function searchCharacters(query: string): Promise<any[]> {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
+    // 同时接受 `q`(新页面规范)与 `query`(兼容老调用方)
+    const rawQuery = searchParams.get('q') ?? searchParams.get('query');
 
-    if (!query || query.trim().length === 0) {
+    if (!rawQuery || rawQuery.trim().length === 0) {
       return NextResponse.json(
         { error: '请提供搜索关键词' },
         { status: 400 }
       );
     }
 
-    const trimmedQuery = query.trim();
+    const trimmedQuery = rawQuery.trim();
 
     // 读取界面语言（i18n middleware 设置的 cookie）
     const lang = request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
@@ -120,11 +129,31 @@ export async function GET(request: NextRequest) {
       intent = await analyzeSearchIntent(trimmedQuery);
     }
 
-    // 搜索书籍
-    const books = await searchBooks(trimmedQuery);
-
-    // 搜索角色
+    // 搜索角色（保持原行为）
     const characters = await searchCharacters(trimmedQuery);
+
+    // ---- 精确路:DB LIKE 命中(已扩展到 *_en) ----
+    const exactBooks = await searchBooks(trimmedQuery);
+    const exactIds = new Set(exactBooks.map(b => b.id));
+
+    // ---- 语义路:Chroma 向量召回 ----
+    const semanticHits = await semanticSearchBooks(trimmedQuery, 10);
+    const extraIds = semanticHits
+      .map(h => h.bookId)
+      .filter(id => !exactIds.has(id));
+
+    let semanticBooks: typeof exactBooks = [];
+    for (const id of extraIds) {
+      const book = await getBookById(id);
+      if (book && book.status === 'published') semanticBooks.push(book);
+    }
+
+    // 合并:精确路优先在前,语义路按 distance 升序追加
+    const books = [...exactBooks, ...semanticBooks];
+    const matches: Array<'exact' | 'semantic'> = [
+      ...exactBooks.map(() => 'exact' as const),
+      ...semanticBooks.map(() => 'semantic' as const),
+    ];
 
     // 格式化书籍结果，按 lang 切换 title/description
     const formattedBooks = books.map(book => {
@@ -154,10 +183,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // 生成搜索建议
+    // 生成搜索建议（基于精确路命中的书,语义路没有强解释性,不参与建议）
     const suggestions = intent.suggestions.length > 0
       ? intent.suggestions
-      : generateDefaultSuggestions(trimmedQuery, books);
+      : generateDefaultSuggestions(trimmedQuery, exactBooks);
 
     return NextResponse.json({
       query: trimmedQuery,
@@ -169,6 +198,8 @@ export async function GET(request: NextRequest) {
         books: formattedBooks.length,
         characters: formattedCharacters.length,
       },
+      // 兼容老调用方:默认 'exact' 不会破坏既有消费者;新前端可读取 match 区分
+      match: matches.length > 0 ? matches[0] : 'exact',
     });
   } catch (error) {
     console.error('[Search] Error:', error);
