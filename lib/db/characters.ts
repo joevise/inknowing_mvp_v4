@@ -356,6 +356,51 @@ export async function bulkCreateCharacters(characters: CreateCharacterInput[]): 
 }
 
 /**
+ * 在同一本书下查找同名角色(忽略大小写、去空格)
+ * 同时匹配 name 与 name_en 字段。
+ * 用于"召唤书中角色"的全局去重。
+ */
+export async function findCharacterByNormalizedName(
+  bookId: string,
+  name: string
+): Promise<Character | null> {
+  const normalized = name.trim();
+  if (!normalized) return null;
+
+  const row = await db()
+    .prepare(`
+      SELECT * FROM characters
+      WHERE book_id = ?
+        AND (
+          LOWER(TRIM(COALESCE(name, ''))) = LOWER(TRIM(?))
+          OR LOWER(TRIM(COALESCE(name_en, ''))) = LOWER(TRIM(?))
+        )
+      LIMIT 1
+    `)
+    .get(bookId, normalized, normalized) as any;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    book_id: row.book_id,
+    name: row.name,
+    description: row.description,
+    personality_traits: parseJson(row.personality_traits) || {},
+    speaking_style: row.speaking_style,
+    background_story: row.background_story,
+    prompt_template: row.prompt_template,
+    name_en: row.name_en,
+    description_en: row.description_en,
+    speaking_style_en: row.speaking_style_en,
+    background_story_en: row.background_story_en,
+    prompt_template_en: row.prompt_template_en,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+/**
  * 复制角色到另一本书
  */
 export async function copyCharacterToBook(

@@ -121,6 +121,24 @@ export interface UserBookRequest {
 }
 
 /**
+ * 角色召唤日志
+ * 记录用户每次"召唤书中角色"的请求,用于每日配额统计与审计。
+ * quota 计数按 user_id + created_at 当天 UTC 范围。
+ */
+export interface CharacterSummonLog {
+  id: string;
+  user_id: string;
+  book_id: string;
+  /** main_cast:批量召唤主要角色; named:指定单个角色名 */
+  mode: 'main_cast' | 'named';
+  /** named 模式下用户输入/AI 返回的角色名;main_cast 模式下可空 */
+  character_name: string | null;
+  /** 整体结果状态:success 真正生成/返回了角色;failed AI 失败等;existed 仅命中去重返回已有角色 */
+  status: 'success' | 'failed' | 'existed';
+  created_at: Date;
+}
+
+/**
  * 用户跨会话全局记忆
  * 跨书籍/角色共享:仅以 user_id 隔离,不绑定 conversation。
  * memory_type 区分事实/偏好/画像等,便于分层注入与管理。
@@ -525,6 +543,22 @@ export const PG_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_user_book_requests_status ON user_book_requests(status);
   CREATE INDEX IF NOT EXISTS idx_user_book_requests_book_id ON user_book_requests(book_id);
 
+  -- 角色召唤日志表(每日配额统计 + 审计)
+  CREATE TABLE IF NOT EXISTS character_summon_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    mode TEXT CHECK (mode IN ('main_cast', 'named')) NOT NULL,
+    character_name TEXT,
+    status TEXT CHECK (status IN ('success', 'failed', 'existed')) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  -- 配额主索引:按用户 + 当天范围聚合计数
+  CREATE INDEX IF NOT EXISTS idx_character_summon_logs_user_created
+    ON character_summon_logs(user_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_character_summon_logs_book_id
+    ON character_summon_logs(book_id);
+
   -- 用户跨会话全局记忆表(新增核心特性)
   CREATE TABLE IF NOT EXISTS user_memories (
     id TEXT PRIMARY KEY,
@@ -586,6 +620,7 @@ export const dropTablesSQL = `
   DROP TABLE IF EXISTS favorites;
   DROP TABLE IF EXISTS documents;
   DROP TABLE IF EXISTS characters;
+  DROP TABLE IF EXISTS character_summon_logs;
   DROP TABLE IF EXISTS books;
   DROP TABLE IF EXISTS users;
   DROP TABLE IF EXISTS config;

@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import FavoriteButton from '@/components/book/FavoriteButton';
+import SummonPanel from '@/components/book/SummonPanel';
 import { useBookLanguage } from '@/components/i18n/BookLanguageContext';
 
 interface Character {
@@ -274,7 +275,23 @@ export default function BookDetailPage() {
                       </div>
                     ))}
                   </div>
+                  {book.character_count < 8 && (
+                    <SummonPanel
+                      bookId={bookId}
+                      isEmpty={false}
+                      onCharactersUpdated={fetchBookDetail}
+                    />
+                  )}
                 </div>
+              )}
+
+              {/* 空角色态:召唤入口 */}
+              {book.characters.length === 0 && (
+                <SummonPanel
+                  bookId={bookId}
+                  isEmpty={true}
+                  onCharactersUpdated={fetchBookDetail}
+                />
               )}
 
               {/* 推荐书籍 */}

@@ -25,6 +25,7 @@ export type {
   Message,
   Session,
   UserBookRequest,
+  CharacterSummonLog,
 } from './schema';
 
 // 导出用户操作
@@ -72,9 +73,20 @@ export {
   bulkCreateCharacters,
   copyCharacterToBook,
   getCharacterStats,
+  findCharacterByNormalizedName,
   type CreateCharacterInput,
   type UpdateCharacterInput,
 } from './characters';
+
+// 导出角色召唤日志操作
+export {
+  createSummonLog,
+  getSummonLogById,
+  countUserSummonsToday,
+  type CreateSummonLogInput,
+  type SummonMode,
+  type SummonStatus,
+} from './character-summon-logs';
 
 // 导出文档操作
 export {

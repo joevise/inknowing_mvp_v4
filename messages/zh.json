@@ -379,5 +379,21 @@
     "confirmTitle": "确定切换到英文？",
     "confirmBody": "这是中文原著角色，英文会明显影响对话的体验和神韵。仍要切换到英文吗？",
     "dismiss": "知道了"
+  },
+  "summon": {
+    "emptyTitle": "想和书里的人聊聊？",
+    "emptySubtitle": "这本书还没有开放对话的角色，你可以召唤一位出场",
+    "summonMainCast": "召唤书中角色",
+    "namedLabel": "我想和TA聊聊",
+    "namedPlaceholder": "输入书中角色的名字，比如：罗切斯特",
+    "namedButton": "邀请 TA",
+    "loading": "正在唤醒角色，马上就好…",
+    "success": "TA 来了，开始对话吧",
+    "errNotInBook": "书里好像没有这位角色，检查一下名字？",
+    "errQuota": "今天的召唤次数用完了，明天再来吧",
+    "errBookFull": "这本书的舞台满员啦，先和现有角色聊聊？",
+    "errNoNew": "主要角色都已经在场了",
+    "errLogin": "请先登录再召唤角色",
+    "errGeneric": "召唤失败，稍后再试一次吧"
   }
 }

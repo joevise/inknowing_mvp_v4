@@ -379,5 +379,21 @@
     "confirmTitle": "Switch to English?",
     "confirmBody": "This character comes from a Chinese original. English will noticeably affect the feel and nuance of the conversation. Switch anyway?",
     "dismiss": "Got it"
+  },
+  "summon": {
+    "emptyTitle": "Want to talk to someone from this book?",
+    "emptySubtitle": "No characters on stage yet — summon one to start chatting",
+    "summonMainCast": "Summon the characters",
+    "namedLabel": "I want to talk to…",
+    "namedPlaceholder": "Type a character's name, e.g. Rochester",
+    "namedButton": "Invite them",
+    "loading": "Summoning the character…",
+    "success": "They're here — start chatting",
+    "errNotInBook": "That character doesn't seem to be in this book — check the name?",
+    "errQuota": "You've used today's summons — come back tomorrow",
+    "errBookFull": "The stage is full — chat with the current cast?",
+    "errNoNew": "All main characters are already on stage",
+    "errLogin": "Please sign in to summon characters",
+    "errGeneric": "Summoning failed — please try again later"
   }
 }
