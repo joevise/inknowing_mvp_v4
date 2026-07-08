@@ -7,7 +7,7 @@ export const RAG_CONFIG = {
   // ChromaDB配置
   chromadb: {
     // 服务器地址，默认使用本地Docker实例
-    host: process.env.CHROMA_DB_URL || 'http://localhost:8000',
+    host: process.env.CHROMA_DB_URL || process.env.CHROMA_URL || 'http://localhost:8000',
 
     // 租户和数据库配置
     tenant: process.env.CHROMA_DB_TENANT || 'default_tenant',
