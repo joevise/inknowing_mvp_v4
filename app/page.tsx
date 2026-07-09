@@ -189,10 +189,10 @@ export default function HomePage() {
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center">
             {/* 产品介绍 */}
-            <h1 className="text-4xl font-light text-[#2C5530] mb-4">
+            <h1 className="text-2xl md:text-4xl font-light text-[#2C5530] mb-4 leading-relaxed">
               {t('home.heroTitle')}
             </h1>
-            <p className="text-lg font-light text-gray-600 mb-12 max-w-2xl mx-auto">
+            <p className="text-sm md:text-lg font-light text-gray-600 mb-8 md:mb-12 max-w-2xl mx-auto leading-relaxed">
               {t('home.heroSubtitle')}
             </p>
 
@@ -233,17 +233,17 @@ export default function HomePage() {
         {/* 书籍展示区域 */}
         <section className="py-16 px-6 bg-white">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-light text-gray-800">{t('home.featuredBooksTitle')}</h2>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-3">
+              <h2 className="text-xl md:text-2xl font-light text-gray-800 flex-shrink-0">{t('home.featuredBooksTitle')}</h2>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 overflow-x-auto">
                 {/* 分类筛选 */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-1">
                   {categories.map(cat => (
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-4 py-2 rounded-lg text-sm font-light transition-colors
+                      className={`px-3 md:px-4 py-2 rounded-lg text-sm font-light transition-colors whitespace-nowrap flex-shrink-0
                                 ${selectedCategory === cat
                                   ? 'bg-[#2C5530] text-white'
                                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
@@ -352,9 +352,9 @@ export default function HomePage() {
         {/* 角色展示区域 */}
         <section className="py-16 px-6 bg-[#FAF9F7]">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-8 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-light text-gray-800">{t('home.popularCharactersTitle')}</h2>
+                <h2 className="text-xl md:text-2xl font-light text-gray-800">{t('home.popularCharactersTitle')}</h2>
                 <p className="text-sm font-light text-gray-500 mt-2">
                   {t('home.popularCharactersSubtitle')}
                 </p>
@@ -372,7 +372,7 @@ export default function HomePage() {
             </div>
 
             {/* 角色卡片网格 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {characters.map(char => (
                 <div
                   key={char.id}
