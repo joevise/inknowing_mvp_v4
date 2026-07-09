@@ -322,10 +322,10 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* 悬停显示的对话按钮 */}
-                  <div className="absolute inset-0 bg-white bg-opacity-0 group-hover:bg-opacity-50
-                                transition-all duration-300 flex items-end justify-center pb-4
-                                opacity-0 group-hover:opacity-100">
+                  {/* 悬停显示的对话按钮 (仅PC端,手机端点卡片直接进详情) */}
+                  <div className="hidden md:absolute md:inset-0 md:bg-white md:bg-opacity-0 md:group-hover:bg-opacity-50
+                                md:transition-all md:duration-300 md:flex md:items-end md:justify-center md:pb-4
+                                md:opacity-0 md:group-hover:opacity-100">
                     <button
                       onClick={(e) => handleStartBookConversation(e, book.id)}
                       disabled={creatingConversation === book.id}
