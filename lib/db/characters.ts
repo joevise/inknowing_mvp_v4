@@ -19,6 +19,30 @@ export interface CreateCharacterInput {
   speaking_style_en?: string;
   background_story_en?: string;
   prompt_template_en?: string;
+  // 角色沉浸质量提升(2026-07):4 个新字段(均允许为空)
+  // 既可接收 string(JSON 字符串)也可接收原生对象/数组,统一 toJson 序列化
+  key_quotes?: string | string[];
+  relationships?: string | string[];
+  key_events?: string | string[];
+  knowledge_boundary?: string;
+}
+
+/**
+ * 统一把可能的 string/数组输入序列化为存库的 JSON 字符串。
+ * undefined / null → null(落库为 SQL NULL,符合"未回填前可为空")。
+ * 空数组 → '[]'(区分"未填"与"显式空")。
+ */
+function toJsonField(v: string | string[] | undefined | null): string | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'string') {
+    // 已序列化或纯文本都原样存;空串视同"未填"存 NULL
+    return v.trim() === '' ? null : v;
+  }
+  if (Array.isArray(v)) {
+    if (v.length === 0) return null;
+    return toJson(v);
+  }
+  return null;
 }
 
 export interface UpdateCharacterInput {
@@ -33,6 +57,10 @@ export interface UpdateCharacterInput {
   speaking_style_en?: string;
   background_story_en?: string;
   prompt_template_en?: string;
+  key_quotes?: string | string[] | null;
+  relationships?: string | string[] | null;
+  key_events?: string | string[] | null;
+  knowledge_boundary?: string | null;
 }
 
 /**
@@ -47,8 +75,9 @@ export async function createCharacter(input: CreateCharacterInput): Promise<Char
       id, book_id, name, description, personality_traits,
       speaking_style, background_story, prompt_template,
       name_en, description_en, speaking_style_en, background_story_en, prompt_template_en,
+      key_quotes, relationships, key_events, knowledge_boundary,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   await stmt.run(
@@ -65,6 +94,10 @@ export async function createCharacter(input: CreateCharacterInput): Promise<Char
     input.speaking_style_en || null,
     input.background_story_en || null,
     input.prompt_template_en || null,
+    toJsonField(input.key_quotes),
+    toJsonField(input.relationships),
+    toJsonField(input.key_events),
+    input.knowledge_boundary?.trim() ? input.knowledge_boundary.trim() : null,
     timestamp,
     timestamp
   );
@@ -98,6 +131,10 @@ export async function getCharacterById(id: string): Promise<Character | null> {
     speaking_style_en: row.speaking_style_en,
     background_story_en: row.background_story_en,
     prompt_template_en: row.prompt_template_en,
+    key_quotes: parseJson(row.key_quotes) || null,
+    relationships: parseJson(row.relationships) || null,
+    key_events: parseJson(row.key_events) || null,
+    knowledge_boundary: row.knowledge_boundary ?? null,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };
@@ -129,6 +166,10 @@ export async function getCharactersByBookId(bookId: string): Promise<Character[]
     speaking_style_en: row.speaking_style_en,
     background_story_en: row.background_story_en,
     prompt_template_en: row.prompt_template_en,
+    key_quotes: parseJson(row.key_quotes) || null,
+    relationships: parseJson(row.relationships) || null,
+    key_events: parseJson(row.key_events) || null,
+    knowledge_boundary: row.knowledge_boundary ?? null,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
@@ -204,6 +245,27 @@ export async function updateCharacter(
     values.push(input.prompt_template_en);
   }
 
+  if (input.key_quotes !== undefined) {
+    updates.push('key_quotes = ?');
+    values.push(toJsonField(input.key_quotes));
+  }
+
+  if (input.relationships !== undefined) {
+    updates.push('relationships = ?');
+    values.push(toJsonField(input.relationships));
+  }
+
+  if (input.key_events !== undefined) {
+    updates.push('key_events = ?');
+    values.push(toJsonField(input.key_events));
+  }
+
+  if (input.knowledge_boundary !== undefined) {
+    const v = input.knowledge_boundary;
+    updates.push('knowledge_boundary = ?');
+    values.push(v == null ? null : (typeof v === 'string' && v.trim() === '' ? null : v));
+  }
+
   if (updates.length === 0) {
     return character;
   }
@@ -277,6 +339,10 @@ export async function searchCharacters(query: string): Promise<Array<Character &
     speaking_style_en: row.speaking_style_en,
     background_story_en: row.background_story_en,
     prompt_template_en: row.prompt_template_en,
+    key_quotes: parseJson(row.key_quotes) || null,
+    relationships: parseJson(row.relationships) || null,
+    key_events: parseJson(row.key_events) || null,
+    knowledge_boundary: row.knowledge_boundary ?? null,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     book_title: row.book_title,
@@ -330,6 +396,10 @@ export async function getPopularCharacters(
     speaking_style_en: row.speaking_style_en,
     background_story_en: row.background_story_en,
     prompt_template_en: row.prompt_template_en,
+    key_quotes: parseJson(row.key_quotes) || null,
+    relationships: parseJson(row.relationships) || null,
+    key_events: parseJson(row.key_events) || null,
+    knowledge_boundary: row.knowledge_boundary ?? null,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
     book_title: row.book_title,
@@ -395,6 +465,10 @@ export async function findCharacterByNormalizedName(
     speaking_style_en: row.speaking_style_en,
     background_story_en: row.background_story_en,
     prompt_template_en: row.prompt_template_en,
+    key_quotes: parseJson(row.key_quotes) || null,
+    relationships: parseJson(row.relationships) || null,
+    key_events: parseJson(row.key_events) || null,
+    knowledge_boundary: row.knowledge_boundary ?? null,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };

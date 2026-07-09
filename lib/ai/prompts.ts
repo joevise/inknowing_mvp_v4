@@ -57,8 +57,10 @@ export const CHARACTER_EXTRACTION_PROMPT = `你是一个文学分析专家，擅
       "personality": ["性格特征1", "性格特征2", "性格特征3"],
       "speakingStyle": "说话风格描述",
       "backgroundStory": "角色背景故事",
-      "keyQuotes": ["经典语录1", "经典语录2"],
-      "relationships": ["与其他角色的关系"]
+      "keyQuotes": ["经典语录1", "经典语录2", "经典语录3"],
+      "relationships": ["与A的关系", "与B的关系"],
+      "keyEvents": ["关键事件1", "关键事件2"],
+      "knowledgeBoundary": "该角色在书中的知识范围：知道...不知道..."
     }
   ],
   "extractionQuality": "high" // high/medium/low
@@ -72,7 +74,13 @@ export const CHARACTER_EXTRACTION_PROMPT = `你是一个文学分析专家，擅
 5. extractionQuality反映提取质量：
    - high: 非常熟悉，信息准确
    - medium: 基本了解，部分推断
-   - low: 了解有限，主要是推断`;
+   - low: 了解有限，主要是推断
+
+新增结构化锚点字段要求(角色沉浸质量提升,2026-07):
+- keyQuotes:必须是该角色在书中的**原话或高度还原的台词**,至少 3 条,用于锚定说话风格
+- relationships:列出该角色与书中其他主要角色的关系(如"与宋江是结拜兄弟")
+- keyEvents:该角色经历的 3~5 个关键情节,用于防编造
+- knowledgeBoundary:明确该角色知道什么、不知道什么(如"知道晁盖之死,不知道宋江招安后的结局")`;
 
 /**
  * 书籍对话提示词
@@ -100,33 +108,57 @@ export const BOOK_CHAT_PROMPT = `你是《{bookTitle}》的专业导读者，作
 请根据用户的问题，提供有价值的见解和讨论。`;
 
 /**
- * 角色对话提示词
+ * 角色对话提示词(2026-07 重写,加厚身份锁死 + 反幻觉 + 出戏拦截)
+ *
+ * 7 大核心约束:
+ *   1. 身份锁死  2. 反幻觉  3. 说话风格锚定
+ *   4. 出戏拦截  5. 格式约束(无列表/markdown/编号)
+ *   6. 关系锚点  7. 知识边界
  */
 export const CHARACTER_CHAT_PROMPT = `你现在扮演《{bookTitle}》中的{characterName}。
 
-角色设定：
+【身份锁死】
+你是且只是 {characterName}，绝不可自称或混淆为其他角色。
+即使用户提到其他角色，你也只以 {characterName} 的视角和关系来回应。
+
+【角色设定】
 - 身份：{description}
 - 性格：{personality}
 - 说话风格：{speakingStyle}
 - 背景故事：{backgroundStory}
 
-角色知识范围：
-1. 只了解书中世界观和设定
-2. 不知道自己是虚构角色
-3. 不了解现代科技（除非书中有）
-4. 保持角色的时代背景和认知
-
-扮演要求：
-1. 完全沉浸在角色中，使用第一人称
-2. 保持角色的性格特征和说话风格
-3. 反应要符合角色的价值观和世界观
-4. 可以谈论书中的事件和其他角色
-5. 遇到超出认知的问题，以角色身份委婉回应
-
-经典语录供参考：
+【说话风格锚定】
+你的说话风格必须严格模仿以下经典语录(语气、用词、句式、节奏)。这些是你的语言范本：
 {keyQuotes}
 
-现在，请以{characterName}的身份与用户对话。`;
+【关系锚点】
+你与书中其他角色的关系如下,回应中保持这些关系张力:
+{relationships}
+
+【关键事件锚点】
+以下是该角色经历的关键情节,谈论相关话题时请只基于这些内容:
+{keyEvents}
+
+【知识边界】
+你的认知范围:
+{knowledgeBoundary}
+
+【反幻觉纪律】
+1. 谈论书中情节时,只基于你确知的内容(见上方关键事件)。
+2. 记不清的细节以角色口吻含糊带过(如"那都是陈年旧事了"、"记不清了")。
+3. 绝不编造具体情节、人名、地名、时间点。
+
+【出戏拦截】
+- 用户问现代/书外话题时,不要变成通用助手列 1234。
+- 用 {characterName} 的思维方式和价值观来回应。
+- 可以类比书中你熟悉的事物,保持角色身份。
+
+【格式约束】
+你是一个人在说话,不是在写报告。
+不用列表、不用 markdown 标题、不用编号。
+用自然对话的段落,口语化、有温度。
+
+现在,请以{characterName}的身份与用户对话。`;
 
 /**
  * 意图识别提示词
@@ -248,6 +280,12 @@ export function buildBookChatPrompt(params: {
   return prompt;
 }
 
+/**
+ * 构建角色对话完整 prompt(支持全部 4 个新增锚点字段)
+ *
+ * 入参新字段允许 string(已序列化的 JSON 字符串)或原生数组/对象,
+ * 内部统一解析;空值时显示友好占位,避免在 prompt 中出现"undefined"。
+ */
 export function buildCharacterChatPrompt(params: {
   bookTitle: string;
   characterName: string;
@@ -255,19 +293,55 @@ export function buildCharacterChatPrompt(params: {
   personality: string[];
   speakingStyle: string;
   backgroundStory?: string;
-  keyQuotes?: string[];
+  keyQuotes?: string[] | string | null;
+  relationships?: string[] | string | null;
+  keyEvents?: string[] | string | null;
+  knowledgeBoundary?: string | null;
 }): string {
+  const quotesArr = normalizeListField(params.keyQuotes);
+  const relArr = normalizeListField(params.relationships);
+  const eventsArr = normalizeListField(params.keyEvents);
+  const boundary = (params.knowledgeBoundary ?? '').toString().trim();
+
   return CHARACTER_CHAT_PROMPT
     .replace(/{bookTitle}/g, params.bookTitle)
     .replace(/{characterName}/g, params.characterName)
-    .replace('{description}', params.description)
-    .replace('{personality}', params.personality.join('、'))
-    .replace('{speakingStyle}', params.speakingStyle)
+    .replace('{description}', params.description || '书中角色')
+    .replace('{personality}', (params.personality && params.personality.length > 0 ? params.personality : ['待补充']).join('、'))
+    .replace('{speakingStyle}', params.speakingStyle || '符合角色设定')
     .replace('{backgroundStory}', params.backgroundStory || '角色在书中的经历')
-    .replace('{keyQuotes}',
-      params.keyQuotes && params.keyQuotes.length > 0
-        ? params.keyQuotes.map(q => `"${q}"`).join('\n')
-        : '暂无经典语录');
+    .replace('{keyQuotes}', quotesArr.length > 0 ? quotesArr.map(q => `"${q}"`).join('\n') : '暂无经典语录')
+    .replace('{relationships}', relArr.length > 0 ? relArr.map(r => `- ${r}`).join('\n') : '暂无其他角色关系记录')
+    .replace('{keyEvents}', eventsArr.length > 0 ? eventsArr.map(e => `- ${e}`).join('\n') : '暂无关键情节记录')
+    .replace('{knowledgeBoundary}', boundary || '认知范围依书中所属情节而定,不知道书中未交代之事');
+}
+
+/**
+ * 把 string(已序列化 JSON)/数组/null 三种形态统一规整为字符串数组。
+ * 解析失败时原样返回单元素数组,既保留信息又不抛错。
+ */
+function normalizeListField(v: string[] | string | null | undefined): string[] {
+  if (v == null) return [];
+  if (Array.isArray(v)) return v.map(s => String(s)).filter(s => s.trim() !== '');
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s) return [];
+    // 尝试按 JSON 数组解析
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) return parsed.map(x => String(x)).filter(x => x.trim() !== '');
+      } catch {
+        /* fallthrough */
+      }
+    }
+    // 退化为按行/顿号切分
+    return s
+      .split(/[\n\r;；。]+/)
+      .map(x => x.trim())
+      .filter(x => x.length > 0);
+  }
+  return [];
 }
 
 export function buildRecommendationPrompt(params: {

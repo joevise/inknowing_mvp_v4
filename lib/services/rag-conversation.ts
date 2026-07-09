@@ -33,6 +33,12 @@ export interface RAGPromptParams {
   characterMode?: boolean;
   characterName?: string;
   characterDescription?: string;
+  // 角色沉浸质量提升(2026-07):4 个新锚点字段
+  // 与 CHARACTER_CHAT_PROMPT 保持同构;允许 string(JSON)/数组/null
+  characterKeyQuotes?: string[] | string | null;
+  characterRelationships?: string[] | string | null;
+  characterKeyEvents?: string[] | string | null;
+  characterKnowledgeBoundary?: string | null;
 }
 
 export class RAGConversation {
@@ -102,32 +108,75 @@ export class RAGConversation {
       characterMode,
       characterName,
       characterDescription,
+      characterKeyQuotes,
+      characterRelationships,
+      characterKeyEvents,
+      characterKnowledgeBoundary,
     } = params;
 
     let prompt = '';
 
     if (characterMode && characterName) {
-      // 角色模式的RAG提示词
+      // 角色模式的RAG提示词(2026-07 重写:加厚身份锁死 + 反幻觉 + 出戏拦截)
+      const quotesBlock = formatListBlock(characterKeyQuotes, '暂无经典语录', q => `"${q}"`);
+      const relationshipsBlock = formatListBlock(characterRelationships, '暂无其他角色关系记录', r => `- ${r}`);
+      const eventsBlock = formatListBlock(characterKeyEvents, '暂无关键情节记录', e => `- ${e}`);
+      const boundary = (characterKnowledgeBoundary ?? '').toString().trim()
+        || '认知范围依书中所属情节而定,不知道书中未交代之事';
+
       prompt = `你现在扮演《${bookTitle}》中的${characterName}。
 
-角色设定：
-- 身份：${characterDescription || '书中角色'}
+【身份锁死】
+你是且只是 ${characterName},绝不可自称或混淆为其他角色。
+即使用户提到其他角色,你也只以 ${characterName} 的视角和关系来回应。
+
+【角色设定】
+- 身份:${characterDescription || '书中角色'}
 - 你必须完全以${characterName}的身份和视角回答
 - 保持角色的性格特征和说话风格
-- 只了解书中的世界观和设定
 
-书籍背景：
+【说话风格锚定】
+你的说话风格必须严格模仿以下经典语录(语气、用词、句式、节奏):
+${quotesBlock}
+
+【关系锚点】
+你与书中其他角色的关系如下,回应中保持这些关系张力:
+${relationshipsBlock}
+
+【关键事件锚点】
+以下是该角色经历的关键情节,谈论相关话题时请只基于这些内容:
+${eventsBlock}
+
+【知识边界】
+你的认知范围:
+${boundary}
+
+【反幻觉纪律】
+1. 谈论书中情节时,只基于你确知的内容(见上方关键事件)。
+2. 记不清的细节以角色口吻含糊带过(如"那都是陈年旧事了"、"记不清了")。
+3. 绝不编造具体情节、人名、地名、时间点。
+4. 检索到的内容优先用,但仍需保持角色口吻——不要直接复述检索段落。
+
+【出戏拦截】
+- 用户问现代/书外话题时,不要变成通用助手列 1234。
+- 用 ${characterName} 的思维方式和价值观来回应。
+- 可以类比书中你熟悉的事物,保持角色身份。
+
+【格式约束】
+你是一个人在说话,不是在写报告。
+不用列表、不用 markdown 标题、不用编号。
+用自然对话的段落,口语化、有温度。
+
+书籍背景:
 《${bookTitle}》由${author}所著。${description}
 
-以下是从书中检索到的相关内容，请基于这些内容和你对角色的理解来回答：
+以下是从书中检索到的相关内容,请基于这些内容和你对角色的理解来回答:
 
 ${this.formatRetrievedContent(retrievedContent)}
 
-重要提醒：
-1. 优先使用检索到的内容
-2. 保持角色身份，使用第一人称
-3. 如果检索内容与问题不相关，可以根据角色设定回答
-4. 不要透露自己是AI或提及检索过程`;
+重要提醒:
+1. 保持角色身份,使用第一人称
+2. 不要透露自己是AI或提及检索过程`;
     } else {
       // 书籍对话模式的RAG提示词
       prompt = `你是《${bookTitle}》的专业导读者，作者是${author}。
@@ -397,4 +446,38 @@ ${doc.content}`;
            `涵盖${chapters.size || 1}个章节，` +
            `用时${context.searchTime}ms`;
   }
+}
+
+/**
+ * 把 string(已序列化 JSON)/数组/null 统一规整为字符串数组,
+ * 拼接成"每行一项"的展示块。空值时回退到占位符。
+ *
+ * 与 lib/ai/prompts.ts 的同名实现语义一致;放本文件避免循环依赖。
+ */
+function formatListBlock(
+  v: string[] | string | null | undefined,
+  emptyHint: string,
+  lineFn: (item: string) => string
+): string {
+  if (v == null) return emptyHint;
+  let items: string[] = [];
+  if (Array.isArray(v)) {
+    items = v.map(s => String(s)).filter(s => s.trim() !== '');
+  } else if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s) return emptyHint;
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) items = parsed.map(x => String(x)).filter(x => x.trim() !== '');
+      } catch {
+        /* fallthrough */
+      }
+    }
+    if (items.length === 0) {
+      items = s.split(/[\n\r;；。]+/).map(x => x.trim()).filter(x => x.length > 0);
+    }
+  }
+  if (items.length === 0) return emptyHint;
+  return items.map(lineFn).join('\n');
 }

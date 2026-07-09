@@ -50,6 +50,12 @@ export interface Character {
   speaking_style_en?: string;
   background_story_en?: string;
   prompt_template_en?: string;
+  // 角色沉浸质量提升(2026-07):从 prompt 中拆出来的结构化锚点
+  // 4 个新列均为 JSON 字符串或明文,允许为空(未回填前正常对话)
+  key_quotes?: string | null; // JSON 数组,5~8 条原著经典台词
+  relationships?: string | null; // JSON 数组,与其他角色的关系描述
+  key_events?: string | null; // JSON 数组,3~5 个关键情节锚点
+  knowledge_boundary?: string | null; // 角色知识边界(活到哪章、知道什么不知道什么)
   created_at: Date;
   updated_at: Date;
 }
@@ -206,6 +212,10 @@ export const createTablesSQL = `
     speaking_style TEXT,
     background_story TEXT,
     prompt_template TEXT,
+    key_quotes TEXT,           -- JSON 数组,原著经典台词
+    relationships TEXT,        -- JSON 数组,与其他角色的关系
+    key_events TEXT,           -- JSON 数组,关键情节锚点
+    knowledge_boundary TEXT,   -- 角色知识边界
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
@@ -449,6 +459,10 @@ export const PG_SCHEMA_SQL = `
     speaking_style_en TEXT,
     background_story_en TEXT,
     prompt_template_en TEXT,
+    key_quotes TEXT,           -- JSON 数组,原著经典台词
+    relationships TEXT,        -- JSON 数组,与其他角色的关系
+    key_events TEXT,           -- JSON 数组,关键情节锚点
+    knowledge_boundary TEXT,   -- 角色知识边界
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   );
@@ -589,6 +603,11 @@ export const PG_SCHEMA_SQL = `
   ALTER TABLE characters ADD COLUMN IF NOT EXISTS speaking_style_en TEXT;
   ALTER TABLE characters ADD COLUMN IF NOT EXISTS background_story_en TEXT;
   ALTER TABLE characters ADD COLUMN IF NOT EXISTS prompt_template_en TEXT;
+  -- 角色沉浸质量提升(2026-07):4 个新列(允许为空,已存在则跳过)
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS key_quotes TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS relationships TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS key_events TEXT;
+  ALTER TABLE characters ADD COLUMN IF NOT EXISTS knowledge_boundary TEXT;
 
   -- 统一的 updated_at 自动更新触发器函数
   CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$

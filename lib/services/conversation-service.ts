@@ -302,6 +302,11 @@ export class ConversationService {
           : [],
         speakingStyle: f.speakingStyle,
         backgroundStory: f.backgroundStory,
+        // 角色沉浸质量提升(2026-07):4 个新锚点直接透传,buildCharacterChatPrompt 内部统一规整
+        keyQuotes: character.key_quotes ?? null,
+        relationships: character.relationships ?? null,
+        keyEvents: character.key_events ?? null,
+        knowledgeBoundary: character.knowledge_boundary ?? null,
       });
     } else {
       // 书籍对话
@@ -405,6 +410,11 @@ export class ConversationService {
         characterName: character.name,
         characterDescription: f.description,
         retrievedContent: retrievalResult.documents,
+        // 角色沉浸质量提升(2026-07):4 个新锚点同步注入 RAG 角色模式
+        characterKeyQuotes: character.key_quotes ?? null,
+        characterRelationships: character.relationships ?? null,
+        characterKeyEvents: character.key_events ?? null,
+        characterKnowledgeBoundary: character.knowledge_boundary ?? null,
       });
     } else {
       // 书籍对话 + RAG
@@ -511,6 +521,11 @@ export class ConversationService {
           : [],
         speakingStyle: f.speakingStyle,
         backgroundStory: f.backgroundStory,
+        // 角色沉浸质量提升(2026-07):4 个新锚点同步注入
+        keyQuotes: character.key_quotes ?? null,
+        relationships: character.relationships ?? null,
+        keyEvents: character.key_events ?? null,
+        knowledgeBoundary: character.knowledge_boundary ?? null,
       });
     } else {
       // 书籍对话

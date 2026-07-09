@@ -63,6 +63,11 @@ interface NamedVerificationResult {
     speakingStyleEn?: string;
     backgroundStory?: string;
     backgroundStoryEn?: string;
+    // 角色沉浸质量提升(2026-07):4 个新锚点字段
+    keyQuotes?: string[];
+    relationships?: string[];
+    keyEvents?: string[];
+    knowledgeBoundary?: string;
   };
 }
 
@@ -131,12 +136,22 @@ async function verifyAndGenerateNamedCharacter(
     '    "speakingStyle": "中文说话风格",',
     '    "speakingStyleEn"?: "English speaking style",',
     '    "backgroundStory"?: "中文背景 100 字内",',
-    '    "backgroundStoryEn"?: "English background 80 words"',
+    '    "backgroundStoryEn"?: "English background 80 words",',
+    '    "keyQuotes"?: ["该角色的原话/高度还原的台词 1", "台词 2", "台词 3"],',
+    '    "relationships"?: ["与 A 的关系", "与 B 的关系"],',
+    '    "keyEvents"?: ["关键事件 1", "关键事件 2", "关键事件 3"],',
+    '    "knowledgeBoundary"?: "该角色知道什么、不知道什么(如:活到哪一章/知道哪些人不知道哪些)"',
     '  }',
     '}',
     '',
     '若该候选名确实来自这本书,belongs=true 并填充 character;',
     '若不属于或信息不足无法确定,belongs=false 且不要返回 character。',
+    '',
+    '新增字段说明(角色沉浸质量提升,2026-07):',
+    '- keyQuotes:必须是该角色在书中的**原话或高度还原的台词**,至少 3 条,用于锚定说话风格;',
+    '- relationships:列出该角色与书中其他主要角色的关系(如"与宋江是结拜兄弟");',
+    '- keyEvents:该角色经历的 3~5 个关键情节,用于防编造;',
+    '- knowledgeBoundary:明确该角色知道什么、不知道什么。',
   ].join('\n');
 
   const completion = await client.chat.completions.create({
@@ -170,6 +185,13 @@ function mapNamedToCharacterInput(
     ? parsed.personality
     : ['待补充'];
 
+  // 4 个新锚点字段:仅在 AI 真的返回了非空数组/字符串时才入库,
+  // 避免"AI 没填 → 写入 []"反而抑制后续回填脚本判断。
+  const safeArr = (v: unknown): string[] | undefined =>
+    Array.isArray(v) && v.length > 0
+      ? v.map(x => String(x)).filter(x => x.trim() !== '')
+      : undefined;
+
   return {
     book_id: bookId,
     name: trimmedName,
@@ -181,6 +203,10 @@ function mapNamedToCharacterInput(
     description_en: parsed.description_en?.trim() || undefined,
     speaking_style_en: parsed.speakingStyleEn?.trim() || undefined,
     background_story_en: parsed.backgroundStoryEn?.trim() || undefined,
+    key_quotes: safeArr(parsed.keyQuotes),
+    relationships: safeArr(parsed.relationships),
+    key_events: safeArr(parsed.keyEvents),
+    knowledge_boundary: parsed.knowledgeBoundary?.trim() || undefined,
   };
 }
 
@@ -200,6 +226,11 @@ function serializeCharacter(character: Character, lang: 'zh' | 'en' = 'zh') {
     background_story: localized.background_story,
     speaking_style_en: character.speaking_style_en,
     background_story_en: character.background_story_en,
+    // 角色沉浸质量提升(2026-07):4 个新锚点(直接透传,前端可选用)
+    key_quotes: character.key_quotes ?? null,
+    relationships: character.relationships ?? null,
+    key_events: character.key_events ?? null,
+    knowledge_boundary: character.knowledge_boundary ?? null,
   };
 }
 
