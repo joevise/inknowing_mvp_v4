@@ -201,11 +201,23 @@ function buildUserPrompt(book: BookRow, characters: CharacterRow[]): string {
 // ===================== LLM 调用 =====================
 function extractJson(text: string): Record<string, unknown> {
   const trimmed = String(text ?? '').trim();
+  // 1) 去 markdown 代码块
   const fence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
-  const body = fence ? fence[1].trim() : trimmed;
+  let body = fence ? fence[1].trim() : trimmed;
+  // 2) 有些模型在 JSON 后面跟了额外文字(如 MiniMax),只取第一个完整 JSON object
   const start = body.indexOf('{');
-  const end = body.lastIndexOf('}');
-  if (start < 0 || end <= start) throw new Error('No JSON object in model response');
+  if (start < 0) throw new Error('No JSON object in model response');
+  // 用栈计数找匹配的最后一个 '}'
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < body.length; i++) {
+    if (body[i] === '{') depth++;
+    else if (body[i] === '}') {
+      depth--;
+      if (depth === 0) { end = i; break; }
+    }
+  }
+  if (end < 0) throw new Error('No complete JSON object in model response');
   return JSON.parse(body.slice(start, end + 1));
 }
 
