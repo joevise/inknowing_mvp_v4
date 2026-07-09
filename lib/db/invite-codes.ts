@@ -108,6 +108,47 @@ export async function listInviteCodes(): Promise<InviteCode[]> {
 }
 
 /**
+ * 按状态过滤列表(后台导出/筛选用)
+ * status = 'all' 时退化为全量列表
+ */
+export async function listInviteCodesByStatus(
+  status: 'all' | InviteCode['status']
+): Promise<InviteCode[]> {
+  if (status === 'all') return listInviteCodes();
+  const rows = await db()
+    .prepare(
+      'SELECT * FROM invite_codes WHERE status = ? ORDER BY created_at DESC'
+    )
+    .all(status) as any[];
+  return rows.map(parseRow);
+}
+
+/**
+ * 批量生成邀请码
+ * - count 上限 200,超过抛错
+ * - 每个码的 note = `${notePrefix}-${序号}`,序号从 1 开始 padStart 2 位(01, 02, ... 99;超出自然扩展为 3 位)
+ */
+export async function batchCreateInviteCodes(
+  count: number,
+  notePrefix: string
+): Promise<InviteCode[]> {
+  if (!Number.isInteger(count) || count <= 0) {
+    throw new Error('count 必须为正整数');
+  }
+  if (count > 200) {
+    throw new Error('单次批量最多生成 200 个邀请码');
+  }
+  const prefix = (notePrefix ?? '').trim().slice(0, 200);
+  const codes: InviteCode[] = [];
+  for (let i = 1; i <= count; i++) {
+    const note = `${prefix}-${String(i).padStart(2, '0')}`;
+    const c = await createInviteCode(note);
+    codes.push(c);
+  }
+  return codes;
+}
+
+/**
  * 删除邀请码
  */
 export async function deleteInviteCode(id: string): Promise<boolean> {

@@ -1,6 +1,6 @@
 /**
  * 邀请码管理页
- * 列表 / 生成(可选备注) / 停用 / 删除
+ * 列表 / 单条或批量生成 / 停用 / 删除 / 导出 CSV
  * 风格与其它 admin 页一致: AdminLayout + 表格 + 操作按钮
  */
 
@@ -32,6 +32,8 @@ export default function AdminInviteCodesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
+  const [batchCount, setBatchCount] = useState<number>(1);
+  const [notePrefix, setNotePrefix] = useState('');
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | InviteCode['status']>('all');
@@ -77,11 +79,29 @@ export default function AdminInviteCodesPage() {
     setCreating(true);
     setError('');
     try {
-      const response = await fetch('/api/admin/invite-codes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note: note.trim() || undefined }),
-      });
+      const prefix = notePrefix.trim();
+      const trimmedNote = note.trim();
+      const useBatch = batchCount > 1 || prefix.length > 0;
+
+      let response: Response;
+      if (useBatch) {
+        response = await fetch('/api/admin/invite-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'batch',
+            count: batchCount,
+            notePrefix: prefix,
+          }),
+        });
+      } else {
+        response = await fetch('/api/admin/invite-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note: trimmedNote || undefined }),
+        });
+      }
+
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || '创建邀请码失败');
@@ -151,6 +171,10 @@ export default function AdminInviteCodesPage() {
     }
   };
 
+  const handleExport = () => {
+    window.open(`/api/admin/invite-codes/export?status=${filter}`, '_blank');
+  };
+
   const filteredCodes =
     filter === 'all' ? codes : codes.filter(c => c.status === filter);
 
@@ -176,28 +200,67 @@ export default function AdminInviteCodesPage() {
         {/* 生成卡片 */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h3 className="text-lg font-light text-gray-800 mb-4">生成新邀请码</h3>
-          <form onSubmit={handleCreate} className="flex flex-col md:flex-row gap-3 md:items-end">
-            <div className="flex-1">
-              <label htmlFor="note" className="block text-xs font-light text-gray-500 mb-1">
-                备注(可选,如"发给张三")
-              </label>
-              <input
-                type="text"
-                id="note"
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                maxLength={200}
-                placeholder="例如: 发给测试用户李四"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] bg-white font-light"
-              />
+          <form onSubmit={handleCreate} className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3 md:items-end">
+              <div className="w-full md:w-32">
+                <label htmlFor="count" className="block text-xs font-light text-gray-500 mb-1">
+                  数量
+                </label>
+                <input
+                  type="number"
+                  id="count"
+                  min={1}
+                  max={200}
+                  value={batchCount}
+                  onChange={e => {
+                    const v = parseInt(e.target.value, 10);
+                    setBatchCount(Number.isFinite(v) && v >= 1 ? Math.min(v, 200) : 1);
+                  }}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] bg-white font-light"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="prefix" className="block text-xs font-light text-gray-500 mb-1">
+                  备注前缀(可选,批量时每条备注为 前缀-序号,如 内测-01)
+                </label>
+                <input
+                  type="text"
+                  id="prefix"
+                  value={notePrefix}
+                  onChange={e => setNotePrefix(e.target.value)}
+                  maxLength={200}
+                  placeholder="如:内测"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] bg-white font-light"
+                />
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={creating}
-              className="px-6 py-2 bg-[#2C5530] text-white font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {creating ? '生成中...' : '+ 生成邀请码'}
-            </button>
+            <div className="flex flex-col md:flex-row gap-3 md:items-end">
+              <div className="flex-1">
+                <label htmlFor="note" className="block text-xs font-light text-gray-500 mb-1">
+                  单条备注(仅数量=1 且无前缀时使用,例如"发给张三")
+                </label>
+                <input
+                  type="text"
+                  id="note"
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  maxLength={200}
+                  placeholder="例如: 发给测试用户李四"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] bg-white font-light"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creating}
+                className="px-6 py-2 bg-[#2C5530] text-white font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {creating
+                  ? '生成中...'
+                  : batchCount > 1 || notePrefix.trim()
+                  ? `+ 批量生成 ${batchCount} 个`
+                  : '+ 生成邀请码'}
+              </button>
+            </div>
           </form>
         </div>
 
@@ -207,26 +270,35 @@ export default function AdminInviteCodesPage() {
           </div>
         )}
 
-        {/* 过滤标签 */}
-        <div className="flex gap-2 mb-4 text-sm">
-          {[
-            { key: 'all', label: `全部 ${stats.all}` },
-            { key: 'active', label: `可用 ${stats.active}` },
-            { key: 'used', label: `已使用 ${stats.used}` },
-            { key: 'disabled', label: `已停用 ${stats.disabled}` },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key as any)}
-              className={`px-4 py-1.5 rounded-full font-light transition-colors ${
-                filter === tab.key
-                  ? 'bg-[#2C5530] text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* 过滤标签 + 导出 */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex gap-2 text-sm flex-wrap">
+            {[
+              { key: 'all', label: `全部 ${stats.all}` },
+              { key: 'active', label: `可用 ${stats.active}` },
+              { key: 'used', label: `已使用 ${stats.used}` },
+              { key: 'disabled', label: `已停用 ${stats.disabled}` },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key as any)}
+                className={`px-4 py-1.5 rounded-full font-light transition-colors ${
+                  filter === tab.key
+                    ? 'bg-[#2C5530] text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={codes.length === 0}
+            className="px-4 py-1.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-lg font-light hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            导出 CSV
+          </button>
         </div>
 
         {/* 列表 */}

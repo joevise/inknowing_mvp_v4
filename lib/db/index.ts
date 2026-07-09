@@ -91,9 +91,11 @@ export {
 // 导出邀请码操作
 export {
   createInviteCode,
+  batchCreateInviteCodes,
   getInviteCodeById,
   getInviteCodeByCode,
   listInviteCodes,
+  listInviteCodesByStatus,
   deleteInviteCode,
   disableInviteCode,
   validateInviteCode,
