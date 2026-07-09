@@ -65,12 +65,16 @@ interface ConversationViewProps {
   conversationId: string;
   onConversationLoaded?: (conversation: Conversation) => void;
   onNavigate?: (conversationId: string) => void;
+  onOpenHistoryDrawer?: () => void;
+  onOpenCharactersDrawer?: () => void;
 }
 
 export default function ConversationView({
   conversationId,
   onConversationLoaded,
   onNavigate,
+  onOpenHistoryDrawer,
+  onOpenCharactersDrawer,
 }: ConversationViewProps) {
   const router = useRouter();
   const t = useTranslations();
@@ -352,23 +356,51 @@ export default function ConversationView({
   return (
     <div className="flex-1 flex flex-col bg-[#FAF9F7]">
       {/* 对话标题栏 */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-light text-gray-800">
+      <div className="px-4 md:px-6 py-4 bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          {/* 移动端：左侧历史记录按钮 */}
+          {onOpenHistoryDrawer && (
+            <button
+              type="button"
+              onClick={onOpenHistoryDrawer}
+              className="md:hidden p-2 -ml-2 text-gray-600 hover:text-[#2C5530] transition-colors flex-shrink-0"
+              aria-label="打开历史记录"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-light text-gray-800 truncate">
               {conversation?.character_name || conversation?.book_title || t('conversation.defaultTitle')}
             </h1>
-            <p className="text-sm font-light text-gray-500">
+            <p className="text-sm font-light text-gray-500 truncate">
               {conversation?.type === 'character' ? t('conversation.characterChatMode') : t('conversation.bookChatMode')}
             </p>
           </div>
-          <button
-            onClick={handleNewTopic}
-            disabled={creatingNewTopic}
-            className="px-4 py-2 bg-[#2C5530] text-white text-sm font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            {creatingNewTopic ? t('conversation.creatingTopic') : t('conversation.newTopic')}
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* 移动端：右侧角色列表按钮 */}
+            {onOpenCharactersDrawer && (
+              <button
+                type="button"
+                onClick={onOpenCharactersDrawer}
+                className="md:hidden p-2 text-gray-600 hover:text-[#2C5530] transition-colors"
+                aria-label="打开角色列表"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={handleNewTopic}
+              disabled={creatingNewTopic}
+              className="px-3 md:px-4 py-2 bg-[#2C5530] text-white text-sm font-light rounded-lg hover:bg-[#234426] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {creatingNewTopic ? t('conversation.creatingTopic') : t('conversation.newTopic')}
+            </button>
+          </div>
         </div>
       </div>
 
