@@ -8,6 +8,7 @@ import { ConversationService } from '@/lib/services/conversation-service';
 import { getSessionFromCookie } from '@/lib/auth/cookie';
 import { validateSession } from '@/lib/auth/session';
 import { userOwnsConversation } from '@/lib/db/conversations';
+import { getTodayUsage, incrementUsage, DAILY_MESSAGE_LIMIT } from '@/lib/db/daily-usage';
 
 const conversationService = new ConversationService();
 
@@ -56,11 +57,32 @@ export async function POST(
       );
     }
 
+    // 4. 每日配额检查(管理员不限)
+    if (session.user.id !== 'admin') {
+      const used = await getTodayUsage(session.user.id);
+      if (used >= DAILY_MESSAGE_LIMIT) {
+        console.log('[API] 用户已达每日对话上限:', {
+          userId: session.user.id,
+          used,
+          limit: DAILY_MESSAGE_LIMIT,
+        });
+        return NextResponse.json(
+          {
+            error: '今日对话已达上限',
+            message: `免费用户每日限 ${DAILY_MESSAGE_LIMIT} 轮对话,明天再来吧`,
+            remaining: 0,
+            limit: DAILY_MESSAGE_LIMIT,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     // 读取界面语言（来自 i18n middleware 设置的 cookie），用于让 AI 跟随界面语种
     const uiLang: 'zh' | 'en' =
       request.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'zh';
 
-    // 4. 创建流式响应
+    // 5. 创建流式响应
     console.log('[API] 开始流式对话:', {
       conversationId: params.id,
       userId: session.user.id,
@@ -71,6 +93,7 @@ export async function POST(
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let firstEventSent = false;
 
         try {
           // 发送流式响应
@@ -83,9 +106,18 @@ export async function POST(
             // 发送SSE格式的数据
             const data = JSON.stringify(event);
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            firstEventSent = true;
 
             // 如果是完成或错误，关闭流
             if (event.type === 'done' || event.type === 'error') {
+              // 成功首事件后 +1(管理员不计)
+              if (event.type === 'done' && session.user.id !== 'admin') {
+                try {
+                  await incrementUsage(session.user.id);
+                } catch (err) {
+                  console.error('[API] 配额自增失败(不影响主流程):', err);
+                }
+              }
               controller.close();
               break;
             }
@@ -107,7 +139,7 @@ export async function POST(
       },
     });
 
-    // 5. 返回SSE响应
+    // 6. 返回SSE响应
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'text/event-stream',

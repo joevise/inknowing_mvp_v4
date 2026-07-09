@@ -186,6 +186,8 @@ export async function resetDb(): Promise<void> {
       DROP TABLE IF EXISTS character_summon_logs CASCADE;
       DROP TABLE IF EXISTS user_memories CASCADE;
       DROP TABLE IF EXISTS user_book_requests CASCADE;
+      DROP TABLE IF EXISTS daily_usage CASCADE;
+      DROP TABLE IF EXISTS invite_codes CASCADE;
       DROP TABLE IF EXISTS books CASCADE;
       DROP TABLE IF EXISTS users CASCADE;
       DROP TABLE IF EXISTS config CASCADE;

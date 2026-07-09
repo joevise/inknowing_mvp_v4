@@ -112,6 +112,16 @@ export default function AdminLayout({ children, title, actions }: AdminLayoutPro
               >
                 系统设置
               </Link>
+              <Link
+                href="/admin/invite-codes"
+                className={`font-light text-sm transition-opacity ${
+                  isActive('/admin/invite-codes')
+                    ? 'opacity-100 border-b border-white'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                邀请码
+              </Link>
             </nav>
 
             {/* 右侧：用户菜单 */}

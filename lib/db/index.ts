@@ -88,6 +88,27 @@ export {
   type SummonStatus,
 } from './character-summon-logs';
 
+// 导出邀请码操作
+export {
+  createInviteCode,
+  getInviteCodeById,
+  getInviteCodeByCode,
+  listInviteCodes,
+  deleteInviteCode,
+  disableInviteCode,
+  validateInviteCode,
+  markInviteCodeUsed,
+  consumeInviteCode,
+} from './invite-codes';
+
+// 导出每日配额操作
+export {
+  getTodayUsage,
+  incrementUsage,
+  getTodayUsageRecord,
+  DAILY_MESSAGE_LIMIT,
+} from './daily-usage';
+
 // 导出文档操作
 export {
   createDocument,

@@ -85,7 +85,11 @@
     "errorLoginFailed": "登录失败，请重试",
     "errorRegisterFailed": "注册失败，请重试",
     "errorNetwork": "网络错误，请稍后重试",
-    "errorPasswordMismatch": "两次输入的密码不一致"
+    "errorPasswordMismatch": "两次输入的密码不一致",
+    "inviteCode": "邀请码",
+    "inviteCodePlaceholder": "请输入 8 位邀请码",
+    "errorInviteCodeInvalid": "邀请码无效或已被使用",
+    "errorMissingInviteCode": "请输入邀请码"
   },
   "home": {
     "heroTitle": "与经典对话，让知识流动",
@@ -367,6 +371,8 @@
     "sending": "发送中...",
     "thinking": "思考中...",
     "streamParseError": "生成回复失败",
+    "dailyLimitReached": "今天的对话额度已用完，明天再来吧",
+    "dailyLimitReachedDetail": "免费用户每日限 {limit} 轮对话",
     "startChatPrompt": "开始与{name}对话",
     "startChatHint": "试试问一些问题吧！",
     "streamReadFailed": "无法读取响应流",

@@ -84,6 +84,7 @@ export default function ConversationView({
   const [streamingMessage, setStreamingMessage] = useState('');
   const [streamingMetadata, setStreamingMetadata] = useState<StreamMetadata>({});
   const [error, setError] = useState('');
+  const [quotaError, setQuotaError] = useState('');
   const [creatingNewTopic, setCreatingNewTopic] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -195,6 +196,7 @@ export default function ConversationView({
     setStreamingMessage('');
     setStreamingMetadata({});
     setError('');
+    setQuotaError('');
 
     const tempUserMsg: Message = {
       id: `temp-user-${Date.now()}`,
@@ -213,6 +215,25 @@ export default function ConversationView({
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          // 友好的限额提示,不弹红色错误条
+          let data: any = null;
+          try {
+            data = await response.json();
+          } catch {
+            /* ignore parse error */
+          }
+          const quotaMsg =
+            data?.message ||
+            t('conversation.dailyLimitReached', { limit: data?.limit ?? 20 });
+          // 把临时用户消息移除,清空流状态
+          setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
+          setStreamingMessage('');
+          setStreamingMetadata({});
+          // 单独标记一个配额错误,渲染为 inline
+          setQuotaError(quotaMsg);
+          return;
+        }
         throw new Error(t('conversation.sendFailed'));
       }
 
@@ -484,6 +505,16 @@ export default function ConversationView({
       {error && (
         <div className="bg-red-50 border-t border-red-200 px-6 py-3">
           <div className="max-w-4xl mx-auto text-red-600 text-sm font-light">{error}</div>
+        </div>
+      )}
+
+      {/* 配额限额提示(友好 inline,不弹红色) */}
+      {quotaError && (
+        <div className="bg-amber-50 border-t border-amber-200 px-6 py-3">
+          <div className="max-w-4xl mx-auto text-amber-700 text-sm font-light flex items-center gap-2">
+            <span>🌙</span>
+            <span>{quotaError}</span>
+          </div>
         </div>
       )}
 

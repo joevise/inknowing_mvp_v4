@@ -166,6 +166,34 @@ export interface UserMemory {
   updated_at: Date;
 }
 
+/**
+ * 注册邀请码
+ * 生产前用于白名单注册:管理员在后台生成码,发给受邀用户。
+ * status: active 可用 / used 已被某用户消费 / disabled 手动停用
+ */
+export interface InviteCode {
+  id: string;
+  code: string;
+  status: 'active' | 'used' | 'disabled';
+  created_at: Date;
+  used_by: string | null;
+  used_at: Date | null;
+  note: string | null;
+}
+
+/**
+ * 用户每日对话配额
+ * 记录每个用户当天已发送消息条数,用于频率限制。
+ * 每日 0 点(UTC)随 usage_date 自然滚动,无需定时任务清理。
+ */
+export interface DailyUsage {
+  id: string;
+  user_id: string;
+  usage_date: string; // PG DATE 类型,这里用字符串 'YYYY-MM-DD'
+  message_count: number;
+  created_at: Date;
+}
+
 // 创建表的SQL语句
 export const createTablesSQL = `
   -- 用户表
@@ -592,6 +620,30 @@ export const PG_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_user_memories_user_importance ON user_memories(user_id, importance DESC, updated_at DESC);
   CREATE INDEX IF NOT EXISTS idx_user_memories_type ON user_memories(user_id, memory_type);
 
+  -- 邀请码表(白名单注册)
+  CREATE TABLE IF NOT EXISTS invite_codes (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'disabled')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    used_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    used_at TIMESTPTZ,
+    note TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
+  CREATE INDEX IF NOT EXISTS idx_invite_codes_status ON invite_codes(status);
+
+  -- 每日配额表(对话频率限制:每用户每天 N 轮)
+  CREATE TABLE IF NOT EXISTS daily_usage (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    message_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, usage_date)
+  );
+  CREATE INDEX IF NOT EXISTS idx_daily_usage_user_date ON daily_usage(user_id, usage_date);
+
   -- 多语言字段(幂等补列,兼容已存在的库)
   ALTER TABLE books ADD COLUMN IF NOT EXISTS language_mode TEXT NOT NULL DEFAULT 'zh_native';
   ALTER TABLE books ADD COLUMN IF NOT EXISTS title_en TEXT;
@@ -644,4 +696,6 @@ export const dropTablesSQL = `
   DROP TABLE IF EXISTS users;
   DROP TABLE IF EXISTS config;
   DROP TABLE IF EXISTS user_book_requests;
+  DROP TABLE IF EXISTS daily_usage;
+  DROP TABLE IF EXISTS invite_codes;
 `;

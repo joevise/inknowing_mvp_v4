@@ -20,6 +20,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    inviteCode: '',
   });
 
   // 处理表单提交
@@ -46,6 +47,7 @@ export default function RegisterPage() {
           username: formData.username,
           email: formData.email,
           password: formData.password,
+          inviteCode: formData.inviteCode,
         }),
       });
 
@@ -161,6 +163,28 @@ export default function RegisterPage() {
               minLength={6}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white"
               placeholder={t('auth.passwordPlaceholderRegister')}
+            />
+          </div>
+
+          {/* 邀请码 */}
+          <div>
+            <label htmlFor="inviteCode" className="block text-sm text-gray-700 mb-1">
+              {t('auth.inviteCode')}
+            </label>
+            <input
+              type="text"
+              id="inviteCode"
+              name="inviteCode"
+              required
+              value={formData.inviteCode}
+              onChange={handleChange}
+              disabled={loading}
+              minLength={4}
+              maxLength={20}
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2C5530] transition-colors bg-white font-light uppercase tracking-wider"
+              placeholder={t('auth.inviteCodePlaceholder')}
             />
           </div>
 

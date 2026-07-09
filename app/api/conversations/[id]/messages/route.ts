@@ -12,6 +12,7 @@ import { getMessagesByConversationId } from '@/lib/db/messages';
 import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
 import { localizeBook } from '@/lib/db/i18n-helpers';
+import { getTodayUsage, incrementUsage, DAILY_MESSAGE_LIMIT } from '@/lib/db/daily-usage';
 
 const conversationService = new ConversationService();
 
@@ -60,7 +61,28 @@ export async function POST(
       );
     }
 
-    // 4. 发送消息并生成回复
+    // 4. 每日配额检查(管理员不限)
+    if (user.id !== 'admin') {
+      const used = await getTodayUsage(user.id);
+      if (used >= DAILY_MESSAGE_LIMIT) {
+        console.log('[API] 用户已达每日对话上限:', {
+          userId: user.id,
+          used,
+          limit: DAILY_MESSAGE_LIMIT,
+        });
+        return NextResponse.json(
+          {
+            error: '今日对话已达上限',
+            message: `免费用户每日限 ${DAILY_MESSAGE_LIMIT} 轮对话,明天再来吧`,
+            remaining: 0,
+            limit: DAILY_MESSAGE_LIMIT,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
+    // 5. 发送消息并生成回复
     console.log('[API] 开始发送消息:', {
       conversationId: params.id,
       userId: user.id,
@@ -78,6 +100,15 @@ export async function POST(
       uiLang,
     });
 
+    // 6. 成功后再 +1(管理员不计)
+    if (user.id !== 'admin') {
+      try {
+        await incrementUsage(user.id);
+      } catch (err) {
+        console.error('[API] 配额自增失败(不影响主流程):', err);
+      }
+    }
+
     console.log('[API] 消息发送成功:', {
       messageId: result.message.assistantMessage.id,
       strategy: result.strategy,
@@ -85,7 +116,7 @@ export async function POST(
       responseTime: result.responseTime,
     });
 
-    // 5. 返回结果
+    // 7. 返回结果
     return NextResponse.json({
       success: true,
       message: result.message,
