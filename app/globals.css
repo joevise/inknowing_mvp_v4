@@ -26,11 +26,11 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary-300 rounded-full;
+    @apply bg-gray-300 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary-400;
+    @apply bg-gray-400;
   }
 }
 
