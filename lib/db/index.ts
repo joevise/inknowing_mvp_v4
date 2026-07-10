@@ -26,6 +26,7 @@ export type {
   Session,
   UserBookRequest,
   CharacterSummonLog,
+  CopyrightReport,
 } from './schema';
 
 // 导出用户操作
@@ -110,6 +111,15 @@ export {
   getTodayUsageRecord,
   DAILY_MESSAGE_LIMIT,
 } from './daily-usage';
+
+export {
+  createCopyrightReport,
+  listCopyrightReports,
+  getCopyrightReportById,
+  updateCopyrightReportStatus,
+  type CreateCopyrightReportInput,
+  type CopyrightReportStatus,
+} from './copyright-reports';
 
 // 导出文档操作
 export {

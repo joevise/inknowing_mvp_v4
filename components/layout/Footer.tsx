@@ -86,6 +86,11 @@ export default function Footer() {
                   {t('footer.privacy')}
                 </a>
               </li>
+              <li>
+                <a href="/copyright" className="font-light text-xs text-gray-600 hover:text-[#2C5530] transition-colors">
+                  {t('footer.copyrightComplaint')}
+                </a>
+              </li>
             </ul>
           </div>
         </div>

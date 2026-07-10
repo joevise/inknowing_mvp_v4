@@ -9,6 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 import FavoriteButton from '@/components/book/FavoriteButton';
 import SummonPanel from '@/components/book/SummonPanel';
 import { useBookLanguage } from '@/components/i18n/BookLanguageContext';
@@ -185,7 +186,7 @@ export default function BookDetailPage() {
                 <div className="flex flex-col md:flex-row gap-0">
                   {/* 封面 */}
                   <div className="w-full md:w-80 flex-shrink-0 bg-gray-50">
-                    <div className="aspect-[3/4] md:aspect-auto md:h-full">
+                    <div className="aspect-[3/4]">
                       {book.cover_url ? (
                         <img
                           src={book.cover_url}
@@ -198,6 +199,9 @@ export default function BookDetailPage() {
                         </div>
                       )}
                     </div>
+                    <p className="px-4 py-3 text-xs text-gray-400 font-light">
+                      封面来源：网络 · 版权归出版方/原作者所有
+                    </p>
                   </div>
 
                   {/* 书籍信息 */}
@@ -331,6 +335,7 @@ export default function BookDetailPage() {
           )}
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

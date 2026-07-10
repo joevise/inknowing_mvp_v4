@@ -349,6 +349,16 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="px-6 py-4 bg-[#FAF9F7]">
+          <div className="max-w-7xl mx-auto rounded-lg bg-gray-100/70 px-4 py-3 text-xs text-gray-400 font-light leading-relaxed">
+            本平台 AI 对话基于大模型演绎，非原著内容。书籍封面来源于公开网络，版权归出版方所有。如涉及著作权问题，请前往
+            <Link href="/copyright" className="text-gray-500 underline underline-offset-2 hover:text-[#2C5530]">
+              投诉页面
+            </Link>
+            反馈。
+          </div>
+        </section>
+
         {/* 角色展示区域 */}
         <section className="py-16 px-6 bg-[#FAF9F7]">
           <div className="max-w-7xl mx-auto">

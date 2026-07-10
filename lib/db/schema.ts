@@ -194,6 +194,19 @@ export interface DailyUsage {
   created_at: Date;
 }
 
+export interface CopyrightReport {
+  id: string;
+  work_title: string;
+  rights_holder: string | null;
+  contact_info: string;
+  proof_description: string;
+  infringing_content: string;
+  status: 'pending' | 'reviewing' | 'resolved' | 'rejected';
+  admin_note: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // 创建表的SQL语句
 export const createTablesSQL = `
   -- 用户表
@@ -627,7 +640,7 @@ export const PG_SCHEMA_SQL = `
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'disabled')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     used_by TEXT REFERENCES users(id) ON DELETE SET NULL,
-    used_at TIMESTPTZ,
+    used_at TIMESTAMPTZ,
     note TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
@@ -643,6 +656,21 @@ export const PG_SCHEMA_SQL = `
     UNIQUE(user_id, usage_date)
   );
   CREATE INDEX IF NOT EXISTS idx_daily_usage_user_date ON daily_usage(user_id, usage_date);
+
+  CREATE TABLE IF NOT EXISTS copyright_reports (
+    id TEXT PRIMARY KEY,
+    work_title TEXT NOT NULL,
+    rights_holder TEXT,
+    contact_info TEXT NOT NULL,
+    proof_description TEXT NOT NULL,
+    infringing_content TEXT NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending','reviewing','resolved','rejected')),
+    admin_note TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_copyright_reports_status ON copyright_reports(status);
+  CREATE INDEX IF NOT EXISTS idx_copyright_reports_created_at ON copyright_reports(created_at DESC);
 
   -- 多语言字段(幂等补列,兼容已存在的库)
   ALTER TABLE books ADD COLUMN IF NOT EXISTS language_mode TEXT NOT NULL DEFAULT 'zh_native';
@@ -675,7 +703,7 @@ export const PG_TRIGGERS_SQL = `
   DO $$
   DECLARE t TEXT;
   BEGIN
-    FOREACH t IN ARRAY ARRAY['users','books','characters','documents','conversations','config','user_book_requests','user_memories']
+    FOREACH t IN ARRAY ARRAY['users','books','characters','documents','conversations','config','user_book_requests','user_memories','copyright_reports']
     LOOP
       EXECUTE format('DROP TRIGGER IF EXISTS trg_set_updated_at ON %I', t);
       EXECUTE format('CREATE TRIGGER trg_set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()', t);
@@ -698,4 +726,5 @@ export const dropTablesSQL = `
   DROP TABLE IF EXISTS user_book_requests;
   DROP TABLE IF EXISTS daily_usage;
   DROP TABLE IF EXISTS invite_codes;
+  DROP TABLE IF EXISTS copyright_reports;
 `;
