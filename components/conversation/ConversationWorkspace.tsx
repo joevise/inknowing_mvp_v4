@@ -80,9 +80,9 @@ export default function ConversationWorkspace({
   }, [showHistoryDrawer, showCharactersDrawer]);
 
   return (
-    <div className="h-screen flex flex-col bg-[#FAF9F7]">
+    <div className="h-dvh flex flex-col bg-[#FAF9F7] overflow-hidden">
       <Header />
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* 左侧历史侧栏: md+ 常驻, 移动端 drawer */}
         <div
           className={`
