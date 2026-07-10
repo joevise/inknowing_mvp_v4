@@ -451,17 +451,16 @@ export async function getAllBooks(options?: {
   ).get(...params);
   const total = countResult?.total || 0;
 
-  // 获取分页数据
+  // 获取分页数据（子查询避免 JOIN 笛卡尔积导致收藏数错误）
   const limit = options?.limit || 20;
   const offset = options?.offset || 0;
 
   const books = await database.prepare(
-    `SELECT b.*, COUNT(f.id) as favorite_count, COUNT(DISTINCT c.id) as character_count
+    `SELECT b.*,
+      (SELECT COUNT(*) FROM favorites f WHERE f.book_id = b.id) as favorite_count,
+      (SELECT COUNT(*) FROM characters c WHERE c.book_id = b.id) as character_count
      FROM books b
-     LEFT JOIN favorites f ON b.id = f.book_id
-     LEFT JOIN characters c ON b.id = c.book_id
      ${whereClause ? whereClause.replace(/\bbooks\b/g, 'b') : ''}
-     GROUP BY b.id
      ORDER BY b.created_at DESC
      LIMIT ? OFFSET ?`
   ).all(...params, limit, offset);
