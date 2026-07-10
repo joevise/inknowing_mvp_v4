@@ -13,7 +13,7 @@
   }
 
   body {
-    @apply antialiased;
+    @apply antialiased bg-[#FAF9F7];
   }
 
   /* 自定义滚动条 */
