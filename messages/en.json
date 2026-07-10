@@ -94,7 +94,7 @@
   },
   "home": {
     "heroTitle": "Talk to the Classics, Let Knowledge Flow",
-    "heroSubtitle": "InKnowing is an AI-powered conversational learning platform. Converse with timeless books, question history's greatest minds, and discover an entirely new way to learn.",
+    "heroSubtitle": "InKnowing is a knowledge conversation platform built on public AI large model data. Converse with timeless books, question history's greatest minds, and discover an entirely new way to learn.",
     "searchPlaceholder": "Search books, characters, or ask anything...",
     "searchHint": "Try: \"I'd like to learn about psychology\" or \"Chat with Socrates\"",
     "requestBookPrompt": "Can't find what you want to read?",

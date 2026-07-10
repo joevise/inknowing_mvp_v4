@@ -551,8 +551,10 @@ export default function ConversationView({
       )}
 
       {/* 输入区域 */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex gap-3">
+      <div className="bg-white border-t border-gray-200 px-4 md:px-6 py-3 md:py-4">
+        <div className="max-w-4xl mx-auto">
+        <p className="text-xs text-gray-400 font-light text-center mb-2">AI 演绎内容，基于大模型理解生成，非原著文本</p>
+        <div className="flex gap-3">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -570,6 +572,7 @@ export default function ConversationView({
           >
             {sending || streaming ? t('conversation.sending') : t('conversation.send')}
           </button>
+        </div>
         </div>
       </div>
     </div>

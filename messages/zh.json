@@ -94,7 +94,7 @@
   },
   "home": {
     "heroTitle": "与经典对话，让知识流动",
-    "heroSubtitle": "InKnowing 知应是一个基于 AI 的知识对话平台。在这里，您可以与经典书籍对话，向历史人物提问，开启全新的学习体验。",
+    "heroSubtitle": "InKnowing 知应是一个基于公开AI大模型数据的知识对话平台。在这里，您可以与经典书籍对话，向历史人物提问，开启全新的学习体验。",
     "searchPlaceholder": "搜索书籍、角色，或直接提问...",
     "searchHint": "试试：\"我想了解心理学\" 或 \"和苏格拉底聊天\"",
     "requestBookPrompt": "没有你想读的书？",
