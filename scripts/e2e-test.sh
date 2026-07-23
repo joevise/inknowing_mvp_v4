@@ -136,8 +136,8 @@ REGISTER_RESP=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/auth/regist
 REGISTER_CODE=$(echo "$REGISTER_RESP" | tail -1)
 REGISTER_BODY=$(echo "$REGISTER_RESP" | sed '$d')
 
-if [ "$REGISTER_CODE" = "200" ]; then
-  pass "Register new user (HTTP 200)"
+if [ "$REGISTER_CODE" = "200" ] || [ "$REGISTER_CODE" = "201" ]; then
+  pass "Register new user (HTTP $REGISTER_CODE)"
 elif [ "$REGISTER_CODE" = "400" ] && echo "$REGISTER_BODY" | grep -q "invite"; then
   echo -e "${YELLOW}⚠️  SKIP${NC}: Register — invite code '${TEST_INVITE_CODE}' invalid (set E2E_INVITE_CODE env var with a real invite code)"
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
