@@ -12,7 +12,8 @@ import { getMessagesByConversationId } from '@/lib/db/messages';
 import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
 import { localizeBook } from '@/lib/db/i18n-helpers';
-import { getTodayUsage, incrementUsage, DAILY_MESSAGE_LIMIT } from '@/lib/db/daily-usage';
+import { incrementUsage } from '@/lib/db/daily-usage';
+import { checkDailyLimit } from '@/lib/entitlement/check';
 import { rateLimit } from '@/lib/middleware/rate-limit';
 
 const conversationService = new ConversationService();
@@ -71,21 +72,20 @@ export async function POST(
       );
     }
 
-    // 4. 每日配额检查(管理员不限)
+    // 4. 每日配额检查 — 通过 entitlement 模块(管理员不限)
     if (user.id !== 'admin') {
-      const used = await getTodayUsage(user.id);
-      if (used >= DAILY_MESSAGE_LIMIT) {
+      const limitCheck = await checkDailyLimit(user.id);
+      if (!limitCheck.allowed) {
         console.log('[API] 用户已达每日对话上限:', {
           userId: user.id,
-          used,
-          limit: DAILY_MESSAGE_LIMIT,
+          used: limitCheck.current,
+          limit: limitCheck.limit,
         });
         return NextResponse.json(
           {
-            error: '今日对话已达上限',
-            message: `免费用户每日限 ${DAILY_MESSAGE_LIMIT} 轮对话,明天再来吧`,
+            error: limitCheck.reason || '今日对话次数已达上限',
             remaining: 0,
-            limit: DAILY_MESSAGE_LIMIT,
+            limit: limitCheck.limit,
           },
           { status: 429 }
         );

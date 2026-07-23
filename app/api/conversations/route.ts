@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ConversationService } from '@/lib/services/conversation-service';
 import { requireAuth } from '@/lib/auth/middleware';
 import { getConversationsByUserId } from '@/lib/db/conversations';
+import { checkCharacterLimit } from '@/lib/entitlement/check';
 
 const conversationService = new ConversationService();
 
@@ -55,6 +56,17 @@ export async function POST(request: NextRequest) {
         { error: '角色对话需要提供 characterId' },
         { status: 400 }
       );
+    }
+
+    // 2b. 角色对话数量限制检查（通过 entitlement 模块）
+    if (characterId) {
+      const charCheck = await checkCharacterLimit(user.id);
+      if (!charCheck.allowed) {
+        return NextResponse.json(
+          { error: charCheck.reason || '当前套餐不支持更多角色对话，请升级套餐' },
+          { status: 403 }
+        );
+      }
     }
 
     // 3. 创建对话
