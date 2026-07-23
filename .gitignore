@@ -78,3 +78,8 @@ public/covers/
 # 本地 .env 备份
 .env.bak.*
 data/backups/
+
+# 所有 env 备份/历史文件
+.env.local.backup.*
+.env*.backup*
+.env.*.backup*
