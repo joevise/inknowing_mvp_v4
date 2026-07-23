@@ -17,7 +17,7 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 import { AsyncLocalStorage } from 'async_hooks';
 import { randomUUID } from 'crypto';
-import { PG_SCHEMA_SQL, PG_TRIGGERS_SQL } from './schema';
+import { PG_SCHEMA_SQL, PG_TRIGGERS_SQL, PG_PAYMENT_SCHEMA_SQL } from './schema';
 
 // ---- 连接池 ----
 const connectionString =
@@ -46,6 +46,7 @@ async function bootstrapSchema(): Promise<void> {
   try {
     await client.query(PG_SCHEMA_SQL);
     await client.query(PG_TRIGGERS_SQL);
+    await client.query(PG_PAYMENT_SCHEMA_SQL);
     // 虚拟 admin 用户(用于管理员 session)
     const r = await client.query('SELECT id FROM users WHERE id = $1', ['admin']);
     if (r.rowCount === 0) {

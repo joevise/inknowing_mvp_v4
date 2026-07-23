@@ -27,6 +27,10 @@ export type {
   UserBookRequest,
   CharacterSummonLog,
   CopyrightReport,
+  Plan,
+  PlanFeature,
+  Subscription,
+  Order,
 } from './schema';
 
 // 导出用户操作

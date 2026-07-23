@@ -15,6 +15,7 @@ import { searchBooks, getBookById } from '@/lib/services/book-service';
 import { db } from '@/lib/db';
 import { localizeBook, localizeCharacter } from '@/lib/db/i18n-helpers';
 import { semanticSearchBooks } from '@/lib/services/semantic-search';
+import { rateLimit, getClientIP } from '@/lib/middleware/rate-limit';
 import OpenAI from 'openai';
 
 // 通义千问客户端
@@ -105,6 +106,16 @@ async function searchCharacters(query: string): Promise<any[]> {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: 20 次/分钟（按 IP）
+    const clientIP = getClientIP(request);
+    const rl = rateLimit(`search:${clientIP}`, 20, 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests', message: '搜索请求过于频繁，请稍后再试' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     // 同时接受 `q`(新页面规范)与 `query`(兼容老调用方)
     const rawQuery = searchParams.get('q') ?? searchParams.get('query');

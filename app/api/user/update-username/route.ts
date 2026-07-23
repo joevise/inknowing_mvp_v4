@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
     // 4. 更新数据库
     const stmt = db().prepare(`
       UPDATE users
-      SET username = ?, updated_at = datetime('now')
+      SET username = ?, updated_at = NOW()
       WHERE id = ?
     `);
 

@@ -5,10 +5,14 @@
  * 返回系统各项统计数据
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/middleware/admin-auth';
 import { db } from '@/lib/db/client';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminAuth(request);
+  if (authError) return authError;
+
   try {
     const database = db();
 

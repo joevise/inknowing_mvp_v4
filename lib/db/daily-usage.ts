@@ -39,40 +39,22 @@ export async function getTodayUsage(userId: string): Promise<number> {
 }
 
 /**
- * UPSERT: 用户当天的计数 +1,返回新的总数
- * 若当天记录不存在则创建
+ * UPSERT (atomic): 用户当天的计数 +1, 返回新的总数
+ * 使用 PG ON CONFLICT 实现原子 upsert, 避免 read-then-write 竞态
  */
 export async function incrementUsage(userId: string): Promise<number> {
-  const row = await db()
-    .prepare(
-      `SELECT id, message_count
-         FROM daily_usage
-        WHERE user_id = ?
-          AND usage_date = CURRENT_DATE`
-    )
-    .get(userId) as any;
-
-  if (row) {
-    const newCount = Number(row.message_count ?? 0) + 1;
-    await db()
-      .prepare(
-        `UPDATE daily_usage
-            SET message_count = ?
-          WHERE id = ?`
-      )
-      .run(newCount, row.id);
-    return newCount;
-  }
-
   const id = generateId();
   const ts = now().toISOString();
-  await db()
+  const row = await db()
     .prepare(
       `INSERT INTO daily_usage (id, user_id, usage_date, message_count, created_at)
-       VALUES (?, ?, CURRENT_DATE, 1, ?)`
+       VALUES (?, ?, CURRENT_DATE, 1, ?)
+       ON CONFLICT (user_id, usage_date)
+       DO UPDATE SET message_count = daily_usage.message_count + 1
+       RETURNING message_count`
     )
-    .run(id, userId, ts);
-  return 1;
+    .get(id, userId, ts) as any;
+  return Number(row?.message_count ?? 1);
 }
 
 /**

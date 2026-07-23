@@ -711,8 +711,160 @@ export const PG_TRIGGERS_SQL = `
   END $$;
 `;
 
+// ============================================================
+// 套餐 / 订阅 / 支付 — 三层架构 Schema
+// ============================================================
+
+/**
+ * 套餐表(admin 可 CRUD)
+ */
+export interface Plan {
+  id: string;
+  name: string;
+  name_en: string | null;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  billing_cycle: 'free' | 'monthly' | 'quarterly' | 'yearly' | 'lifetime';
+  sort_order: number;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * 套餐功能权限(key-value 灵活结构)
+ */
+export interface PlanFeature {
+  id: string;
+  plan_id: string;
+  feature_key: string;
+  feature_value: string;
+  created_at: Date;
+}
+
+/**
+ * 用户订阅记录
+ */
+export interface Subscription {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: 'active' | 'expired' | 'cancelled' | 'past_due';
+  start_date: Date;
+  end_date: Date | null;
+  auto_renew: boolean;
+  cancel_at_period_end: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * 支付订单
+ */
+export interface Order {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  amount_cents: number;
+  currency: string;
+  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'expired';
+  provider: string;
+  provider_order_id: string | null;
+  provider_transaction_id: string | null;
+  paid_at: Date | null;
+  expires_at: Date | null;
+  metadata: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * 套餐/订阅/支付 PG Schema(追加到 PG_SCHEMA_SQL 末尾)
+ */
+export const PG_PAYMENT_SCHEMA_SQL = `
+  -- 套餐表
+  CREATE TABLE IF NOT EXISTS plans (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    name_en TEXT,
+    description TEXT,
+    price_cents INTEGER NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'CNY',
+    billing_cycle TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('free','monthly','quarterly','yearly','lifetime')),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
+  -- 套餐功能权限
+  CREATE TABLE IF NOT EXISTS plan_features (
+    id TEXT PRIMARY KEY,
+    plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    feature_key TEXT NOT NULL,
+    feature_value TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(plan_id, feature_key)
+  );
+
+  -- 用户订阅记录
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id TEXT NOT NULL REFERENCES plans(id),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','expired','cancelled','past_due')),
+    start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_date TIMESTAMPTZ,
+    auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+    cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+
+  -- 支付订单
+  CREATE TABLE IF NOT EXISTS orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id TEXT NOT NULL REFERENCES plans(id),
+    amount_cents INTEGER NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'CNY',
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','failed','refunded','expired')),
+    provider TEXT NOT NULL,
+    provider_order_id TEXT,
+    provider_transaction_id TEXT,
+    paid_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    metadata TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+  CREATE INDEX IF NOT EXISTS idx_orders_provider ON orders(provider, provider_order_id);
+
+  -- 为 plans / subscriptions / orders 挂 updated_at 触发器
+  DO $$
+  DECLARE t TEXT;
+  BEGIN
+    FOREACH t IN ARRAY ARRAY['plans','subscriptions','orders']
+    LOOP
+      EXECUTE format('DROP TRIGGER IF EXISTS trg_set_updated_at ON %I', t);
+      EXECUTE format('CREATE TRIGGER trg_set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()', t);
+    END LOOP;
+  END $$;
+`;
+
 // 删除所有表的SQL（用于重置数据库）
 export const dropTablesSQL = `
+  DROP TABLE IF EXISTS orders;
+  DROP TABLE IF EXISTS subscriptions;
+  DROP TABLE IF EXISTS plan_features;
+  DROP TABLE IF EXISTS plans;
   DROP TABLE IF EXISTS messages;
   DROP TABLE IF EXISTS sessions;
   DROP TABLE IF EXISTS conversations;

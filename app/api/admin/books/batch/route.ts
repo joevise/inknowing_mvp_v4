@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/middleware/admin-auth';
 import { getAllBooks, updateBook, deleteBook } from '@/lib/db/books';
 
 /**
@@ -13,6 +14,9 @@ import { getAllBooks, updateBook, deleteBook } from '@/lib/db/books';
  * 批量上架或下架书籍
  */
 export async function PUT(request: NextRequest) {
+  const authError = await requireAdminAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { ids, action } = body;
@@ -65,6 +69,9 @@ export async function PUT(request: NextRequest) {
  * 批量删除书籍
  */
 export async function DELETE(request: NextRequest) {
+  const authError = await requireAdminAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { ids } = body;

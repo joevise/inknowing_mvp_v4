@@ -9,14 +9,13 @@ import { setAdminSessionCookie } from './cookie';
 
 /**
  * 获取管理员密码
- * 从环境变量中读取，没有设置则使用默认密码
+ * 从环境变量中读取，没有设置则抛错（不再有默认密码）
  */
 function getAdminPassword(): string {
   const password = process.env.ADMIN_PASSWORD;
 
   if (!password) {
-    console.warn('[Admin] No ADMIN_PASSWORD set in environment, using default');
-    return 'admin123456'; // MVP默认密码，生产环境必须设置环境变量
+    throw new Error('ADMIN_PASSWORD not configured');
   }
 
   return password;

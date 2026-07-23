@@ -14,6 +14,7 @@ import { validatePasswordStrength } from '@/lib/auth/password';
 import { createSession } from '@/lib/auth/session';
 import { setSessionCookie } from '@/lib/auth/cookie';
 import { validateInviteCode, markInviteCodeUsed } from '@/lib/db/invite-codes';
+import { rateLimit, getClientIP } from '@/lib/middleware/rate-limit';
 
 /**
  * 验证邮箱格式
@@ -29,6 +30,16 @@ function validateEmail(email: string): boolean {
  */
 export async function POST(request: NextRequest) {
   console.log('[Register API] Processing registration request');
+
+  // 0. Rate limiting: 5 次/小时（按 IP）
+  const clientIP = getClientIP(request);
+  const rl = rateLimit(`register:${clientIP}`, 5, 60 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', message: '注册请求过于频繁，请稍后再试' },
+      { status: 429, headers: { 'Retry-After': '3600' } }
+    );
+  }
 
   try {
     // 1. 解析请求体

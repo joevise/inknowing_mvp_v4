@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserByEmail, verifyUserPassword } from '@/lib/db';
 import { createSession } from '@/lib/auth/session';
 import { setSessionCookie } from '@/lib/auth/cookie';
+import { rateLimit, getClientIP } from '@/lib/middleware/rate-limit';
 
 /**
  * POST /api/auth/login
@@ -17,6 +18,16 @@ import { setSessionCookie } from '@/lib/auth/cookie';
  */
 export async function POST(request: NextRequest) {
   console.log('[Login API] Processing login request');
+
+  // 0. Rate limiting: 10 次/分钟（按 IP）
+  const clientIP = getClientIP(request);
+  const rl = rateLimit(`login:${clientIP}`, 10, 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', message: '请求过于频繁，请稍后再试' },
+      { status: 429, headers: { 'Retry-After': '60' } }
+    );
+  }
 
   try {
     // 1. 解析请求体

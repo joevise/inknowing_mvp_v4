@@ -13,6 +13,7 @@ import { getBookById } from '@/lib/db/books';
 import { getCharacterById } from '@/lib/db/characters';
 import { localizeBook } from '@/lib/db/i18n-helpers';
 import { getTodayUsage, incrementUsage, DAILY_MESSAGE_LIMIT } from '@/lib/db/daily-usage';
+import { rateLimit } from '@/lib/middleware/rate-limit';
 
 const conversationService = new ConversationService();
 
@@ -34,6 +35,15 @@ export async function POST(
     }
 
     const { user } = authResult;
+
+    // 1b. Rate limiting: 30 次/分钟（按 userId）
+    const rl = rateLimit(`msg:${user.id}`, 30, 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests', message: '消息发送过于频繁，请稍后再试' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      );
+    }
 
     // 2. 验证对话权限
     if (!(await userOwnsConversation(user.id, params.id))) {
