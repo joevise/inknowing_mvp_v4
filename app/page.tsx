@@ -11,6 +11,7 @@ import { useTranslations } from 'next-intl';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FavoriteButton from '@/components/book/FavoriteButton';
+import PricingSection from '@/components/home/PricingSection';
 
 interface Book {
   id: string;
@@ -358,6 +359,9 @@ export default function HomePage() {
             反馈。
           </div>
         </section>
+
+        {/* 套餐简览区域 */}
+        <PricingSection />
 
         {/* 角色展示区域 */}
         <section className="py-16 px-6 bg-[#FAF9F7]">

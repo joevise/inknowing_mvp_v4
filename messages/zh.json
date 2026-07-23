@@ -402,5 +402,58 @@
     "errNoNew": "主要角色都已经在场了",
     "errLogin": "请先登录再召唤角色",
     "errGeneric": "召唤失败，稍后再试一次吧"
+  },
+  "pricing": {
+    "sectionTitle": "选择适合你的方案",
+    "sectionSubtitle": "简单透明，随时升级或降级",
+    "pageTitle": "套餐与价格",
+    "pageSubtitle": "选择最适合你的方案，开启深度阅读之旅",
+    "comparisonTitle": "功能对比",
+    "free": "免费",
+    "choose": "选择",
+    "upgrade": "升级",
+    "startUsing": "开始使用",
+    "startFree": "免费开始",
+    "useFree": "使用免费版",
+    "currentPlan": "当前套餐",
+    "save": "省 {amount}",
+    "unlimited": "不限",
+    "feature": "功能",
+    "faqHint": "还有疑问？了解更多关于我们的故事。",
+    "learnMore": "了解更多",
+    "cycle": {
+      "free": "永久",
+      "monthly": "月",
+      "quarterly": "季",
+      "yearly": "年",
+      "lifetime": "终身"
+    },
+    "features": {
+      "daily_messages": "每日对话轮数",
+      "max_characters": "角色数量",
+      "premium_books": "精品书单",
+      "custom_characters": "自定义角色",
+      "multilingual": "多语言支持",
+      "advanced_model": "高级 AI 模型"
+    }
+  },
+  "checkout": {
+    "title": "确认订单",
+    "subtitle": "请确认以下信息",
+    "plan": "套餐",
+    "billingCycle": "计费周期",
+    "amount": "应付金额",
+    "confirmPay": "确认支付",
+    "creating": "创建订单中...",
+    "scanToPay": "微信扫码支付",
+    "scanHint": "打开微信扫一扫，扫描下方二维码完成支付",
+    "waitingForPayment": "等待支付...",
+    "paymentSuccess": "支付成功",
+    "redirecting": "即将跳转...",
+    "paymentFailed": "支付超时",
+    "paymentFailedHint": "订单已过期，请重新创建",
+    "retry": "重新支付",
+    "planNotFound": "套餐不存在",
+    "createOrderFailed": "创建订单失败"
   }
 }

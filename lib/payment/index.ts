@@ -18,3 +18,5 @@ export {
   confirmOrder,
 } from './service';
 export { MockPaymentProvider } from './providers/mock';
+export { WechatPayProvider } from './providers/wechat';
+export type { WechatPayConfig } from './providers/wechat';

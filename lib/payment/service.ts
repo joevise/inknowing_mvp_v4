@@ -7,13 +7,18 @@ import type { Order } from '@/lib/db/schema';
 import { subscribe } from '@/lib/subscription/service';
 import type { PaymentProvider } from './types';
 import { MockPaymentProvider } from './providers/mock';
+import { WechatPayProvider } from './providers/wechat';
 
 // ---- Provider 注册 ----
 const providers: Map<string, PaymentProvider> = new Map();
 
 // 注册内置 provider
 providers.set('mock', new MockPaymentProvider());
-// 未来：providers.set('wechat', new WechatPayProvider());
+
+// 微信支付：环境变量配置后自动注册
+if (process.env.WECHAT_PAY_MCH_ID) {
+  providers.set('wechat', new WechatPayProvider());
+}
 // 未来：providers.set('alipay', new AlipayProvider());
 // 未来：providers.set('stripe', new StripeProvider());
 

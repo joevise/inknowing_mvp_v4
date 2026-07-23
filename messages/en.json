@@ -402,5 +402,58 @@
     "errNoNew": "All main characters are already on stage",
     "errLogin": "Please sign in to summon characters",
     "errGeneric": "Summoning failed — please try again later"
+  },
+  "pricing": {
+    "sectionTitle": "Choose Your Plan",
+    "sectionSubtitle": "Simple and transparent. Upgrade or cancel anytime.",
+    "pageTitle": "Plans & Pricing",
+    "pageSubtitle": "Pick the plan that fits you and start your reading journey",
+    "comparisonTitle": "Feature Comparison",
+    "free": "Free",
+    "choose": "Choose",
+    "upgrade": "Upgrade",
+    "startUsing": "Get Started",
+    "startFree": "Start for Free",
+    "useFree": "Use Free Plan",
+    "currentPlan": "Current Plan",
+    "save": "Save {amount}",
+    "unlimited": "Unlimited",
+    "feature": "Feature",
+    "faqHint": "Still have questions? Learn more about our story.",
+    "learnMore": "Learn more",
+    "cycle": {
+      "free": "forever",
+      "monthly": "mo",
+      "quarterly": "quarter",
+      "yearly": "yr",
+      "lifetime": "lifetime"
+    },
+    "features": {
+      "daily_messages": "Daily messages",
+      "max_characters": "Characters",
+      "premium_books": "Premium books",
+      "custom_characters": "Custom characters",
+      "multilingual": "Multilingual",
+      "advanced_model": "Advanced AI model"
+    }
+  },
+  "checkout": {
+    "title": "Confirm Order",
+    "subtitle": "Please review the details below",
+    "plan": "Plan",
+    "billingCycle": "Billing cycle",
+    "amount": "Amount due",
+    "confirmPay": "Confirm & Pay",
+    "creating": "Creating order...",
+    "scanToPay": "Scan to Pay",
+    "scanHint": "Open WeChat and scan the QR code below to complete payment",
+    "waitingForPayment": "Waiting for payment...",
+    "paymentSuccess": "Payment Successful",
+    "redirecting": "Redirecting...",
+    "paymentFailed": "Payment Timed Out",
+    "paymentFailedHint": "Your order has expired. Please try again.",
+    "retry": "Retry",
+    "planNotFound": "Plan not found",
+    "createOrderFailed": "Failed to create order"
   }
 }
