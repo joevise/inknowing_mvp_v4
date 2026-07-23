@@ -24,6 +24,7 @@ const ADMIN_NAV_ITEMS = [
   { href: '/admin/documents', label: '文档管理' },
   { href: '/admin/settings', label: '系统设置' },
   { href: '/admin/invite-codes', label: '邀请码' },
+  { href: '/admin/plans', label: '套餐管理' },
   { href: '/admin/copyright-reports', label: '版权投诉' },
 ];
 
